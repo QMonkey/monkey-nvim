@@ -1,0 +1,12 @@
+# Ctags file
+*.tags
+tags
+
+# Swap file
+*.swp
+*.swo
+*.swn
+
+# Session
+*.vim
+!init.lua
