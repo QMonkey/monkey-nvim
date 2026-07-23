@@ -1,46 +1,42 @@
-local api = vim.api
-local augroup = api.nvim_create_augroup
-local autocmd = api.nvim_create_autocmd
-
 -- Relative number toggle in active normal mode
-local relnum = augroup('RelativeNumber', { clear = true })
-autocmd({ 'WinEnter', 'InsertLeave' }, {
+local relnum = vim.api.nvim_create_augroup('RelativeNumber', { clear = true })
+vim.api.nvim_create_autocmd({ 'WinEnter', 'InsertLeave' }, {
   group = relnum,
   command = 'set relativenumber',
 })
-autocmd({ 'WinLeave', 'InsertEnter' }, {
+vim.api.nvim_create_autocmd({ 'WinLeave', 'InsertEnter' }, {
   group = relnum,
   command = 'set norelativenumber number',
 })
 
 -- Cursorline toggle (disabled in insert mode)
-local curline = augroup('CursorLine', { clear = true })
-autocmd('InsertEnter', {
+local curline = vim.api.nvim_create_augroup('CursorLine', { clear = true })
+vim.api.nvim_create_autocmd('InsertEnter', {
   group = curline,
   command = 'set nocursorline',
 })
-autocmd('InsertLeave', {
+vim.api.nvim_create_autocmd('InsertLeave', {
   group = curline,
   command = 'set cursorline',
 })
 
 -- Paste mode (disable on leaving insert)
-local paste = augroup('PasteMode', { clear = true })
-autocmd('InsertLeave', {
+local paste = vim.api.nvim_create_augroup('PasteMode', { clear = true })
+vim.api.nvim_create_autocmd('InsertLeave', {
   group = paste,
   command = 'setlocal nopaste',
 })
 
 -- AutoInsertFileHead (.sh, .py)
-local filehead = augroup('FileHead', { clear = true })
-autocmd('BufNewFile', {
+local filehead = vim.api.nvim_create_augroup('FileHead', { clear = true })
+vim.api.nvim_create_autocmd('BufNewFile', {
   group = filehead,
   pattern = '*.sh',
   callback = function()
     vim.api.nvim_buf_set_lines(0, 0, 0, false, { '#!/usr/bin/env bash', '' })
   end,
 })
-autocmd('BufNewFile', {
+vim.api.nvim_create_autocmd('BufNewFile', {
   group = filehead,
   pattern = '*.py',
   callback = function()
@@ -49,8 +45,8 @@ autocmd('BufNewFile', {
 })
 
 -- Restore cursor position
-local cursor = augroup('RestoreCursorPosition', { clear = true })
-autocmd('BufReadPost', {
+local cursor = vim.api.nvim_create_augroup('RestoreCursorPosition', { clear = true })
+vim.api.nvim_create_autocmd('BufReadPost', {
   group = cursor,
   callback = function()
     local mark = vim.api.nvim_buf_get_mark(0, '"')
@@ -62,20 +58,20 @@ autocmd('BufReadPost', {
 })
 
 -- Clear jumplist on startup
-autocmd('VimEnter', {
-  group = augroup('Jumplist', { clear = true }),
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = vim.api.nvim_create_augroup('Jumplist', { clear = true }),
   command = 'clearjumps',
 })
 
 -- Resize splits on VimResized
-autocmd('VimResized', {
-  group = augroup('AutoResize', { clear = true }),
+vim.api.nvim_create_autocmd('VimResized', {
+  group = vim.api.nvim_create_augroup('AutoResize', { clear = true }),
   command = 'tabdo wincmd =',
 })
 
 -- Check file changes
-local checkfile = augroup('CheckFileChanges', { clear = true })
-autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorHold' }, {
+local checkfile = vim.api.nvim_create_augroup('CheckFileChanges', { clear = true })
+vim.api.nvim_create_autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorHold' }, {
   group = checkfile,
   callback = function()
     if vim.fn.getcmdtype() == '' then
@@ -85,8 +81,8 @@ autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorHold' }, {
 })
 
 -- .tags filetype
-autocmd({ 'BufNewFile', 'BufRead' }, {
-  group = augroup('Ctags', { clear = true }),
+vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
+  group = vim.api.nvim_create_augroup('Ctags', { clear = true }),
   pattern = '*.tags',
   command = 'setfiletype tags',
 })

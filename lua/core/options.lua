@@ -1,5 +1,3 @@
--- ~/.config/nvim/lua/core/options.lua
-
 vim.g.mapleader = ','
 vim.g.maplocalleader = ','
 

@@ -1,5 +1,4 @@
--- ~/.config/nvim/lua/plugins/telescope.lua
-
+-- --- telescope.nvim ---
 local telescope = require('telescope')
 local actions = require('telescope.actions')
 
@@ -25,11 +24,9 @@ telescope.setup({
 
 local builtin = require('telescope.builtin')
 
--- File/buffer search (replaces LeaderF)
 vim.keymap.set('n', '<C-p>', builtin.find_files, { silent = true })
 vim.keymap.set('n', '<leader>b', builtin.buffers, { silent = true })
 vim.keymap.set('n', '<leader>y', builtin.current_buffer_tags, { silent = true })
-
 vim.keymap.set('n', '<leader>e', builtin.current_buffer_fuzzy_find, { silent = true })
 
 vim.keymap.set('n', '<leader>f', function()
@@ -60,4 +57,54 @@ vim.keymap.set({ 'n', 'i' }, '<F2>', function()
   else
     builtin.resume()
   end
+end, { silent = true })
+
+-- --- flash.nvim ---
+require('flash').setup({
+  labels = 'asdfghjklqwertyuiopzxcvbnm',
+  search = {
+    mode = 'fuzzy',
+  },
+  modes = {
+    char = {
+      enabled = false,
+    },
+  },
+})
+
+vim.keymap.set({ 'n', 'x', 'o' }, 'f', function()
+  require('flash').jump()
+end)
+vim.keymap.set({ 'n', 'x', 'o' }, 'F', function()
+  require('flash').jump({ search = { mode = 'search' } })
+end)
+
+-- --- marks.nvim ---
+require('marks').setup({
+  default_mappings = false,
+  mappings = {
+    set_next = 'm',
+  },
+})
+
+-- --- oil.nvim ---
+local project = require('config.project')
+
+require('oil').setup({
+  keymaps = {
+    ['-'] = 'actions.parent',
+    ['<CR>'] = 'actions.select',
+    ['<C-s>'] = 'actions.select_vsplit',
+    ['<C-v>'] = 'actions.select_split',
+    ['<C-t>'] = 'actions.select_tab',
+  },
+})
+
+vim.keymap.set('n', '-', function()
+  require('oil').open(vim.fn.expand('%:p:h'))
+end, { silent = true })
+
+vim.keymap.set('n', '~', function()
+  local root = project.find_root() or vim.fn.expand('~')
+  require('oil').open(root)
 end, { silent = true })

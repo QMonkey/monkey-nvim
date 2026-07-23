@@ -1,8 +1,7 @@
--- ~/.config/nvim/lua/plugins/lsp.lua
-
+-- --- mason.nvim ---
 require('mason').setup()
 
--- LSP keymaps (global, applied on LspAttach)
+-- --- LSP keymaps (LspAttach) ---
 local lsp_attach = vim.api.nvim_create_augroup('LspAttachKeymaps', { clear = true })
 vim.api.nvim_create_autocmd('LspAttach', {
   group = lsp_attach,
@@ -32,8 +31,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
--- --- Server configs -------------------------------------------------------
-
+-- --- Server: clangd (C/C++) ---
 vim.lsp.config('clangd', {
   cmd = {
     'clangd',
@@ -53,6 +51,7 @@ vim.lsp.config('clangd', {
   root_markers = { '.git' },
 })
 
+-- --- Server: rust-analyzer ---
 vim.lsp.config('rust_analyzer', {
   cmd = { 'rust-analyzer' },
   filetypes = { 'rust' },
@@ -66,6 +65,7 @@ vim.lsp.config('rust_analyzer', {
   },
 })
 
+-- --- Server: gopls (Go) ---
 vim.lsp.config('gopls', {
   cmd = { 'gopls' },
   filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
@@ -103,6 +103,7 @@ vim.lsp.config('gopls', {
   },
 })
 
+-- --- Server: ts_ls (TypeScript/JavaScript) ---
 vim.lsp.config('ts_ls', {
   cmd = { 'typescript-language-server', '--stdio' },
   filetypes = { 'javascript', 'typescript' },
@@ -113,6 +114,7 @@ vim.lsp.config('ts_ls', {
   },
 })
 
+-- --- Server: pylsp (Python) ---
 vim.lsp.config('pylsp', {
   cmd = { 'pylsp' },
   filetypes = { 'python' },
@@ -137,6 +139,7 @@ vim.lsp.config('pylsp', {
   },
 })
 
+-- --- Server: lua_ls (Lua) ---
 vim.lsp.config('lua_ls', {
   cmd = { 'lua-language-server' },
   filetypes = { 'lua' },
@@ -149,6 +152,7 @@ vim.lsp.config('lua_ls', {
   },
 })
 
+-- --- Server: bashls ---
 vim.lsp.config('bashls', {
   cmd = { 'bash-language-server', 'start' },
   filetypes = { 'sh' },
@@ -161,18 +165,21 @@ vim.lsp.config('bashls', {
   },
 })
 
+-- --- Server: vimls ---
 vim.lsp.config('vimls', {
   cmd = { 'vim-language-server', '--stdio' },
   filetypes = { 'vim' },
   root_markers = { '.git' },
 })
 
+-- --- Server: marksman (Markdown) ---
 vim.lsp.config('marksman', {
   cmd = { 'marksman', 'server' },
   filetypes = { 'markdown' },
   root_markers = { '.marksman.toml', '.git' },
 })
 
+-- --- Server: yamlls ---
 vim.lsp.config('yamlls', {
   cmd = { 'yaml-language-server', '--stdio' },
   filetypes = { 'yaml' },
@@ -190,18 +197,16 @@ vim.lsp.config('yamlls', {
   },
 })
 
+-- --- Server: jsonls ---
 vim.lsp.config('jsonls', {
   cmd = { 'vscode-json-language-server', '--stdio' },
   filetypes = { 'json' },
   root_markers = { '.git' },
 })
 
--- --- CMP capabilities -----------------------------------------------------
-
+-- --- CMP capabilities ---
 local ok_cmp, cmp_nvim_lsp = pcall(require, 'cmp_nvim_lsp')
 local capabilities = ok_cmp and cmp_nvim_lsp.default_capabilities() or nil
-
--- --- Enable all servers ---------------------------------------------------
 
 local enabled = {
   'clangd', 'rust_analyzer', 'gopls', 'ts_ls', 'pylsp',
@@ -211,9 +216,7 @@ for _, name in ipairs(enabled) do
   vim.lsp.enable(name, capabilities and { capabilities = capabilities } or {})
 end
 
--- --- Format on save -------------------------------------------------------
-
--- LSP diagnostic display
+-- --- Format on save / diagnostics ---
 vim.diagnostic.config({
   virtual_lines = { current_line = true },
 })

@@ -1,5 +1,3 @@
--- ~/.config/nvim/init.lua
-
 -- --- Auto-bootstrap: clone plugins on first run -----------------------------
 
 vim.pack.add({
@@ -48,22 +46,9 @@ require('core.autocmds')
 require('core.keys')
 require('core.filetypes')
 
--- --- Plugin configs -----------------------------------------------------
-
-local plugin_list = {
-  'colorscheme', 'lualine', 'telescope', 'project',
-  'gutentags', 'toggleterm', 'lsp', 'cmp', 'treesitter',
-  'gitsigns', 'fugitive', 'flash', 'substitute',
-  'visual-multi', 'ufo', 'textobjects', 'surround',
-  'repeat', 'autopairs', 'matchup', 'eunuch',
-  'commentary', 'highlighted-yank', 'oil', 'marks',
-  'auto-session', 'trouble',
-}
-
-for _, name in ipairs(plugin_list) do
-  pcall(require, 'plugins.' .. name)
-end
-
 -- --- Colorscheme --------------------------------------------------------
 
+vim.g.sonokai_style = 'andromeda'
+vim.g.sonokai_better_performance = 1
+vim.opt.background = 'dark'
 vim.cmd('colorscheme sonokai')

@@ -1,5 +1,4 @@
--- ~/.config/nvim/lua/plugins/cmp.lua
-
+-- --- nvim-cmp / luasnip ---
 local cmp = require('cmp')
 local luasnip = require('luasnip')
 

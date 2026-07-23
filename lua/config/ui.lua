@@ -1,5 +1,4 @@
--- ~/.config/nvim/lua/plugins/lualine.lua
-
+-- --- lualine.nvim ---
 local function vm_active()
   local ok, vm = pcall(vim.fn.VMInfos)
   return ok and type(vm) == 'table' and not vim.tbl_isempty(vm)

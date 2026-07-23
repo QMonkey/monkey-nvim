@@ -1,16 +1,10 @@
--- ~/.config/nvim/lua/core/filetypes.lua
-
-local api = vim.api
-local augroup = api.nvim_create_augroup
-local autocmd = api.nvim_create_autocmd
-
-local ft = augroup('FileTypeSettings', { clear = true })
+local ft = vim.api.nvim_create_augroup('FileTypeSettings', { clear = true })
 
 -- Tab indent, 4-wide: C, C++, Go, Bash, VimL, SQL (default: noexpandtab, ts=4)
 -- Inherits global defaults
 
 -- Space indent, 4-wide: Rust, Python, Markdown
-autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   group = ft,
   pattern = { 'rust', 'python', 'markdown' },
   callback = function()
@@ -22,7 +16,7 @@ autocmd('FileType', {
 })
 
 -- Space indent, 2-wide: JavaScript, TypeScript, Lua, YAML, JSON, Markdown
-autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   group = ft,
   pattern = { 'json', 'yaml', 'javascript', 'typescript', 'lua' },
   callback = function()
@@ -34,7 +28,7 @@ autocmd('FileType', {
 })
 
 -- Fold method per filetype
-autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   group = ft,
   pattern = { 'python', 'yaml' },
   callback = function()
@@ -43,14 +37,14 @@ autocmd('FileType', {
 })
 
 -- Quickfix window to bottom
-autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   group = ft,
   pattern = 'qf',
   command = 'wincmd J',
 })
 
 -- docset keywordprg
-autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   group = ft,
   pattern = { 'man', 'help' },
   callback = function()
@@ -61,7 +55,7 @@ autocmd('FileType', {
 -- LspHover via K (replaces keywordprg, which doesn't support functions)
 vim.keymap.set('n', 'K', vim.lsp.buf.hover, { silent = true })
 
-autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   group = ft,
   pattern = { 'c', 'man' },
   callback = function()
@@ -70,7 +64,7 @@ autocmd('FileType', {
   end,
 })
 
-autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   group = ft,
   pattern = { 'vim', 'help' },
   callback = function()

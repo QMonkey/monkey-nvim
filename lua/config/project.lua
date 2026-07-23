@@ -1,8 +1,4 @@
--- ~/.config/nvim/lua/plugins/project.lua
-
--- Minimal project root detection — no external plugin needed.
--- Replaces airblade/vim-rooter
-
+-- --- project root detection ---
 local M = {}
 
 M.patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
