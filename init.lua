@@ -34,7 +34,7 @@ vim.pack.add({
   { src = 'https://github.com/tpope/vim-repeat' },
   { src = 'https://github.com/tpope/vim-eunuch' },
   { src = 'https://github.com/NeogitOrg/neogit' },
-  { src = 'https://github.com/sindrets/diffview.nvim' },
+  { src = 'https://github.com/esmuellert/codediff.nvim' },
   { src = 'https://github.com/akinsho/toggleterm.nvim' },
   { src = 'https://github.com/stevearc/oil.nvim' },
   { src = 'https://github.com/rmagatti/auto-session' },
@@ -1037,7 +1037,12 @@ vim.g.highlightedyank_highlight_duration = 200
 -- neogit + gitsigns
 
 require('neogit').setup({
-  integrations = { diffview = true },
+  diff_viewer = 'codediff',
+  integrations = { codediff = true },
+})
+
+require('codediff').setup({
+  diff = { compact = true },
 })
 
 vim.keymap.set('n', '<leader>gs', '<cmd>Neogit<CR>', { silent = true })
