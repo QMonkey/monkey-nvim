@@ -600,7 +600,7 @@ require('trouble').setup({
   height = 10,
 })
 
-vim.keymap.set('n', '<leader>q', '<cmd>Trouble quickfix toggle<CR>', { silent = true })
+vim.keymap.set('n', '<leader>q', '<cmd>Trouble diagnostics toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = true })
 
 -- auto-session
@@ -939,14 +939,14 @@ vim.lsp.config('vscode-json-language-server', {
 })
 
 local cmp_nvim_lsp = require('cmp_nvim_lsp')
-local capabilities = cmp_nvim_lsp.default_capabilities()
+vim.lsp.config('*', { capabilities = cmp_nvim_lsp.default_capabilities() })
 
 local enabled = {
   'clangd', 'rust_analyzer', 'gopls', 'typescript-language-server', 'pylsp', 'lua-language-server',
   'bash-language-server', 'vim-language-server', 'marksman', 'yaml-language-server', 'vscode-json-language-server',
 }
 for _, name in ipairs(enabled) do
-  vim.lsp.enable(name, capabilities and { capabilities = capabilities } or {})
+  vim.lsp.enable(name)
 end
 
 vim.diagnostic.config({ virtual_lines = { current_line = true } })
