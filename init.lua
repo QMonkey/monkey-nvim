@@ -436,6 +436,7 @@ vim.keymap.set('n', '<S-q>', '<cmd>quitall<CR>', { silent = true })
 vim.keymap.set({ 'n', 'v' }, 't', 'q')
 
 -- Terminal
+vim.keymap.set('n', '<F3>', ':botright terminal ', { desc = 'Open terminal with command' })
 require('toggleterm').setup({
   size = 15,
   open_mapping = '<F4>',
@@ -633,7 +634,6 @@ telescope.setup({
 })
 
 local builtin = require('telescope.builtin')
-
 vim.keymap.set('n', '<C-p>', builtin.find_files, { silent = true })
 vim.keymap.set('n', '<leader>b', builtin.buffers, { silent = true })
 vim.keymap.set('n', '<leader>y', builtin.current_buffer_tags, { silent = true })
