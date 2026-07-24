@@ -94,7 +94,7 @@ vim.opt.completeopt = 'menu,menuone,noselect'
 vim.opt.magic = true
 
 -- Swap
-vim.opt.directory = vim.fn.expand('$HOME/.nvim/swap//')
+vim.opt.directory = vim.fn.stdpath("data") .. "/swap//"
 vim.opt.jumpoptions:append('stack')
 
 -- Clipboard
@@ -207,6 +207,9 @@ vim.api.nvim_create_autocmd('BufNewFile', {
 })
 
 -- Docset
+vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
+vim.opt.keywordprg = ':LspHover'
+
 local docsetGroup = vim.api.nvim_create_augroup('DocSet', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
   group = docsetGroup,
@@ -216,14 +219,11 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
-vim.keymap.set('n', 'K', vim.lsp.buf.hover, { silent = true })
-
 vim.api.nvim_create_autocmd('FileType', {
   group = docsetGroup,
   pattern = { 'c', 'man' },
   callback = function()
     vim.bo.keywordprg = ':Man'
-    vim.keymap.del('n', 'K', { buffer = 0 })
   end,
 })
 
@@ -232,7 +232,6 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = { 'vim', 'help' },
   callback = function()
     vim.bo.keywordprg = ':help'
-    vim.keymap.del('n', 'K', { buffer = 0 })
   end,
 })
 
@@ -306,7 +305,7 @@ vim.api.nvim_create_autocmd('User', {
   group = vm_lualine_augroup,
   pattern = { 'visual_multi_start', 'visual_multi_exit' },
   callback = function()
-    vim.cmd('lualine.refresh')
+    require('lualine').refresh()
   end,
 })
 
@@ -704,7 +703,7 @@ vim.o.foldlevelstart = 99
 vim.o.foldenable = true
 
 require('ufo').setup({
-  provider_selector = function(_, ft, _)
+  provider_selector = function(_, _, _)
     return { 'treesitter', 'indent' }
   end,
   fold_virt_text_handler = function(virtText, lnum, endLnum, width, truncate)
@@ -765,12 +764,13 @@ vim.api.nvim_create_autocmd('LspAttach', {
     vim.keymap.set('n', '<leader>gc', function() vim.lsp.buf.declaration({ reuse_win = true }) end, bufopts)
     vim.keymap.set('n', '<leader>gt', function() vim.lsp.buf.type_definition({ reuse_win = true }) end, bufopts)
     vim.keymap.set('n', '<leader>gi', function() vim.lsp.buf.implementation({ reuse_win = true }) end, bufopts)
-    vim.keymap.set('n', '<leader>gr', function() vim.lsp.buf.references({ reuse_win = true }) end, bufopts)
+    vim.keymap.set('n', '<leader>gr',
+      function() vim.lsp.buf.references({ includeDeclaration = false, reuse_win = true }) end, bufopts)
 
-    vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, bufopts)
-    vim.keymap.set('n', ']d', vim.diagnostic.goto_next, bufopts)
-    vim.keymap.set('n', '[D', function() vim.diagnostic.goto_prev({ count = 999 }) end, bufopts)
-    vim.keymap.set('n', ']D', function() vim.diagnostic.goto_next({ count = 999 }) end, bufopts)
+    vim.keymap.set('n', '[d', function() vim.diagnostic.jump({ count = -1 }) end, bufopts)
+    vim.keymap.set('n', ']d', function() vim.diagnostic.jump({ count = 1 }) end, bufopts)
+    vim.keymap.set('n', '[D', function() vim.diagnostic.jump({ count = -999 }) end, bufopts)
+    vim.keymap.set('n', ']D', function() vim.diagnostic.jump({ count = 999 }) end, bufopts)
     vim.keymap.set('n', '<leader>gh', function() vim.diagnostic.open_float({ scope = 'cursor' }) end, bufopts)
     vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, bufopts)
   end,
@@ -1026,8 +1026,21 @@ require('mini.indentscope').setup({ draw = { delay = 0 } })
 -- mini.ai
 require('mini.ai').setup()
 
--- mini.surround
-require('mini.surround').setup()
+-- mini.surround (vim-surround compatible mappings)
+require('mini.surround').setup({
+  mappings = {
+    add = 'ys',
+    delete = 'ds',
+    find = '',
+    find_left = '',
+    highlight = '',
+    replace = 'cs',
+  },
+  search_method = 'cover_or_next',
+})
+vim.keymap.set('n', 'yss', 'ys_', { remap = true })
+vim.keymap.del('x', 'ys')
+vim.keymap.set('x', 'S', [[:<C-u>lua MiniSurround.add('visual')<CR>]], { silent = true })
 
 -- Comment.nvim
 require('Comment').setup()
