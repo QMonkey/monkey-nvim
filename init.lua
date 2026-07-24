@@ -31,8 +31,6 @@ vim.pack.add({
   { src = 'https://github.com/folke/trouble.nvim' },
   { src = 'https://github.com/rafamadriz/friendly-snippets' },
   { src = 'https://github.com/mg979/vim-visual-multi' },
-  { src = 'https://github.com/tpope/vim-repeat' },
-  { src = 'https://github.com/tpope/vim-eunuch' },
   { src = 'https://github.com/NeogitOrg/neogit' },
   { src = 'https://github.com/esmuellert/codediff.nvim' },
   { src = 'https://github.com/akinsho/toggleterm.nvim' },
@@ -510,7 +508,7 @@ vim.keymap.set('n', '<leader>z', function()
   end
 end, { silent = true })
 
--- vim-rooter
+-- rooter
 local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
 
 local function find_root()
@@ -548,13 +546,7 @@ vim.api.nvim_create_autocmd('VimEnter', {
 
 -- oil.nvim
 require('oil').setup({
-  keymaps = {
-    ['-'] = 'actions.parent',
-    ['<CR>'] = 'actions.select',
-    ['<C-s>'] = 'actions.select_vsplit',
-    ['<C-v>'] = 'actions.select_split',
-    ['<C-t>'] = 'actions.select_tab',
-  },
+  view_options = { show_hidden = true },
 })
 
 vim.keymap.set('n', '-', function()
@@ -565,6 +557,11 @@ vim.keymap.set('n', '~', function()
   local root = find_root() or vim.fn.expand('~')
   require('oil').open(root)
 end, { silent = true })
+
+-- sudo write
+vim.api.nvim_create_user_command('SudoWrite', function()
+  vim.cmd('write !sudo tee % >/dev/null && edit!')
+end, {})
 
 -- gutentags
 vim.g.gutentags_modules = { 'ctags' }
@@ -622,6 +619,12 @@ telescope.setup({
     },
   },
   pickers = {
+    buffers = {
+      mappings = {
+        i = { ['<C-d>'] = actions.delete_buffer },
+        n = { ['<C-d>'] = actions.delete_buffer },
+      },
+    },
     live_grep = { additional_args = { '--hidden' } },
     find_files = { hidden = true },
   },
