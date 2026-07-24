@@ -1,8 +1,0 @@
-require('config.editor')
-require('config.project')
-require('config.navigation')
-require('config.completion')
-require('config.lsp')
-require('config.git')
-require('config.tools')
-require('config.ui')
