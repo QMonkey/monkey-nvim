@@ -34,6 +34,7 @@ vim.pack.add({
   { src = 'https://github.com/tpope/vim-repeat' },
   { src = 'https://github.com/tpope/vim-eunuch' },
   { src = 'https://github.com/NeogitOrg/neogit' },
+  { src = 'https://github.com/sindrets/diffview.nvim' },
   { src = 'https://github.com/akinsho/toggleterm.nvim' },
   { src = 'https://github.com/stevearc/oil.nvim' },
   { src = 'https://github.com/rmagatti/auto-session' },
@@ -222,7 +223,7 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = { 'c', 'man' },
   callback = function()
     vim.bo.keywordprg = ':Man'
-    pcall(vim.keymap.del, 'n', 'K', { buffer = true })
+    vim.keymap.del('n', 'K', { buffer = 0 })
   end,
 })
 
@@ -231,7 +232,7 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = { 'vim', 'help' },
   callback = function()
     vim.bo.keywordprg = ':help'
-    pcall(vim.keymap.del, 'n', 'K', { buffer = true })
+    vim.keymap.del('n', 'K', { buffer = 0 })
   end,
 })
 
@@ -257,7 +258,7 @@ vim.api.nvim_create_autocmd('BufReadPost', {
     local mark = vim.api.nvim_buf_get_mark(0, '"')
     local lcount = vim.api.nvim_buf_line_count(0)
     if mark[1] > 1 and mark[1] <= lcount then
-      pcall(vim.api.nvim_win_set_cursor, 0, mark)
+      vim.api.nvim_win_set_cursor(0, mark)
     end
   end,
 })
@@ -305,7 +306,7 @@ vim.api.nvim_create_autocmd('User', {
   group = vm_lualine_augroup,
   pattern = { 'visual_multi_start', 'visual_multi_exit' },
   callback = function()
-    pcall(vim.cmd, 'lualine.refresh')
+    vim.cmd('lualine.refresh')
   end,
 })
 
@@ -427,7 +428,7 @@ vim.keymap.set('n', 'q', function()
 
   if is_qf or is_preview then
     if tonumber(last_winnr) > 0 and vim.fn.win_id2win(vim.fn.win_getid(tonumber(last_winnr))) ~= 0 then
-      pcall(vim.cmd, last_winnr .. 'wincmd w')
+      vim.cmd(last_winnr .. 'wincmd w')
     end
   end
 end, { silent = true })
@@ -937,8 +938,8 @@ vim.lsp.config('vscode-json-language-server', {
   root_markers = { '.git' },
 })
 
-local ok_cmp, cmp_nvim_lsp = pcall(require, 'cmp_nvim_lsp')
-local capabilities = ok_cmp and cmp_nvim_lsp.default_capabilities() or nil
+local cmp_nvim_lsp = require('cmp_nvim_lsp')
+local capabilities = cmp_nvim_lsp.default_capabilities()
 
 local enabled = {
   'clangd', 'rust_analyzer', 'gopls', 'typescript-language-server', 'pylsp', 'lua-language-server',
@@ -1014,18 +1015,11 @@ vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typ
   'vim', 'sql', 'yaml', 'json' }
 
 -- nvim-treesitter
-local ok_treesitter, configs = pcall(require, 'nvim-treesitter.configs')
-if ok_treesitter then
-  configs.setup({
-    ensure_installed = {
-      'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
-      'markdown_inline', 'yaml', 'json', 'sql',
-    },
-    auto_install = true,
-    highlight = { enable = true },
-    indent = { enable = true },
-  })
-end
+require('nvim-treesitter').setup()
+require('nvim-treesitter.install').install({
+  'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
+  'markdown_inline', 'yaml', 'json', 'sql',
+})
 -- mini.indentscope
 require('mini.indentscope').setup({ draw = { delay = 0 } })
 
@@ -1042,13 +1036,12 @@ require('Comment').setup()
 vim.g.highlightedyank_highlight_duration = 200
 -- neogit + gitsigns
 
-local ok_neogit, neogit = pcall(require, 'neogit')
-if ok_neogit then
-  neogit.setup()
-end
+require('neogit').setup({
+  integrations = { diffview = true },
+})
 
 vim.keymap.set('n', '<leader>gs', '<cmd>Neogit<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gD', '<cmd>Gitsigns diffthis<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gB', '<cmd>Gitsigns blame<CR>', { silent = true })
 
 require('gitsigns').setup()
