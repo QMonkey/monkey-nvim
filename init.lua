@@ -33,6 +33,7 @@ vim.pack.add({
   { src = 'https://github.com/mg979/vim-visual-multi' },
   { src = 'https://github.com/tpope/vim-repeat' },
   { src = 'https://github.com/tpope/vim-eunuch' },
+  { src = 'https://github.com/NeogitOrg/neogit' },
   { src = 'https://github.com/akinsho/toggleterm.nvim' },
   { src = 'https://github.com/stevearc/oil.nvim' },
   { src = 'https://github.com/rmagatti/auto-session' },
@@ -415,6 +416,12 @@ vim.keymap.set('n', 'q', function()
   local is_diff = vim.wo.diff
   local is_qf = ftype == 'qf'
   local is_preview = vim.wo.previewwindow
+
+  if is_diff and tonumber(last_winnr) > 0 then
+    vim.cmd(last_winnr .. 'wincmd w')
+    vim.cmd('quit')
+    return
+  end
 
   vim.cmd('quit')
 
@@ -1033,6 +1040,15 @@ require('Comment').setup()
 
 -- highlightedyank
 vim.g.highlightedyank_highlight_duration = 200
--- gitsigns
+-- neogit + gitsigns
+
+local ok_neogit, neogit = pcall(require, 'neogit')
+if ok_neogit then
+  neogit.setup()
+end
+
+vim.keymap.set('n', '<leader>gs', '<cmd>Neogit<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gB', '<cmd>Gitsigns blame<CR>', { silent = true })
 
 require('gitsigns').setup()
