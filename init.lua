@@ -1,4 +1,4 @@
-vim.cmd('syntax off')
+vim.cmd('syntax on')
 
 -- Plugins
 vim.pack.add({
@@ -260,12 +260,6 @@ vim.api.nvim_create_autocmd('BufReadPost', {
       vim.api.nvim_win_set_cursor(0, mark)
     end
   end,
-})
-
--- Jumplist
-vim.api.nvim_create_autocmd('VimEnter', {
-  group = vim.api.nvim_create_augroup('Jumplist', { clear = true }),
-  command = 'clearjumps',
 })
 
 -- CheckFileChanges
