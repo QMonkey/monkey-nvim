@@ -4,7 +4,7 @@ vim.cmd('syntax on')
 vim.pack.add({
   { src = 'https://github.com/sainnhe/sonokai' },
   { src = 'https://github.com/nvim-lualine/lualine.nvim' },
-  { src = 'https://github.com/nvim-tree/nvim-web-devicons' },
+  { src = 'https://github.com/echasnovski/mini.icons' },
   { src = 'https://github.com/nvim-lua/plenary.nvim' },
   { src = 'https://github.com/nvim-telescope/telescope.nvim' },
   { src = 'https://github.com/hrsh7th/nvim-cmp' },
@@ -656,8 +656,6 @@ vim.keymap.set('v', '<leader>a', function()
   vim.fn.setreg('"', saved_reg, saved_regtype)
   builtin.grep_string({ default_text = text })
 end, { silent = true })
-vim.keymap.set('n', '<leader>gc', builtin.git_commits, { silent = true })
-vim.keymap.set('n', '<leader>gb', builtin.git_branches, { silent = true })
 vim.keymap.set('n', '<F1>', builtin.live_grep, { silent = true })
 vim.keymap.set({ 'n', 'i' }, '<F2>', function()
   local state = require('telescope.state')
@@ -1027,6 +1025,10 @@ require('nvim-treesitter.install').install({
   'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
   'markdown_inline', 'yaml', 'json', 'sql',
 })
+
+-- mini.icons
+require('mini.icons').setup()
+
 -- mini.indentscope
 require('mini.indentscope').setup({ draw = { delay = 0 } })
 
@@ -1060,7 +1062,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
--- neogit + gitsigns
+-- git
 require('neogit').setup({
   diff_viewer = 'codediff',
   integrations = { codediff = true },
@@ -1072,6 +1074,12 @@ require('codediff').setup({
 
 require('gitsigns').setup()
 
-vim.keymap.set('n', '<leader>gs', '<cmd>Neogit<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gD', '<cmd>Gitsigns diffthis<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gD', '<cmd>CodeDiff<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns blame_line<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gB', '<cmd>Gitsigns blame<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gsl', '<cmd>Gitsigns setloclist<CR>', { silent = true })
+vim.keymap.set('n', '<leader>ghp', '<cmd>Gitsigns preview_hunk_inline<CR>', { silent = true })
+vim.keymap.set('n', '<leader>ghs', '<cmd>Gitsigns stage_hunk<CR>', { silent = true })
+vim.keymap.set('n', '<leader>ghr', '<cmd>Gitsigns reset_hunk<CR>', { silent = true })
