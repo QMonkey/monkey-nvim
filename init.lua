@@ -5,9 +5,8 @@ vim.pack.add({
   { src = 'https://github.com/sainnhe/sonokai' },
   { src = 'https://github.com/nvim-lualine/lualine.nvim' },
   { src = 'https://github.com/nvim-tree/nvim-web-devicons' },
-  { src = 'https://github.com/nvim-telescope/telescope.nvim' },
   { src = 'https://github.com/nvim-lua/plenary.nvim' },
-  { src = 'https://github.com/williamboman/mason.nvim' },
+  { src = 'https://github.com/nvim-telescope/telescope.nvim' },
   { src = 'https://github.com/hrsh7th/nvim-cmp' },
   { src = 'https://github.com/hrsh7th/cmp-nvim-lsp' },
   { src = 'https://github.com/hrsh7th/cmp-buffer' },
@@ -22,15 +21,14 @@ vim.pack.add({
   { src = 'https://github.com/echasnovski/mini.indentscope' },
   { src = 'https://github.com/echasnovski/mini.surround' },
   { src = 'https://github.com/numToStr/Comment.nvim' },
-  { src = 'https://github.com/machakann/vim-highlightedyank' },
   { src = 'https://github.com/windwp/nvim-autopairs' },
-  { src = 'https://github.com/kevinhwang91/nvim-ufo' },
   { src = 'https://github.com/kevinhwang91/promise-async' },
+  { src = 'https://github.com/kevinhwang91/nvim-ufo' },
   { src = 'https://github.com/ludovicchabant/vim-gutentags' },
   { src = 'https://github.com/chentoast/marks.nvim' },
   { src = 'https://github.com/folke/trouble.nvim' },
   { src = 'https://github.com/rafamadriz/friendly-snippets' },
-  { src = 'https://github.com/mg979/vim-visual-multi' },
+  { src = 'https://github.com/jake-stewart/multicursor.nvim' },
   { src = 'https://github.com/NeogitOrg/neogit' },
   { src = 'https://github.com/esmuellert/codediff.nvim' },
   { src = 'https://github.com/akinsho/toggleterm.nvim' },
@@ -85,6 +83,18 @@ vim.opt.gdefault = true
 vim.opt.shortmess:remove('S')
 vim.opt.shortmess:append('s')
 
+local hlsearchGroup = vim.api.nvim_create_augroup('Hlsearch', { clear = true })
+vim.api.nvim_create_autocmd('InsertEnter', {
+  group = hlsearchGroup,
+  callback = function()
+    if vim.v.hlsearch == 1 then
+      vim.schedule(function()
+        vim.cmd('nohlsearch')
+      end)
+    end
+  end,
+})
+
 -- Completion
 vim.opt.wildmenu = true
 vim.opt.wildmode = 'list:longest,full'
@@ -122,7 +132,7 @@ vim.opt.timeout = true
 vim.opt.timeoutlen = 1000
 vim.opt.ttimeout = true
 vim.opt.ttimeoutlen = 10
-vim.opt.updatetime = 300
+vim.opt.updatetime = 500
 
 -- Display
 vim.opt.list = true
@@ -287,19 +297,10 @@ vim.opt.background = 'dark'
 vim.cmd('colorscheme sonokai')
 
 -- lualine.nvim
-local function vm_active()
-  local ok, vm = pcall(vim.fn.VMInfos)
-  return ok and type(vm) == 'table' and not vim.tbl_isempty(vm)
+local mc = require('multicursor-nvim')
+local function mc_active()
+  return mc.hasCursors()
 end
-
-local vm_lualine_augroup = vim.api.nvim_create_augroup('VMLualine', { clear = true })
-vim.api.nvim_create_autocmd('User', {
-  group = vm_lualine_augroup,
-  pattern = { 'visual_multi_start', 'visual_multi_exit' },
-  callback = function()
-    require('lualine').refresh()
-  end,
-})
 
 require('lualine').setup({
   options = {
@@ -312,14 +313,24 @@ require('lualine').setup({
     lualine_a = {
       {
         function()
-          if vm_active() then
-            return 'V-MULTI'
+          if mc_active() then
+            local m = vim.fn.mode()
+            local prefix
+            if m == 'n' then prefix = 'N'
+            elseif m == 'v' then prefix = 'V'
+            elseif m == 'V' then prefix = 'V-L'
+            else prefix = 'V-B'
+            end
+            return prefix .. '-MULTI'
           end
           return require('lualine.utils.mode').get_mode()
         end,
         color = function()
-          if vm_active() then
-            return { fg = '#1a1b26', bg = '#bb9af7', gui = 'bold' }
+          if mc_active() then
+            local purple = vim.fn.mode() ~= 'n'
+              and '#9d7cd8'
+              or '#bb9af7'
+            return { fg = '#1a1b26', bg = purple, gui = 'bold' }
           end
           return {}
         end,
@@ -336,14 +347,10 @@ require('lualine').setup({
     lualine_x = {
       {
         function()
-          if not vm_active() then
+          if not mc_active() then
             return ''
           end
-          local ok, vm = pcall(vim.fn.VMInfos)
-          if not ok or type(vm) ~= 'table' or vim.tbl_isempty(vm) then
-            return ''
-          end
-          local result = vm.ratio or ''
+          local result = mc.numCursors() .. ' cursors'
           if vim.v.hlsearch and vim.fn.getreg('/') ~= '' then
             result = result .. '  /' .. vim.fn.getreg('/')
           end
@@ -484,11 +491,8 @@ vim.keymap.set('n', 'cod', function()
 end, { silent = true })
 vim.keymap.set('n', 'cop', '<cmd>set invpaste<CR>', { silent = true })
 vim.keymap.set('n', 'col', '<cmd>set invlist<CR>', { silent = true })
-vim.keymap.set('n', 'con', function()
-  vim.cmd.nohlsearch()
-end, { silent = true })
-vim.keymap.set('n', '<leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:nohlsearch<CR>', { silent = true })
-vim.keymap.set('n', '<leader><leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:%s/\\r$//e<CR>:nohlsearch<CR>', { silent = true })
+vim.keymap.set('n', '<leader><Space>', '<cmd>%s/\\s\\+$//e<CR>', { silent = true })
+vim.keymap.set('n', '<leader><leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:%s/\\r$//e<CR>', { silent = true })
 
 vim.api.nvim_create_autocmd('InsertLeave', {
   group = vim.api.nvim_create_augroup('PasteMode', { clear = true }),
@@ -591,7 +595,8 @@ require('trouble').setup({
   height = 10,
 })
 
-vim.keymap.set('n', '<leader>q', '<cmd>Trouble diagnostics toggle<CR>', { silent = true })
+vim.keymap.set('n', '<leader>d', '<cmd>Trouble diagnostics toggle<CR>', { silent = true })
+vim.keymap.set('n', '<leader>q', '<cmd>Trouble quickfix toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = true })
 
 -- auto-session
@@ -672,8 +677,11 @@ require('flash').setup({
 vim.keymap.set({ 'n', 'x', 'o' }, 'f', function()
   require('flash').jump()
 end)
-vim.keymap.set({ 'n', 'x', 'o' }, 'F', function()
-  require('flash').jump({ search = { mode = 'search' } })
+vim.keymap.set('n', 'F', function()
+  require('flash').jump({ jump = { pos = 'end' } })
+end)
+vim.keymap.set({ 'x', 'o' }, 'F', function()
+  require('flash').treesitter()
 end)
 
 -- substitute.nvim
@@ -684,14 +692,24 @@ vim.keymap.set('x', 's', require('substitute').visual, { silent = true })
 vim.keymap.set('n', 'ss', require('substitute').line, { silent = true })
 vim.keymap.set('n', 'S', require('substitute').eol, { silent = true })
 
--- vim-visual-multi
-vim.cmd([[
-  let g:VM_maps = {}
-  let g:VM_maps['Select Operator'] = 'gs'
-  let g:VM_set_statusline = 0
-  let g:VM_silent_exit = 1
-  let g:VM_show_warnings = 0
-]])
+-- multicursor.nvim
+mc = require('multicursor-nvim')
+mc.setup({ hlsearch = true })
+
+vim.keymap.set({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
+mc.addKeymapLayer(function(layerSet)
+  layerSet({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
+  layerSet({ 'n', 'x' }, '<c-p>', function() mc.matchAddCursor(-1) end)
+  layerSet({ 'n', 'x' }, '<c-x>', function() mc.matchSkipCursor(1) end)
+  layerSet({ 'n', 'x' }, '<c-q>', function() mc.matchSkipCursor(-1) end)
+  layerSet('n', '<esc>', function()
+    if not mc.cursorsEnabled() then
+      mc.enableCursors()
+    else
+      mc.clearCursors()
+    end
+  end)
+end)
 
 -- nvim-ufo
 vim.o.foldcolumn = '0'
@@ -742,8 +760,6 @@ npairs.add_rule(rule('"', '"', 'vim'):with_pair(function() return false end))
 require('marks').setup()
 
 -- lsp
-require('mason').setup()
-
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('Lsp', { clear = true }),
   callback = function(args)
@@ -757,18 +773,10 @@ vim.api.nvim_create_autocmd('LspAttach', {
     vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, bufopts)
     vim.keymap.set('n', 'gr', vim.lsp.buf.references, bufopts)
 
-    vim.keymap.set('n', '<leader>gd', function() vim.lsp.buf.definition({ reuse_win = true }) end, bufopts)
-    vim.keymap.set('n', '<leader>gc', function() vim.lsp.buf.declaration({ reuse_win = true }) end, bufopts)
-    vim.keymap.set('n', '<leader>gt', function() vim.lsp.buf.type_definition({ reuse_win = true }) end, bufopts)
-    vim.keymap.set('n', '<leader>gi', function() vim.lsp.buf.implementation({ reuse_win = true }) end, bufopts)
-    vim.keymap.set('n', '<leader>gr',
-      function() vim.lsp.buf.references({ includeDeclaration = false, reuse_win = true }) end, bufopts)
-
     vim.keymap.set('n', '[d', function() vim.diagnostic.jump({ count = -1 }) end, bufopts)
     vim.keymap.set('n', ']d', function() vim.diagnostic.jump({ count = 1 }) end, bufopts)
     vim.keymap.set('n', '[D', function() vim.diagnostic.jump({ count = -999 }) end, bufopts)
     vim.keymap.set('n', ']D', function() vim.diagnostic.jump({ count = 999 }) end, bufopts)
-    vim.keymap.set('n', '<leader>gh', function() vim.diagnostic.open_float({ scope = 'cursor' }) end, bufopts)
     vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, bufopts)
   end,
 })
@@ -1042,10 +1050,15 @@ vim.keymap.set('x', 'S', [[:<C-u>lua MiniSurround.add('visual')<CR>]], { silent 
 -- Comment.nvim
 require('Comment').setup()
 
--- highlightedyank
-vim.g.highlightedyank_highlight_duration = 200
--- neogit + gitsigns
+-- highlight
+vim.api.nvim_create_autocmd('TextYankPost', {
+  group = vim.api.nvim_create_augroup('HighlightYank', { clear = true }),
+  callback = function()
+    vim.highlight.on_yank { higroup = 'Search', timeout = 200 }
+  end,
+})
 
+-- neogit + gitsigns
 require('neogit').setup({
   diff_viewer = 'codediff',
   integrations = { codediff = true },
@@ -1055,8 +1068,8 @@ require('codediff').setup({
   diff = { compact = true },
 })
 
+require('gitsigns').setup()
+
 vim.keymap.set('n', '<leader>gs', '<cmd>Neogit<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gD', '<cmd>Gitsigns diffthis<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gB', '<cmd>Gitsigns blame<CR>', { silent = true })
-
-require('gitsigns').setup()
