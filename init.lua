@@ -316,10 +316,14 @@ require('lualine').setup({
           if mc_active() then
             local m = vim.fn.mode()
             local prefix
-            if m == 'n' then prefix = 'N'
-            elseif m == 'v' then prefix = 'V'
-            elseif m == 'V' then prefix = 'V-L'
-            else prefix = 'V-B'
+            if m == 'n' then
+              prefix = 'N'
+            elseif m == 'v' then
+              prefix = 'V'
+            elseif m == 'V' then
+              prefix = 'V-L'
+            else
+              prefix = 'V-B'
             end
             return prefix .. '-MULTI'
           end
@@ -327,9 +331,7 @@ require('lualine').setup({
         end,
         color = function()
           if mc_active() then
-            local purple = vim.fn.mode() ~= 'n'
-              and '#9d7cd8'
-              or '#bb9af7'
+            local purple = vim.fn.mode() ~= 'n' and '#9d7cd8' or '#bb9af7'
             return { fg = '#1a1b26', bg = purple, gui = 'bold' }
           end
           return {}
