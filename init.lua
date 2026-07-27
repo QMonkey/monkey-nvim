@@ -2,38 +2,45 @@ vim.cmd('syntax on')
 
 -- Plugins
 vim.pack.add({
+  -- Theme / UI
   { src = 'https://github.com/sainnhe/sonokai' },
   { src = 'https://github.com/nvim-lualine/lualine.nvim' },
   { src = 'https://github.com/echasnovski/mini.icons' },
+  -- Editor
+  { src = 'https://github.com/echasnovski/mini.indentscope' },
+  { src = 'https://github.com/echasnovski/mini.ai' },
+  { src = 'https://github.com/echasnovski/mini.surround' },
+  { src = 'https://github.com/numToStr/Comment.nvim' },
+  { src = 'https://github.com/windwp/nvim-autopairs' },
+  { src = 'https://github.com/gbprod/substitute.nvim' },
+  { src = 'https://github.com/chentoast/marks.nvim' },
+  -- Navigation / Search
   { src = 'https://github.com/nvim-lua/plenary.nvim' },
   { src = 'https://github.com/nvim-telescope/telescope.nvim' },
+  { src = 'https://github.com/folke/flash.nvim' },
+  { src = 'https://github.com/kevinhwang91/promise-async' },
+  { src = 'https://github.com/kevinhwang91/nvim-ufo' },
+  -- Code Intelligence
+  { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
   { src = 'https://github.com/hrsh7th/nvim-cmp' },
   { src = 'https://github.com/hrsh7th/cmp-nvim-lsp' },
   { src = 'https://github.com/hrsh7th/cmp-buffer' },
   { src = 'https://github.com/hrsh7th/cmp-path' },
   { src = 'https://github.com/L3MON4D3/LuaSnip' },
   { src = 'https://github.com/saadparwaiz1/cmp_luasnip' },
-  { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
-  { src = 'https://github.com/lewis6991/gitsigns.nvim' },
-  { src = 'https://github.com/folke/flash.nvim' },
-  { src = 'https://github.com/gbprod/substitute.nvim' },
-  { src = 'https://github.com/echasnovski/mini.ai' },
-  { src = 'https://github.com/echasnovski/mini.indentscope' },
-  { src = 'https://github.com/echasnovski/mini.surround' },
-  { src = 'https://github.com/numToStr/Comment.nvim' },
-  { src = 'https://github.com/windwp/nvim-autopairs' },
-  { src = 'https://github.com/kevinhwang91/promise-async' },
-  { src = 'https://github.com/kevinhwang91/nvim-ufo' },
-  { src = 'https://github.com/ludovicchabant/vim-gutentags' },
-  { src = 'https://github.com/chentoast/marks.nvim' },
-  { src = 'https://github.com/folke/trouble.nvim' },
   { src = 'https://github.com/rafamadriz/friendly-snippets' },
-  { src = 'https://github.com/jake-stewart/multicursor.nvim' },
+  -- Git
+  { src = 'https://github.com/lewis6991/gitsigns.nvim' },
   { src = 'https://github.com/NeogitOrg/neogit' },
   { src = 'https://github.com/esmuellert/codediff.nvim' },
-  { src = 'https://github.com/akinsho/toggleterm.nvim' },
-  { src = 'https://github.com/stevearc/oil.nvim' },
+  -- Project
   { src = 'https://github.com/rmagatti/auto-session' },
+  { src = 'https://github.com/stevearc/oil.nvim' },
+  { src = 'https://github.com/ludovicchabant/vim-gutentags' },
+  -- Tools
+  { src = 'https://github.com/folke/trouble.nvim' },
+  { src = 'https://github.com/jake-stewart/multicursor.nvim' },
+  { src = 'https://github.com/akinsho/toggleterm.nvim' },
 })
 
 -- Leader
@@ -142,11 +149,6 @@ vim.opt.listchars = 'tab:▸ ,leadmultispace:│   ,eol:¬,trail:·'
 vim.opt.scrolloff = 7
 vim.opt.sidescrolloff = 15
 vim.opt.sidescroll = 1
-
--- Fold
-vim.opt.foldenable = false
-vim.opt.foldmethod = 'syntax'
-vim.opt.foldlevel = 99
 
 -- Misc
 vim.opt.backspace = 'indent,eol,start'
@@ -382,203 +384,262 @@ require('lualine').setup({
   },
 })
 
--- Key map
-vim.keymap.set('n', 'Y', 'y$')
-vim.keymap.set({ 'n', 'v' }, 'j', 'gj')
-vim.keymap.set({ 'n', 'v' }, 'k', 'gk')
-vim.keymap.set({ 'n', 'v' }, 'H', '^')
-vim.keymap.set({ 'n', 'v' }, 'L', '$')
-vim.keymap.set('v', '<', '<gv')
-vim.keymap.set('v', '>', '>gv')
-vim.keymap.set({ 'n', 'v' }, ';', ':')
-vim.keymap.set('n', 'U', '<C-r>')
+-- mini.icons
+require('mini.icons').setup()
 
-vim.keymap.set('i', '<C-p>', '<Up>')
-vim.keymap.set('i', '<C-n>', '<Down>')
-vim.keymap.set('i', '<C-b>', '<Left>')
-vim.keymap.set('i', '<C-f>', '<Right>')
-vim.keymap.set('i', '<C-a>', '<Home>')
-vim.keymap.set('i', '<C-e>', '<End>')
-vim.keymap.set('i', '<C-h>', '<BackSpace>')
-vim.keymap.set('i', '<C-d>', '<Del>')
+-- mini.indentscope
+require('mini.indentscope').setup({ draw = { delay = 0 } })
 
-vim.keymap.set('c', '<C-p>', '<Up>')
-vim.keymap.set('c', '<C-n>', '<Down>')
-vim.keymap.set('c', '<C-b>', '<Left>')
-vim.keymap.set('c', '<C-f>', '<Right>')
-vim.keymap.set('c', '<C-a>', '<Home>')
-vim.keymap.set('c', '<C-e>', '<End>')
-vim.keymap.set('c', '<C-h>', '<BackSpace>')
-vim.keymap.set('c', '<C-d>', '<Del>')
+-- mini.ai
+require('mini.ai').setup()
 
-local function is_auxiliary_window(win_id)
-  if not vim.api.nvim_win_is_valid(win_id) then
-    return true
+-- mini.surround (vim-surround compatible mappings)
+require('mini.surround').setup({
+  mappings = {
+    add = 'ys',
+    delete = 'ds',
+    find = '',
+    find_left = '',
+    highlight = '',
+    replace = 'cs',
+  },
+  search_method = 'cover_or_next',
+})
+vim.keymap.set('n', 'yss', 'ys_', { remap = true })
+vim.keymap.del('x', 'ys')
+vim.keymap.set('x', 'S', [[:<C-u>lua MiniSurround.add('visual')<CR>]], { silent = true })
+
+-- Comment.nvim
+require('Comment').setup()
+
+-- nvim-autopairs
+local npairs = require('nvim-autopairs')
+npairs.setup()
+
+local rule = require('nvim-autopairs.rule')
+npairs.add_rule(rule('"', '"', 'vim'):with_pair(function() return false end))
+
+-- substitute.nvim
+require('substitute').setup()
+
+vim.keymap.set('n', 's', require('substitute').operator, { silent = true })
+vim.keymap.set('x', 's', require('substitute').visual, { silent = true })
+vim.keymap.set('n', 'ss', require('substitute').line, { silent = true })
+vim.keymap.set('n', 'S', require('substitute').eol, { silent = true })
+
+-- marks.nvim
+require('marks').setup()
+
+-- telescope.nvim
+local telescope = require('telescope')
+local actions = require('telescope.actions')
+
+telescope.setup({
+  defaults = {
+    file_ignore_patterns = { '.git/', '.hg/', '.svn/', '.bzr/' },
+    mappings = {
+      i = {
+        ['<C-j>'] = actions.move_selection_next,
+        ['<C-k>'] = actions.move_selection_previous,
+      },
+    },
+  },
+  pickers = {
+    buffers = {
+      mappings = {
+        i = { ['<C-d>'] = actions.delete_buffer },
+        n = { ['<C-d>'] = actions.delete_buffer },
+      },
+    },
+    live_grep = { additional_args = { '--hidden' } },
+    find_files = { hidden = true },
+  },
+})
+
+local builtin = require('telescope.builtin')
+vim.keymap.set('n', '<C-p>', builtin.find_files, { silent = true })
+vim.keymap.set('n', '<leader>b', builtin.buffers, { silent = true })
+vim.keymap.set('n', '<leader>y', builtin.current_buffer_tags, { silent = true })
+vim.keymap.set('n', '<leader>f', function()
+  builtin.lsp_document_symbols({ symbols = { 'function', 'method' } })
+end, { silent = true })
+vim.keymap.set('n', '<leader>e', builtin.current_buffer_fuzzy_find, { silent = true })
+vim.keymap.set('n', '<leader>a', function()
+  builtin.grep_string({ default_text = vim.fn.expand('<cword>') })
+end, { silent = true })
+vim.keymap.set('v', '<leader>a', function()
+  local saved_reg = vim.fn.getreg('"')
+  local saved_regtype = vim.fn.getregtype('"')
+  vim.cmd('normal! "vy"')
+  local text = vim.fn.getreg('"')
+  vim.fn.setreg('"', saved_reg, saved_regtype)
+  builtin.grep_string({ default_text = text })
+end, { silent = true })
+vim.keymap.set('n', '<F1>', builtin.live_grep, { silent = true })
+vim.keymap.set({ 'n', 'i' }, '<F2>', function()
+  local state = require('telescope.state')
+  local prompt_bufs = state.get_existing_prompt_bufnrs()
+  if #prompt_bufs > 0 then
+    actions.close(prompt_bufs[#prompt_bufs])
+  else
+    builtin.resume()
   end
+end, { silent = true })
 
-  local buf = vim.api.nvim_win_get_buf(win_id)
-  if not vim.api.nvim_buf_is_valid(buf) then
-    return true
-  end
+-- flash.nvim
+require('flash').setup({
+  labels = 'asdfghjklqwertyuiopzxcvbnm',
+  search = { mode = 'exact' },
+  modes = { char = { enabled = false } },
+})
 
-  local buftype = vim.api.nvim_get_option_value('buftype', { buf = buf })
-  local filetype = vim.api.nvim_get_option_value('filetype', { buf = buf })
-  local is_preview = vim.api.nvim_get_option_value('previewwindow', { win = win_id })
-  local win_config = vim.api.nvim_win_get_config(win_id)
+vim.keymap.set({ 'n', 'x', 'o' }, 'f', function()
+  require('flash').jump()
+end)
+vim.keymap.set('n', 'F', function()
+  require('flash').jump({ jump = { pos = 'end' } })
+end)
+vim.keymap.set({ 'x', 'o' }, 'F', function()
+  require('flash').treesitter()
+end)
 
-  if is_preview then return true end
-  if buftype == 'quickfix' then return true end
-  if buftype == 'help' then return true end
-  if buftype == 'terminal' then return true end
-  if buftype == 'nofile' and filetype == 'man' then return true end
+-- nvim-ufo
+vim.opt.foldcolumn = '0'
+vim.opt.foldlevel = 99
+vim.opt.foldlevelstart = 99
+vim.opt.foldenable = true
 
-  if filetype == 'NvimTree' or filetype == 'neo-tree' then return true end
-
-  if filetype == 'dap-repl' or filetype == 'dapui_watches' or filetype == 'dapui_breakpoints' then return true end
-
-  if win_config.relative ~= '' then return true end
-
-  if buftype == 'nofile' and vim.api.nvim_buf_get_name(buf) == '' and
-      not vim.api.nvim_get_option_value('modified', { buf = buf }) then
-    return true
-  end
-
-  return false
-end
-
-local function focus_to_valid_window()
-  local current = vim.api.nvim_get_current_win()
-  if vim.api.nvim_win_is_valid(current) and not is_auxiliary_window(current) then
-    return true
-  end
-
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_is_valid(win) and not is_auxiliary_window(win) then
-      vim.api.nvim_set_current_win(win)
-      return true
-    end
-  end
-
-  return false
-end
-
-local function close_gitsigns_diff()
-  if not vim.wo.diff then return false end
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.fn.bufname(vim.api.nvim_win_get_buf(win)):match('^gitsigns:') then
-      vim.api.nvim_win_close(win, false)
-      return true
-    end
-  end
-  return false
-end
-
-vim.keymap.set('n', 'q', function()
-  if close_gitsigns_diff() then return end
-
-  local win_id = vim.api.nvim_get_current_win()
-  local will_be_only_aux = true
-  local has_other_window = false
-
-  for _, w in ipairs(vim.api.nvim_list_wins()) do
-    if w ~= win_id then
-      has_other_window = true
-      if not is_auxiliary_window(w) then
-        will_be_only_aux = false
+require('ufo').setup({
+  provider_selector = function(_, _, _)
+    return { 'treesitter', 'indent' }
+  end,
+  fold_virt_text_handler = function(virt_text, lnum, end_lnum, width, truncate)
+    local new_virt_text = {}
+    local suffix = '  ' .. (end_lnum - lnum) .. ' lines'
+    local suf_width = vim.fn.strdisplaywidth(suffix)
+    local target_width = width - suf_width
+    local cur_width = 0
+    for _, chunk in ipairs(virt_text) do
+      local chunk_text = chunk[1]
+      local chunk_width = vim.fn.strdisplaywidth(chunk_text)
+      if target_width > cur_width + chunk_width then
+        table.insert(new_virt_text, chunk)
+      else
+        chunk_text = truncate(chunk_text, target_width - cur_width)
+        local hl_group = chunk[2]
+        table.insert(new_virt_text, { chunk_text, hl_group })
+        chunk_width = vim.fn.strdisplaywidth(chunk_text)
+        if cur_width + chunk_width < target_width then
+          suffix = suffix .. (' '):rep(target_width - cur_width - chunk_width)
+        end
         break
       end
+      cur_width = cur_width + chunk_width
     end
-  end
-
-  if not has_other_window or will_be_only_aux then
-    vim.cmd('confirm quitall')
-  else
-    vim.cmd('quit')
-    focus_to_valid_window()
-  end
-end, { silent = true })
-
-vim.keymap.set('n', '<S-q>', '<cmd>quitall<CR>', { silent = true })
-vim.keymap.set({ 'n', 'v' }, 't', 'q')
-
--- Terminal
-vim.keymap.set('n', '<F3>', ':botright terminal ', { desc = 'Open terminal with command' })
-require('toggleterm').setup({
-  size = 15,
-  open_mapping = '<F4>',
-  direction = 'horizontal',
+    table.insert(new_virt_text, { suffix, 'MoreMsg' })
+    return new_virt_text
+  end,
 })
 
--- Buffer
-vim.keymap.set('n', '<leader>o', function()
-  local name = vim.fn.input('New buffer name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('edit ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-vim.keymap.set('n', '[b', '<cmd>bprevious<CR>', { silent = true })
-vim.keymap.set('n', ']b', '<cmd>bnext<CR>', { silent = true })
-
--- Tab
-vim.keymap.set('n', '<leader>t', function()
-  local name = vim.fn.input('New tab name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-vim.keymap.set('n', '[t', '<cmd>tabprevious<CR>', { silent = true })
-vim.keymap.set('n', ']t', '<cmd>tabnext<CR>', { silent = true })
-for i = 1, 9 do
-  vim.keymap.set('n', '<leader>' .. i, i .. 'gt')
-end
-vim.keymap.set('n', '<leader>[', '<cmd>tabfirst<CR>', { silent = true })
-vim.keymap.set('n', '<leader>]', '<cmd>tablast<CR>', { silent = true })
-
--- Split
-vim.keymap.set('n', '<C-j>', '<C-w>j')
-vim.keymap.set('n', '<C-k>', '<C-w>k')
-vim.keymap.set('n', '<C-h>', '<C-w>h')
-vim.keymap.set('n', '<C-l>', '<C-w>l')
-vim.keymap.set('n', '<leader>s', function()
-  local name = vim.fn.input('New split name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('split ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-vim.keymap.set('n', '<leader>v', function()
-  local name = vim.fn.input('New vsplit name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('vsplit ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-
--- Toggle
-vim.keymap.set('n', 'cod', function()
-  vim.cmd(vim.wo.diff and 'diffoff' or 'diffthis')
-end, { silent = true })
-vim.keymap.set('n', 'cop', '<cmd>set invpaste<CR>', { silent = true })
-vim.keymap.set('n', 'col', '<cmd>set invlist<CR>', { silent = true })
-vim.keymap.set('n', 'con', '<cmd>set nohlsearch<CR>', { silent = true })
-vim.keymap.set('n', '<leader><Space>', '<cmd>%s/\\s\\+$//e<CR>', { silent = true })
-vim.keymap.set('n', '<leader><leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:%s/\\r$//e<CR>', { silent = true })
-
-vim.api.nvim_create_autocmd('InsertLeave', {
-  group = vim.api.nvim_create_augroup('PasteMode', { clear = true }),
-  command = 'setlocal nopaste',
+-- nvim-treesitter
+require('nvim-treesitter').setup({
+  highlight = { enable = true },
+  indent = { enable = true },
+  auto_install = true,
+})
+require('nvim-treesitter.install').install({
+  'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
+  'markdown_inline', 'yaml', 'json', 'sql',
 })
 
--- Zoom
-vim.keymap.set('n', '<leader>z', function()
-  if vim.g.zoomed then
-    vim.cmd(vim.g.zoom_winrestcmd)
-    vim.g.zoomed = false
-  else
-    vim.g.zoom_winrestcmd = vim.fn.winrestcmd()
-    vim.cmd('resize')
-    vim.cmd('vertical resize')
-    vim.g.zoomed = true
-  end
-end, { silent = true })
+-- nvim-cmp
+local cmp = require('cmp')
+local luasnip = require('luasnip')
+
+require('luasnip.loaders.from_vscode').lazy_load()
+
+cmp.setup({
+  snippet = {
+    expand = function(args)
+      luasnip.lsp_expand(args.body)
+    end,
+  },
+  mapping = cmp.mapping.preset.insert({
+    ['<Tab>'] = cmp.mapping(function(fallback)
+      if luasnip.jumpable(1) then
+        luasnip.jump(1)
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+    ['<S-Tab>'] = cmp.mapping(function(fallback)
+      if luasnip.jumpable(-1) then
+        luasnip.jump(-1)
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+    ['<C-l>'] = cmp.mapping(function(fallback)
+      if luasnip.expand_or_jumpable() then
+        luasnip.expand_or_jump()
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }),
+    ['<C-j>'] = cmp.mapping.select_next_item(),
+    ['<C-k>'] = cmp.mapping.select_prev_item(),
+  }),
+  sources = cmp.config.sources({
+    { name = 'nvim_lsp' },
+    { name = 'luasnip' },
+  }, {
+    { name = 'buffer' },
+    { name = 'path' },
+  }),
+})
+
+-- git
+require('neogit').setup({
+  diff_viewer = 'codediff',
+  integrations = { codediff = true },
+})
+
+require('codediff').setup({
+  diff = { compact = true },
+})
+
+local gitsigns = require('gitsigns')
+gitsigns.setup()
+
+vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gl', '<cmd>NeogitLogCurrent<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gD', '<cmd>CodeDiff<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns blame_line<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gB', '<cmd>Gitsigns blame<CR>', { silent = true })
+
+vim.keymap.set('n', '[h', '<cmd>Gitsigns prev_hunk<CR>', { silent = true })
+vim.keymap.set('n', ']h', '<cmd>Gitsigns next_hunk<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hq', '<cmd>Gitsigns setqflist<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hQ', '<cmd>Gitsigns setqflist all<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hl', '<cmd>Gitsigns setloclist<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hp', '<cmd>Gitsigns preview_hunk_inline<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hP', '<cmd>Gitsigns preview_hunk<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hs', '<cmd>Gitsigns stage_hunk<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hr', '<cmd>Gitsigns reset_hunk<CR>', { silent = true })
+vim.keymap.set('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>', { silent = true })
+
+-- auto-session
+require('auto-session').setup({
+  log_level = 'error',
+  auto_save_enabled = true,
+  auto_restore_enabled = true,
+})
+
+vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
+vim.keymap.set('n', '<leader>rs', '<cmd>AutoSession delete<CR>', { silent = true })
 
 -- rooter
 local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
@@ -667,97 +728,6 @@ vim.keymap.set('n', '<leader>d', '<cmd>Trouble diagnostics toggle<CR>', { silent
 vim.keymap.set('n', '<leader>q', '<cmd>Trouble quickfix toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = true })
 
--- auto-session
-require('auto-session').setup({
-  log_level = 'error',
-  auto_save_enabled = true,
-  auto_restore_enabled = true,
-})
-
-vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
-vim.keymap.set('n', '<leader>rs', '<cmd>AutoSession delete<CR>', { silent = true })
-
--- telescope.nvim
-local telescope = require('telescope')
-local actions = require('telescope.actions')
-
-telescope.setup({
-  defaults = {
-    file_ignore_patterns = { '.git/', '.hg/', '.svn/', '.bzr/' },
-    mappings = {
-      i = {
-        ['<C-j>'] = actions.move_selection_next,
-        ['<C-k>'] = actions.move_selection_previous,
-      },
-    },
-  },
-  pickers = {
-    buffers = {
-      mappings = {
-        i = { ['<C-d>'] = actions.delete_buffer },
-        n = { ['<C-d>'] = actions.delete_buffer },
-      },
-    },
-    live_grep = { additional_args = { '--hidden' } },
-    find_files = { hidden = true },
-  },
-})
-
-local builtin = require('telescope.builtin')
-vim.keymap.set('n', '<C-p>', builtin.find_files, { silent = true })
-vim.keymap.set('n', '<leader>b', builtin.buffers, { silent = true })
-vim.keymap.set('n', '<leader>y', builtin.current_buffer_tags, { silent = true })
-vim.keymap.set('n', '<leader>f', function()
-  builtin.lsp_document_symbols({ symbols = { 'function', 'method' } })
-end, { silent = true })
-vim.keymap.set('n', '<leader>e', builtin.current_buffer_fuzzy_find, { silent = true })
-vim.keymap.set('n', '<leader>a', function()
-  builtin.grep_string({ default_text = vim.fn.expand('<cword>') })
-end, { silent = true })
-vim.keymap.set('v', '<leader>a', function()
-  local saved_reg = vim.fn.getreg('"')
-  local saved_regtype = vim.fn.getregtype('"')
-  vim.cmd('normal! "vy"')
-  local text = vim.fn.getreg('"')
-  vim.fn.setreg('"', saved_reg, saved_regtype)
-  builtin.grep_string({ default_text = text })
-end, { silent = true })
-vim.keymap.set('n', '<F1>', builtin.live_grep, { silent = true })
-vim.keymap.set({ 'n', 'i' }, '<F2>', function()
-  local state = require('telescope.state')
-  local prompt_bufs = state.get_existing_prompt_bufnrs()
-  if #prompt_bufs > 0 then
-    actions.close(prompt_bufs[#prompt_bufs])
-  else
-    builtin.resume()
-  end
-end, { silent = true })
-
--- flash.nvim
-require('flash').setup({
-  labels = 'asdfghjklqwertyuiopzxcvbnm',
-  search = { mode = 'exact' },
-  modes = { char = { enabled = false } },
-})
-
-vim.keymap.set({ 'n', 'x', 'o' }, 'f', function()
-  require('flash').jump()
-end)
-vim.keymap.set('n', 'F', function()
-  require('flash').jump({ jump = { pos = 'end' } })
-end)
-vim.keymap.set({ 'x', 'o' }, 'F', function()
-  require('flash').treesitter()
-end)
-
--- substitute.nvim
-require('substitute').setup()
-
-vim.keymap.set('n', 's', require('substitute').operator, { silent = true })
-vim.keymap.set('x', 's', require('substitute').visual, { silent = true })
-vim.keymap.set('n', 'ss', require('substitute').line, { silent = true })
-vim.keymap.set('n', 'S', require('substitute').eol, { silent = true })
-
 -- multicursor.nvim
 mc = require('multicursor-nvim')
 mc.setup({ hlsearch = true })
@@ -777,55 +747,212 @@ mc.addKeymapLayer(function(layer_set)
   end)
 end)
 
--- nvim-ufo
-vim.opt.foldcolumn = '0'
-vim.opt.foldlevel = 99
-vim.opt.foldlevelstart = 99
-vim.opt.foldenable = true
-
-require('ufo').setup({
-  provider_selector = function(_, _, _)
-    return { 'treesitter', 'indent' }
-  end,
-  fold_virt_text_handler = function(virt_text, lnum, end_lnum, width, truncate)
-    local new_virt_text = {}
-    local suffix = '  ' .. (end_lnum - lnum) .. ' lines'
-    local suf_width = vim.fn.strdisplaywidth(suffix)
-    local target_width = width - suf_width
-    local cur_width = 0
-    for _, chunk in ipairs(virt_text) do
-      local chunk_text = chunk[1]
-      local chunk_width = vim.fn.strdisplaywidth(chunk_text)
-      if target_width > cur_width + chunk_width then
-        table.insert(new_virt_text, chunk)
-      else
-        chunk_text = truncate(chunk_text, target_width - cur_width)
-        local hl_group = chunk[2]
-        table.insert(new_virt_text, { chunk_text, hl_group })
-        chunk_width = vim.fn.strdisplaywidth(chunk_text)
-        if cur_width + chunk_width < target_width then
-          suffix = suffix .. (' '):rep(target_width - cur_width - chunk_width)
-        end
-        break
-      end
-      cur_width = cur_width + chunk_width
-    end
-    table.insert(new_virt_text, { suffix, 'MoreMsg' })
-    return new_virt_text
-  end,
+-- toggleterm.nvim
+require('toggleterm').setup({
+  size = 15,
+  direction = 'horizontal',
+  start_in_insert = true,
 })
 
--- nvim-autopairs
-local npairs = require('nvim-autopairs')
-npairs.setup()
+vim.keymap.set('n', '<F3>', function()
+  local cmd = vim.fn.input('Command: ')
+  if cmd ~= '' then
+    vim.cmd('2TermExec cmd=' .. vim.fn.shellescape(cmd))
+  end
+end, { desc = 'Run one-off command in terminal' })
 
-local rule = require('nvim-autopairs.rule')
-npairs.add_rule(rule('"', '"', 'vim'):with_pair(function() return false end))
+vim.keymap.set({ 'n', 't' }, '<F4>', '<cmd>1ToggleTerm direction=horizontal<CR>', { desc = 'Toggle horizontal terminal' })
 
--- marks.nvim
-require('marks').setup()
+-- Key maps
+vim.keymap.set('n', 'Y', 'y$')
+vim.keymap.set({ 'n', 'v' }, 'j', 'gj')
+vim.keymap.set({ 'n', 'v' }, 'k', 'gk')
+vim.keymap.set({ 'n', 'v' }, 'H', '^')
+vim.keymap.set({ 'n', 'v' }, 'L', '$')
+vim.keymap.set('v', '<', '<gv')
+vim.keymap.set('v', '>', '>gv')
+vim.keymap.set({ 'n', 'v' }, ';', ':')
+vim.keymap.set('n', 'U', '<C-r>')
 
--- lsp
+vim.keymap.set('i', '<C-p>', '<Up>')
+vim.keymap.set('i', '<C-n>', '<Down>')
+vim.keymap.set('i', '<C-b>', '<Left>')
+vim.keymap.set('i', '<C-f>', '<Right>')
+vim.keymap.set('i', '<C-a>', '<Home>')
+vim.keymap.set('i', '<C-e>', '<End>')
+vim.keymap.set('i', '<C-h>', '<BackSpace>')
+vim.keymap.set('i', '<C-d>', '<Del>')
+
+vim.keymap.set('c', '<C-p>', '<Up>')
+vim.keymap.set('c', '<C-n>', '<Down>')
+vim.keymap.set('c', '<C-b>', '<Left>')
+vim.keymap.set('c', '<C-f>', '<Right>')
+vim.keymap.set('c', '<C-a>', '<Home>')
+vim.keymap.set('c', '<C-e>', '<End>')
+vim.keymap.set('c', '<C-h>', '<BackSpace>')
+vim.keymap.set('c', '<C-d>', '<Del>')
+
+local function is_auxiliary_window(win_id)
+  if not vim.api.nvim_win_is_valid(win_id) then
+    return true
+  end
+
+  local buf = vim.api.nvim_win_get_buf(win_id)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return true
+  end
+
+  local buftype = vim.api.nvim_get_option_value('buftype', { buf = buf })
+  local filetype = vim.api.nvim_get_option_value('filetype', { buf = buf })
+  local is_preview = vim.api.nvim_get_option_value('previewwindow', { win = win_id })
+  local win_config = vim.api.nvim_win_get_config(win_id)
+
+  if is_preview then return true end
+  if buftype == 'quickfix' then return true end
+  if buftype == 'help' then return true end
+  if buftype == 'terminal' then return true end
+  if buftype == 'nofile' and filetype == 'man' then return true end
+
+  if filetype == 'NvimTree' or filetype == 'neo-tree' then return true end
+  if filetype == 'dap-repl' or filetype == 'dapui_watches' or filetype == 'dapui_breakpoints' then return true end
+
+  if win_config.relative ~= '' then return true end
+
+  if buftype == 'nofile' and vim.api.nvim_buf_get_name(buf) == '' and
+      not vim.api.nvim_get_option_value('modified', { buf = buf }) then
+    return true
+  end
+
+  return false
+end
+
+local function focus_to_valid_window()
+  local current = vim.api.nvim_get_current_win()
+  if vim.api.nvim_win_is_valid(current) and not is_auxiliary_window(current) then
+    return true
+  end
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) and not is_auxiliary_window(win) then
+      vim.api.nvim_set_current_win(win)
+      return true
+    end
+  end
+
+  return false
+end
+
+local function close_gitsigns_diff()
+  if not vim.wo.diff then return false end
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.fn.bufname(vim.api.nvim_win_get_buf(win)):match('^gitsigns:') then
+      vim.api.nvim_win_close(win, false)
+      return true
+    end
+  end
+  return false
+end
+
+vim.keymap.set('n', 'q', function()
+  if close_gitsigns_diff() then return end
+
+  local win_id = vim.api.nvim_get_current_win()
+  local will_be_only_aux = true
+  local has_other_window = false
+
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if w ~= win_id then
+      has_other_window = true
+      if not is_auxiliary_window(w) then
+        will_be_only_aux = false
+        break
+      end
+    end
+  end
+
+  if not has_other_window or will_be_only_aux then
+    vim.cmd('confirm quitall')
+  else
+    vim.cmd('quit')
+    focus_to_valid_window()
+  end
+end, { silent = true })
+
+vim.keymap.set('n', '<S-q>', '<cmd>quitall<CR>', { silent = true })
+vim.keymap.set({ 'n', 'v' }, 't', 'q')
+
+-- Buffer
+vim.keymap.set('n', '<leader>o', function()
+  local name = vim.fn.input('New buffer name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('edit ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+vim.keymap.set('n', '[b', '<cmd>bprevious<CR>', { silent = true })
+vim.keymap.set('n', ']b', '<cmd>bnext<CR>', { silent = true })
+
+-- Tab
+vim.keymap.set('n', '<leader>t', function()
+  local name = vim.fn.input('New tab name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+vim.keymap.set('n', '[t', '<cmd>tabprevious<CR>', { silent = true })
+vim.keymap.set('n', ']t', '<cmd>tabnext<CR>', { silent = true })
+for i = 1, 9 do
+  vim.keymap.set('n', '<leader>' .. i, i .. 'gt')
+end
+vim.keymap.set('n', '<leader>[', '<cmd>tabfirst<CR>', { silent = true })
+vim.keymap.set('n', '<leader>]', '<cmd>tablast<CR>', { silent = true })
+
+-- Split
+vim.keymap.set('n', '<C-j>', '<C-w>j')
+vim.keymap.set('n', '<C-k>', '<C-w>k')
+vim.keymap.set('n', '<C-h>', '<C-w>h')
+vim.keymap.set('n', '<C-l>', '<C-w>l')
+vim.keymap.set('n', '<leader>s', function()
+  local name = vim.fn.input('New split name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('split ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+vim.keymap.set('n', '<leader>v', function()
+  local name = vim.fn.input('New vsplit name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('vsplit ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+
+-- Toggle
+vim.keymap.set('n', 'cod', function()
+  vim.cmd(vim.wo.diff and 'diffoff' or 'diffthis')
+end, { silent = true })
+vim.keymap.set('n', 'cop', '<cmd>set invpaste<CR>', { silent = true })
+vim.keymap.set('n', 'col', '<cmd>set invlist<CR>', { silent = true })
+vim.keymap.set('n', 'con', '<cmd>set nohlsearch<CR>', { silent = true })
+vim.keymap.set('n', '<leader><Space>', '<cmd>%s/\\s\\+$//e<CR>', { silent = true })
+vim.keymap.set('n', '<leader><leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:%s/\\r$//e<CR>', { silent = true })
+
+vim.api.nvim_create_autocmd('InsertLeave', {
+  group = vim.api.nvim_create_augroup('PasteMode', { clear = true }),
+  command = 'setlocal nopaste',
+})
+
+-- Zoom
+vim.keymap.set('n', '<leader>z', function()
+  if vim.g.zoomed then
+    vim.cmd(vim.g.zoom_winrestcmd)
+    vim.g.zoomed = false
+  else
+    vim.g.zoom_winrestcmd = vim.fn.winrestcmd()
+    vim.cmd('resize')
+    vim.cmd('vertical resize')
+    vim.g.zoomed = true
+  end
+end, { silent = true })
+
+-- LSP
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('Lsp', { clear = true }),
   callback = function(args)
@@ -1046,93 +1173,11 @@ vim.api.nvim_create_autocmd('BufWritePre', {
   end,
 })
 
--- nvim-cmp
-local cmp = require('cmp')
-local luasnip = require('luasnip')
-
-require('luasnip.loaders.from_vscode').lazy_load()
-
-cmp.setup({
-  snippet = {
-    expand = function(args)
-      luasnip.lsp_expand(args.body)
-    end,
-  },
-  mapping = cmp.mapping.preset.insert({
-    ['<Tab>'] = cmp.mapping(function(fallback)
-      if luasnip.jumpable(1) then
-        luasnip.jump(1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<S-Tab>'] = cmp.mapping(function(fallback)
-      if luasnip.jumpable(-1) then
-        luasnip.jump(-1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<C-l>'] = cmp.mapping(function(fallback)
-      if luasnip.expand_or_jumpable() then
-        luasnip.expand_or_jump()
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<CR>'] = cmp.mapping.confirm({ select = true }),
-    ['<C-j>'] = cmp.mapping.select_next_item(),
-    ['<C-k>'] = cmp.mapping.select_prev_item(),
-  }),
-  sources = cmp.config.sources({
-    { name = 'nvim_lsp' },
-    { name = 'luasnip' },
-  }, {
-    { name = 'buffer' },
-    { name = 'path' },
-  }),
-})
-
 -- markdown
 vim.g.markdown_syntax_conceal = 0
 vim.g.markdown_minlines = 100
 vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash=sh',
   'vim', 'sql', 'yaml', 'json' }
-
--- nvim-treesitter
-require('nvim-treesitter').setup()
-require('nvim-treesitter.install').install({
-  'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
-  'markdown_inline', 'yaml', 'json', 'sql',
-})
-
--- mini.icons
-require('mini.icons').setup()
-
--- mini.indentscope
-require('mini.indentscope').setup({ draw = { delay = 0 } })
-
--- mini.ai
-require('mini.ai').setup()
-
--- mini.surround (vim-surround compatible mappings)
-require('mini.surround').setup({
-  mappings = {
-    add = 'ys',
-    delete = 'ds',
-    find = '',
-    find_left = '',
-    highlight = '',
-    replace = 'cs',
-  },
-  search_method = 'cover_or_next',
-})
-vim.keymap.set('n', 'yss', 'ys_', { remap = true })
-vim.keymap.del('x', 'ys')
-vim.keymap.set('x', 'S', [[:<C-u>lua MiniSurround.add('visual')<CR>]], { silent = true })
-
--- Comment.nvim
-require('Comment').setup()
 
 -- highlight
 vim.api.nvim_create_autocmd('TextYankPost', {
@@ -1141,35 +1186,3 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank { higroup = 'Search', timeout = 200 }
   end,
 })
-
--- git
-require('neogit').setup({
-  diff_viewer = 'codediff',
-  integrations = { codediff = true },
-})
-
-require('codediff').setup({
-  diff = { compact = true },
-})
-
-local gitsigns = require('gitsigns')
-gitsigns.setup()
-
-vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gl', '<cmd>NeogitLogCurrent<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gD', '<cmd>CodeDiff<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns blame_line<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gB', '<cmd>Gitsigns blame<CR>', { silent = true })
-
-vim.keymap.set('n', '[h', '<cmd>Gitsigns prev_hunk<CR>', { silent = true })
-vim.keymap.set('n', ']h', '<cmd>Gitsigns next_hunk<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hq', '<cmd>Gitsigns setqflist<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hQ', '<cmd>Gitsigns setqflist all<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hl', '<cmd>Gitsigns setloclist<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hp', '<cmd>Gitsigns preview_hunk_inline<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hP', '<cmd>Gitsigns preview_hunk<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hs', '<cmd>Gitsigns stage_hunk<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hr', '<cmd>Gitsigns reset_hunk<CR>', { silent = true })
-vim.keymap.set('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>', { silent = true })
