@@ -609,6 +609,8 @@ cmp.setup({
   }),
 })
 
+require('cmp_cmdline')
+
 cmp.setup.cmdline(':', {
   mapping = cmp.mapping.preset.cmdline(),
   sources = cmp.config.sources({
