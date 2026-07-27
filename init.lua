@@ -1,5 +1,3 @@
-vim.cmd('syntax on')
-
 -- Plugins
 vim.pack.add({
   -- Theme / UI
@@ -48,6 +46,8 @@ vim.api.nvim_create_user_command('PackUpdate', function()
   vim.pack.update()
   vim.notify('Packages updated', vim.log.levels.INFO)
 end, {})
+
+vim.cmd('syntax on')
 
 -- Leader
 vim.g.mapleader = ','
@@ -119,9 +119,11 @@ vim.opt.directory = vim.fn.stdpath("data") .. "/swap//"
 vim.opt.jumpoptions:append('stack')
 
 -- Clipboard
-if vim.fn.has('unnamedplus') == 1 and vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0 then
+local has_display = vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0
+local has_wayland = vim.fn.empty(vim.fn.getenv('WAYLAND_DISPLAY')) == 0
+if vim.fn.has('unnamedplus') == 1 and (has_display or has_wayland) then
   vim.opt.clipboard = 'unnamed,unnamedplus'
-elseif vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0 then
+elseif has_display or has_wayland then
   vim.opt.clipboard = 'unnamed'
 end
 
@@ -172,9 +174,6 @@ if vim.fn.has('termguicolors') == 1 then
   vim.opt.termguicolors = true
 else
   vim.opt.t_Co = 256
-  if vim.env.TERM and vim.env.TERM:find('256color') then
-    vim.opt.t_ut = ''
-  end
 end
 
 -- FileType
