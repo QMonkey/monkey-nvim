@@ -185,6 +185,7 @@ vim.opt.showtabline = 1
 vim.opt.laststatus = 2
 
 vim.opt.sessionoptions:remove({ 'blank', 'options', 'folds', 'terminal' })
+vim.opt.sessionoptions:append('localoptions')
 
 -- Color support
 if vim.fn.has('termguicolors') == 1 then
@@ -1054,7 +1055,7 @@ vim.lsp.config('rust_analyzer', {
 
 vim.lsp.config('gopls', {
   cmd = { 'gopls' },
-  filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
+  filetypes = { 'go', 'gomod', 'gowork' },
   root_markers = { 'go.work', 'go.mod' },
   settings = {
     gopls = {
