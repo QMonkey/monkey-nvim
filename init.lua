@@ -50,26 +50,26 @@ vim.opt.relativenumber = true
 vim.opt.number = true
 vim.opt.ruler = true
 
-local relativeNumberGroup = vim.api.nvim_create_augroup('RelativeNumber', { clear = true })
+local relativenumber_group = vim.api.nvim_create_augroup('RelativeNumber', { clear = true })
 vim.api.nvim_create_autocmd({ 'WinEnter', 'InsertLeave' }, {
-  group = relativeNumberGroup,
+  group = relativenumber_group,
   command = 'set relativenumber',
 })
 vim.api.nvim_create_autocmd({ 'WinLeave', 'InsertEnter' }, {
-  group = relativeNumberGroup,
+  group = relativenumber_group,
   command = 'set norelativenumber number',
 })
 
 -- Cursorline
 vim.opt.cursorline = true
 
-local cursorLineGroup = vim.api.nvim_create_augroup('CursorLine', { clear = true })
+local cursorline_group = vim.api.nvim_create_augroup('CursorLine', { clear = true })
 vim.api.nvim_create_autocmd('InsertEnter', {
-  group = cursorLineGroup,
+  group = cursorline_group,
   command = 'set nocursorline',
 })
 vim.api.nvim_create_autocmd('InsertLeave', {
-  group = cursorLineGroup,
+  group = cursorline_group,
   command = 'set cursorline',
 })
 
@@ -83,9 +83,9 @@ vim.opt.gdefault = true
 vim.opt.shortmess:remove('S')
 vim.opt.shortmess:append('s')
 
-local hlsearchGroup = vim.api.nvim_create_augroup('Hlsearch', { clear = true })
+local hlsearch_group = vim.api.nvim_create_augroup('Hlsearch', { clear = true })
 vim.api.nvim_create_autocmd('InsertEnter', {
-  group = hlsearchGroup,
+  group = hlsearch_group,
   callback = function()
     if vim.v.hlsearch == 1 then
       vim.schedule(function()
@@ -170,9 +170,9 @@ else
 end
 
 -- FileType
-local fileTypeGroup = vim.api.nvim_create_augroup('FileType', { clear = true })
+local filetype_group = vim.api.nvim_create_augroup('FileType', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
-  group = fileTypeGroup,
+  group = filetype_group,
   pattern = { 'rust', 'python', 'markdown' },
   callback = function()
     vim.bo.expandtab = true
@@ -183,7 +183,7 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 vim.api.nvim_create_autocmd('FileType', {
-  group = fileTypeGroup,
+  group = filetype_group,
   pattern = { 'javascript', 'typescript', 'lua', 'yaml', 'json' },
   callback = function()
     vim.bo.expandtab = true
@@ -194,20 +194,20 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 vim.api.nvim_create_autocmd('FileType', {
-  group = fileTypeGroup,
+  group = filetype_group,
   pattern = 'qf',
   command = 'wincmd J',
 })
 
 vim.api.nvim_create_autocmd('BufNewFile', {
-  group = fileTypeGroup,
+  group = filetype_group,
   pattern = '*.sh',
   callback = function()
     vim.api.nvim_buf_set_lines(0, 0, 0, false, { '#!/usr/bin/env bash', '' })
   end,
 })
 vim.api.nvim_create_autocmd('BufNewFile', {
-  group = fileTypeGroup,
+  group = filetype_group,
   pattern = '*.py',
   callback = function()
     vim.api.nvim_buf_set_lines(0, 0, 0, false, { '#!/usr/bin/env python3', '', '' })
@@ -218,9 +218,9 @@ vim.api.nvim_create_autocmd('BufNewFile', {
 vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
 vim.opt.keywordprg = ':LspHover'
 
-local docsetGroup = vim.api.nvim_create_augroup('DocSet', { clear = true })
+local docset_group = vim.api.nvim_create_augroup('DocSet', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
-  group = docsetGroup,
+  group = docset_group,
   pattern = { 'man', 'help' },
   callback = function()
     vim.wo.list = false
@@ -228,7 +228,7 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 vim.api.nvim_create_autocmd('FileType', {
-  group = docsetGroup,
+  group = docset_group,
   pattern = { 'c', 'man' },
   callback = function()
     vim.bo.keywordprg = ':Man'
@@ -236,7 +236,7 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 vim.api.nvim_create_autocmd('FileType', {
-  group = docsetGroup,
+  group = docset_group,
   pattern = { 'vim', 'help' },
   callback = function()
     vim.bo.keywordprg = ':help'
@@ -411,25 +411,90 @@ vim.keymap.set('c', '<C-e>', '<End>')
 vim.keymap.set('c', '<C-h>', '<BackSpace>')
 vim.keymap.set('c', '<C-d>', '<Del>')
 
-vim.keymap.set('n', 'q', function()
-  local last_winnr = vim.fn.winnr('#')
-  local ftype = vim.bo.filetype
-  local is_diff = vim.wo.diff
-  local is_qf = ftype == 'qf'
-  local is_preview = vim.wo.previewwindow
-
-  if is_diff and tonumber(last_winnr) > 0 then
-    vim.cmd(last_winnr .. 'wincmd w')
-    vim.cmd('quit')
-    return
+local function is_auxiliary_window(win_id)
+  if not vim.api.nvim_win_is_valid(win_id) then
+    return true
   end
 
-  vim.cmd('quit')
+  local buf = vim.api.nvim_win_get_buf(win_id)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return true
+  end
 
-  if is_qf or is_preview then
-    if tonumber(last_winnr) > 0 and vim.fn.win_id2win(vim.fn.win_getid(tonumber(last_winnr))) ~= 0 then
-      vim.cmd(last_winnr .. 'wincmd w')
+  local buftype = vim.api.nvim_get_option_value('buftype', { buf = buf })
+  local filetype = vim.api.nvim_get_option_value('filetype', { buf = buf })
+  local is_preview = vim.api.nvim_get_option_value('previewwindow', { win = win_id })
+  local win_config = vim.api.nvim_win_get_config(win_id)
+
+  if is_preview then return true end
+  if buftype == 'quickfix' then return true end
+  if buftype == 'help' then return true end
+  if buftype == 'terminal' then return true end
+  if buftype == 'nofile' and filetype == 'man' then return true end
+
+  if filetype == 'NvimTree' or filetype == 'neo-tree' then return true end
+
+  if filetype == 'dap-repl' or filetype == 'dapui_watches' or filetype == 'dapui_breakpoints' then return true end
+
+  if win_config.relative ~= '' then return true end
+
+  if buftype == 'nofile' and vim.api.nvim_buf_get_name(buf) == '' and
+      not vim.api.nvim_get_option_value('modified', { buf = buf }) then
+    return true
+  end
+
+  return false
+end
+
+local function focus_to_valid_window()
+  local current = vim.api.nvim_get_current_win()
+  if vim.api.nvim_win_is_valid(current) and not is_auxiliary_window(current) then
+    return true
+  end
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) and not is_auxiliary_window(win) then
+      vim.api.nvim_set_current_win(win)
+      return true
     end
+  end
+
+  return false
+end
+
+local function close_gitsigns_diff()
+  if not vim.wo.diff then return false end
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.fn.bufname(vim.api.nvim_win_get_buf(win)):match('^gitsigns:') then
+      vim.api.nvim_win_close(win, false)
+      return true
+    end
+  end
+  return false
+end
+
+vim.keymap.set('n', 'q', function()
+  if close_gitsigns_diff() then return end
+
+  local win_id = vim.api.nvim_get_current_win()
+  local will_be_only_aux = true
+  local has_other_window = false
+
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if w ~= win_id then
+      has_other_window = true
+      if not is_auxiliary_window(w) then
+        will_be_only_aux = false
+        break
+      end
+    end
+  end
+
+  if not has_other_window or will_be_only_aux then
+    vim.cmd('confirm quitall')
+  else
+    vim.cmd('quit')
+    focus_to_valid_window()
   end
 end, { silent = true })
 
@@ -698,12 +763,12 @@ mc = require('multicursor-nvim')
 mc.setup({ hlsearch = true })
 
 vim.keymap.set({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
-mc.addKeymapLayer(function(layerSet)
-  layerSet({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
-  layerSet({ 'n', 'x' }, '<c-p>', function() mc.matchAddCursor(-1) end)
-  layerSet({ 'n', 'x' }, '<c-x>', function() mc.matchSkipCursor(1) end)
-  layerSet({ 'n', 'x' }, '<c-q>', function() mc.matchSkipCursor(-1) end)
-  layerSet('n', '<esc>', function()
+mc.addKeymapLayer(function(layer_set)
+  layer_set({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
+  layer_set({ 'n', 'x' }, '<c-p>', function() mc.matchAddCursor(-1) end)
+  layer_set({ 'n', 'x' }, '<c-x>', function() mc.matchSkipCursor(1) end)
+  layer_set({ 'n', 'x' }, '<c-q>', function() mc.matchSkipCursor(-1) end)
+  layer_set('n', '<esc>', function()
     if not mc.cursorsEnabled() then
       mc.enableCursors()
     else
@@ -713,40 +778,40 @@ mc.addKeymapLayer(function(layerSet)
 end)
 
 -- nvim-ufo
-vim.o.foldcolumn = '0'
-vim.o.foldlevel = 99
-vim.o.foldlevelstart = 99
-vim.o.foldenable = true
+vim.opt.foldcolumn = '0'
+vim.opt.foldlevel = 99
+vim.opt.foldlevelstart = 99
+vim.opt.foldenable = true
 
 require('ufo').setup({
   provider_selector = function(_, _, _)
     return { 'treesitter', 'indent' }
   end,
-  fold_virt_text_handler = function(virtText, lnum, endLnum, width, truncate)
-    local newVirtText = {}
-    local suffix = '  ' .. (endLnum - lnum) .. ' lines'
-    local sufWidth = vim.fn.strdisplaywidth(suffix)
-    local targetWidth = width - sufWidth
-    local curWidth = 0
-    for _, chunk in ipairs(virtText) do
-      local chunkText = chunk[1]
-      local chunkWidth = vim.fn.strdisplaywidth(chunkText)
-      if targetWidth > curWidth + chunkWidth then
-        table.insert(newVirtText, chunk)
+  fold_virt_text_handler = function(virt_text, lnum, end_lnum, width, truncate)
+    local new_virt_text = {}
+    local suffix = '  ' .. (end_lnum - lnum) .. ' lines'
+    local suf_width = vim.fn.strdisplaywidth(suffix)
+    local target_width = width - suf_width
+    local cur_width = 0
+    for _, chunk in ipairs(virt_text) do
+      local chunk_text = chunk[1]
+      local chunk_width = vim.fn.strdisplaywidth(chunk_text)
+      if target_width > cur_width + chunk_width then
+        table.insert(new_virt_text, chunk)
       else
-        chunkText = truncate(chunkText, targetWidth - curWidth)
-        local hlGroup = chunk[2]
-        table.insert(newVirtText, { chunkText, hlGroup })
-        chunkWidth = vim.fn.strdisplaywidth(chunkText)
-        if curWidth + chunkWidth < targetWidth then
-          suffix = suffix .. (' '):rep(targetWidth - curWidth - chunkWidth)
+        chunk_text = truncate(chunk_text, target_width - cur_width)
+        local hl_group = chunk[2]
+        table.insert(new_virt_text, { chunk_text, hl_group })
+        chunk_width = vim.fn.strdisplaywidth(chunk_text)
+        if cur_width + chunk_width < target_width then
+          suffix = suffix .. (' '):rep(target_width - cur_width - chunk_width)
         end
         break
       end
-      curWidth = curWidth + chunkWidth
+      cur_width = cur_width + chunk_width
     end
-    table.insert(newVirtText, { suffix, 'MoreMsg' })
-    return newVirtText
+    table.insert(new_virt_text, { suffix, 'MoreMsg' })
+    return new_virt_text
   end,
 })
 
@@ -1091,6 +1156,7 @@ local gitsigns = require('gitsigns')
 gitsigns.setup()
 
 vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gl', '<cmd>NeogitLogCurrent<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gD', '<cmd>CodeDiff<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns blame_line<CR>', { silent = true })
