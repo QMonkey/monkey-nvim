@@ -958,6 +958,10 @@ vim.keymap.set('n', '<leader>z', function()
 end, { silent = true })
 
 -- LSP
+vim.api.nvim_set_hl(0, 'LspReferenceText', { link = 'Search' })
+vim.api.nvim_set_hl(0, 'LspReferenceRead', { link = 'Search' })
+vim.api.nvim_set_hl(0, 'LspReferenceWrite', { link = 'Search' })
+
 vim.api.nvim_create_autocmd('LspAttach', {
   group = vim.api.nvim_create_augroup('Lsp', { clear = true }),
   callback = function(args)
@@ -990,6 +994,15 @@ vim.api.nvim_create_autocmd('LspAttach', {
     vim.keymap.set('n', '[D', function() vim.diagnostic.jump({ count = -999 }) end, bufopts)
     vim.keymap.set('n', ']D', function() vim.diagnostic.jump({ count = 999 }) end, bufopts)
     vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, bufopts)
+
+    vim.api.nvim_create_autocmd('CursorHold', {
+      buffer = buf,
+      callback = vim.lsp.buf.document_highlight,
+    })
+    vim.api.nvim_create_autocmd('CursorMoved', {
+      buffer = buf,
+      callback = vim.lsp.buf.clear_references,
+    })
   end,
 })
 
