@@ -43,6 +43,12 @@ vim.pack.add({
   { src = 'https://github.com/akinsho/toggleterm.nvim' },
 })
 
+-- Pack management
+vim.api.nvim_create_user_command('PackUpdate', function()
+  vim.pack.update()
+  vim.notify('Packages updated', vim.log.levels.INFO)
+end, {})
+
 -- Leader
 vim.g.mapleader = ','
 vim.g.maplocalleader = ','
