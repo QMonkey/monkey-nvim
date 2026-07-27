@@ -108,6 +108,14 @@ vim.api.nvim_create_autocmd('InsertEnter', {
   end,
 })
 
+-- highlight
+vim.api.nvim_create_autocmd('TextYankPost', {
+  group = vim.api.nvim_create_augroup('HighlightYank', { clear = true }),
+  callback = function()
+    vim.highlight.on_yank { higroup = 'Search', timeout = 200 }
+  end,
+})
+
 -- Completion
 vim.opt.wildmenu = true
 vim.opt.wildmode = 'list:longest,full'
@@ -220,6 +228,12 @@ vim.api.nvim_create_autocmd('BufNewFile', {
     vim.api.nvim_buf_set_lines(0, 0, 0, false, { '#!/usr/bin/env python3', '', '' })
   end,
 })
+
+-- markdown
+vim.g.markdown_syntax_conceal = 0
+vim.g.markdown_minlines = 100
+vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash=sh',
+  'vim', 'sql', 'yaml', 'json' }
 
 -- Docset
 vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
@@ -1179,19 +1193,5 @@ vim.api.nvim_create_autocmd('BufWritePre', {
     local clients = vim.lsp.get_clients({ bufnr = args.buf })
     if #clients == 0 then return end
     vim.lsp.buf.format({ async = true, timeout_ms = 5000 })
-  end,
-})
-
--- markdown
-vim.g.markdown_syntax_conceal = 0
-vim.g.markdown_minlines = 100
-vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash=sh',
-  'vim', 'sql', 'yaml', 'json' }
-
--- highlight
-vim.api.nvim_create_autocmd('TextYankPost', {
-  group = vim.api.nvim_create_augroup('HighlightYank', { clear = true }),
-  callback = function()
-    vim.highlight.on_yank { higroup = 'Search', timeout = 200 }
   end,
 })
