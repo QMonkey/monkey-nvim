@@ -3,7 +3,6 @@ vim.pack.add({
   -- Theme / UI
   { src = 'https://github.com/sainnhe/sonokai' },
   { src = 'https://github.com/nvim-lualine/lualine.nvim' },
-  { src = 'https://github.com/echasnovski/mini.icons' },
   -- Editor
   { src = 'https://github.com/echasnovski/mini.indentscope' },
   { src = 'https://github.com/echasnovski/mini.ai' },
@@ -24,6 +23,7 @@ vim.pack.add({
   { src = 'https://github.com/hrsh7th/cmp-nvim-lsp' },
   { src = 'https://github.com/hrsh7th/cmp-buffer' },
   { src = 'https://github.com/hrsh7th/cmp-path' },
+  { src = 'https://github.com/hrsh7th/cmp-cmdline' },
   { src = 'https://github.com/L3MON4D3/LuaSnip' },
   { src = 'https://github.com/saadparwaiz1/cmp_luasnip' },
   { src = 'https://github.com/rafamadriz/friendly-snippets' },
@@ -48,6 +48,15 @@ vim.api.nvim_create_user_command('PackUpdate', function()
 end, {})
 
 vim.cmd('syntax on')
+
+-- sonokai
+vim.g.sonokai_style = 'andromeda'
+vim.g.sonokai_better_performance = 1
+vim.g.sonokai_diagnostic_text_highlight = 1
+vim.g.sonokai_diagnostic_virtual_text = 'colored'
+vim.g.sonokai_dim_inactive_windows = 1
+vim.opt.background = 'dark'
+vim.cmd('colorscheme sonokai')
 
 -- Leader
 vim.g.mapleader = ','
@@ -270,15 +279,6 @@ vim.api.nvim_create_autocmd('VimResized', {
   command = 'tabdo wincmd =',
 })
 
--- LanguageFold
-vim.api.nvim_create_autocmd('FileType', {
-  group = vim.api.nvim_create_augroup('LanguageFold', { clear = true }),
-  pattern = { 'python', 'yaml' },
-  callback = function()
-    vim.wo.foldmethod = 'indent'
-  end,
-})
-
 -- RestoreCursorPosition
 vim.api.nvim_create_autocmd('BufReadPost', {
   group = vim.api.nvim_create_augroup('RestoreCursorPosition', { clear = true }),
@@ -308,15 +308,6 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
   command = 'setfiletype tags',
 })
 
--- sonokai
-vim.g.sonokai_style = 'andromeda'
-vim.g.sonokai_better_performance = 1
-vim.g.sonokai_diagnostic_text_highlight = 1
-vim.g.sonokai_diagnostic_virtual_text = 'colored'
-vim.g.sonokai_dim_inactive_windows = 1
-vim.opt.background = 'dark'
-vim.cmd('colorscheme sonokai')
-
 -- lualine.nvim
 local mc = require('multicursor-nvim')
 local function mc_active()
@@ -329,6 +320,7 @@ require('lualine').setup({
     component_separators = '',
     section_separators = '',
     always_show_tabline = false,
+    icons_enabled = false,
   },
   sections = {
     lualine_a = {
@@ -402,9 +394,6 @@ require('lualine').setup({
     lualine_z = {},
   },
 })
-
--- mini.icons
-require('mini.icons').setup()
 
 -- mini.indentscope
 require('mini.indentscope').setup({ draw = { delay = 0 } })
@@ -599,7 +588,9 @@ cmp.setup({
       end
     end, { 'i', 's' }),
     ['<C-l>'] = cmp.mapping(function(fallback)
-      if luasnip.expand_or_jumpable() then
+      if cmp.visible() then
+        cmp.confirm({ select = true })
+      elseif luasnip.expand_or_jumpable() then
         luasnip.expand_or_jump()
       else
         fallback()
@@ -616,6 +607,22 @@ cmp.setup({
     { name = 'buffer' },
     { name = 'path' },
   }),
+})
+
+cmp.setup.cmdline(':', {
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = cmp.config.sources({
+    { name = 'path' },
+  }, {
+    { name = 'cmdline' },
+  }),
+})
+
+cmp.setup.cmdline({ '/', '?' }, {
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = {
+    { name = 'buffer' },
+  },
 })
 
 -- git
@@ -680,7 +687,7 @@ vim.api.nvim_create_autocmd('VimEnter', {
 
 -- oil.nvim
 require('oil').setup({
-  view_options = { show_hidden = true },
+  view_options = { show_hidden = true, show_icons = false },
 })
 
 vim.keymap.set('n', '-', function()
