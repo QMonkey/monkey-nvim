@@ -649,37 +649,19 @@ vim.keymap.set('n', '<leader>rs', '<cmd>AutoSession delete<CR>', { silent = true
 -- rooter
 local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
 
-local function find_root()
-  local path = vim.fn.fnamemodify(vim.fn.getcwd(), ':p')
-  local last = nil
-  while path ~= last do
-    for _, p in ipairs(patterns) do
-      if vim.uv.fs_stat(vim.fs.joinpath(path, p)) then
-        return path
-      end
-    end
-    last = path
-    path = vim.fn.fnamemodify(path, ':h')
-  end
-  return nil
-end
-
-vim.keymap.set('n', '<leader>cr', function()
-  local root = find_root()
+local function cd_root()
+  local root = vim.fs.root(0, patterns)
   if root then
     vim.cmd('cd ' .. vim.fn.fnameescape(root))
   end
-end, { silent = true })
+end
+
+vim.keymap.set('n', '<leader>cr', cd_root, { silent = true })
 
 vim.api.nvim_create_autocmd('VimEnter', {
   group = vim.api.nvim_create_augroup('ChangeRoot', { clear = true }),
   once = true,
-  callback = function()
-    local root = find_root()
-    if root then
-      vim.cmd('cd ' .. vim.fn.fnameescape(root))
-    end
-  end,
+  callback = cd_root,
 })
 
 -- oil.nvim
@@ -692,7 +674,7 @@ vim.keymap.set('n', '-', function()
 end, { silent = true })
 
 vim.keymap.set('n', '~', function()
-  local root = find_root() or vim.fn.expand('~')
+  local root = vim.fs.root(0, patterns) or vim.fn.expand('~')
   require('oil').open(root)
 end, { silent = true })
 
@@ -995,14 +977,23 @@ vim.api.nvim_create_autocmd('LspAttach', {
     vim.keymap.set('n', ']D', function() vim.diagnostic.jump({ count = 999 }) end, bufopts)
     vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, bufopts)
 
-    vim.api.nvim_create_autocmd('CursorHold', {
-      buffer = buf,
-      callback = vim.lsp.buf.document_highlight,
-    })
-    vim.api.nvim_create_autocmd('CursorMoved', {
-      buffer = buf,
-      callback = vim.lsp.buf.clear_references,
-    })
+    local has_highlight = false
+    for _, client in ipairs(vim.lsp.get_clients({ bufnr = buf })) do
+      if client.server_capabilities.documentHighlight then
+        has_highlight = true
+        break
+      end
+    end
+    if has_highlight then
+      vim.api.nvim_create_autocmd('CursorHold', {
+        buffer = buf,
+        callback = vim.lsp.buf.document_highlight,
+      })
+      vim.api.nvim_create_autocmd('CursorMoved', {
+        buffer = buf,
+        callback = vim.lsp.buf.clear_references,
+      })
+    end
   end,
 })
 
