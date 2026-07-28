@@ -145,6 +145,7 @@ elseif has_display or has_wayland then
 end
 
 -- Indent
+vim.g.editorconfig = false
 vim.opt.smartindent = true
 vim.opt.autoindent = true
 vim.opt.smarttab = true
