@@ -145,7 +145,6 @@ elseif has_display or has_wayland then
 end
 
 -- Indent
-vim.g.editorconfig = false
 vim.opt.smartindent = true
 vim.opt.autoindent = true
 vim.opt.smarttab = true
@@ -186,7 +185,6 @@ vim.opt.showtabline = 1
 vim.opt.laststatus = 2
 
 vim.opt.sessionoptions:remove({ 'blank', 'options', 'folds', 'terminal' })
-vim.opt.sessionoptions:append('localoptions')
 
 -- Color support
 if vim.fn.has('termguicolors') == 1 then
