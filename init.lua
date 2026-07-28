@@ -60,6 +60,30 @@ vim.api.nvim_create_user_command('PackUpdate', function()
   vim.notify('Packages updated', vim.log.levels.INFO)
 end, {})
 
+vim.api.nvim_create_user_command('PackClean', function()
+  local names = vim.iter(vim.pack.get())
+      :filter(function(x) return not x.active end)
+      :map(function(x) return x.spec.name end)
+      :totable()
+
+  if #names == 0 then
+    vim.notify('No unused plugins found', vim.log.levels.INFO)
+    return
+  end
+
+  local list = vim.iter(names):fold('', function(acc, name)
+    return acc .. '  ' .. name .. '\n'
+  end)
+  local choice = vim.fn.confirm(
+    'Remove ' .. #names .. ' unused plugin(s)?\n\n' .. list .. '\n',
+    '&Yes\n&No', 2
+  )
+  if choice == 1 then
+    vim.pack.del(names)
+    vim.notify('Removed ' .. #names .. ' plugin(s)', vim.log.levels.INFO)
+  end
+end, {})
+
 vim.cmd('syntax on')
 
 -- sonokai
@@ -1222,6 +1246,6 @@ vim.api.nvim_create_autocmd('BufWritePre', {
   callback = function(args)
     local clients = vim.lsp.get_clients({ bufnr = args.buf })
     if #clients == 0 then return end
-    vim.lsp.buf.format({ async = true, timeout_ms = 5000 })
+    vim.lsp.buf.format({ async = false, timeout_ms = 5000 })
   end,
 })
