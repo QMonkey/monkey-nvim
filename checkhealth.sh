@@ -104,6 +104,16 @@ check_cc() {
 	fi
 }
 
+check_ts() {
+	if command -v tree-sitter &>/dev/null; then
+		echo -e "  ${PASS} tree-sitter-cli"
+		return 0
+	else
+		echo -e "  ${FAIL} tree-sitter-cli"
+		return 1
+	fi
+}
+
 os_detect() {
 	case "$(uname -s)" in
 	Linux)
@@ -209,13 +219,13 @@ REQUIRED["git"]="git"
 REQUIRED["rg"]="ripgrep"
 REQUIRED["ctags"]="universal-ctags"
 REQUIRED["cc"]="C compiler (gcc/clang)"
+REQUIRED["ts"]="tree-sitter-cli"
 
 # packages for each OS (maps binary -> package name)
 declare -A APT_NAMES=(
 	["rg"]="ripgrep"
 	["ctags"]="universal-ctags"
 	["clangd"]="clangd"
-	["clang-format"]="clang-format"
 	["gcc"]="gcc"
 	["g++"]="g++"
 	["go"]="golang-go"
@@ -226,7 +236,6 @@ declare -A PACMAN_NAMES=(
 	["rg"]="ripgrep"
 	["ctags"]="ctags"
 	["clangd"]="clang"
-	["clang-format"]="clang"
 	["gcc"]="gcc"
 	["g++"]="gcc"
 	["go"]="go"
@@ -239,7 +248,6 @@ declare -A PACMAN_NAMES=(
 declare -A BREW_NAMES=(
 	["ctags"]="universal-ctags"
 	["clangd"]="llvm"
-	["clang-format"]="llvm"
 	["gcc"]="gcc"
 	["g++"]="gcc"
 	["go"]="go"
@@ -263,7 +271,7 @@ pkg_name() {
 # ──────────── language-grouped optional deps ────────────
 
 declare -A DEPS_BY_GROUP
-DEPS_BY_GROUP["C/C++"]="gcc g++ clangd clang-format"
+DEPS_BY_GROUP["C/C++"]="gcc g++ clangd"
 DEPS_BY_GROUP["Go"]="go gopls"
 DEPS_BY_GROUP["Python"]="python3 pylsp"
 DEPS_BY_GROUP["Rust"]="cargo rust-analyzer"
@@ -304,17 +312,29 @@ check_bin "git" || { MISSING_REQUIRED+=("git"); ALL_PASSED=false; }
 check_bin "rg" "ripgrep" || { MISSING_REQUIRED+=("rg"); ALL_PASSED=false; }
 check_bin "ctags" "universal-ctags" || { MISSING_REQUIRED+=("ctags"); ALL_PASSED=false; }
 check_cc || { MISSING_REQUIRED+=("cc"); ALL_PASSED=false; }
+check_ts || { MISSING_REQUIRED+=("ts"); ALL_PASSED=false; }
 echo ""
 
 if $INSTALL_MODE && [[ ${#MISSING_REQUIRED[@]} -gt 0 ]]; then
 	echo -e "${YELLOW}Installing: ${MISSING_REQUIRED[*]}...${NC}"
-	pkgs=()
-	for b in "${MISSING_REQUIRED[@]}"; do pkgs+=("$(pkg_name "$b")"); done
-	if install_pkg "${pkgs[@]}"; then
-		echo -e "${GREEN}Done.${NC}"
-	else
-		echo -e "${RED}Failed. Run: $(get_install_hint "${pkgs[*]}")${NC}"
-	fi
+	for b in "${MISSING_REQUIRED[@]}"; do
+		if [[ "$b" == "ts" ]]; then
+			echo -e "  ${YELLOW}→ installing tree-sitter-cli via npm...${NC}"
+			if sudo npm install -g tree-sitter-cli 2>/dev/null; then
+				echo -e "  ${GREEN}Done.${NC}"
+			else
+				echo -e "  ${RED}Failed. Run: sudo npm install -g tree-sitter-cli${NC}"
+			fi
+		else
+			pkgs=()
+			pkgs+=("$(pkg_name "$b")")
+			if install_pkg "${pkgs[@]}"; then
+				echo -e "  ${GREEN}${b} installed.${NC}"
+			else
+				echo -e "  ${RED}Failed for ${b}. Run: $(get_install_hint "${pkgs[*]}")${NC}"
+			fi
+		fi
+	done
 	echo ""
 fi
 
@@ -354,7 +374,6 @@ echo ""
 if ! $INSTALL_MODE; then
 	declare -A INSTALL_HINTS
 	INSTALL_HINTS["clangd"]="$(get_install_hint clangd)  # or clangd-15+"
-	INSTALL_HINTS["clang-format"]="$(get_install_hint clang-format)"
 	INSTALL_HINTS["gcc"]="$(get_install_hint gcc)"
 	INSTALL_HINTS["g++"]="$(get_install_hint g++)"
 	INSTALL_HINTS["go"]="https://go.dev/dl/"
