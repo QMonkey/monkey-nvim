@@ -43,17 +43,23 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 | [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | Telescope live grep backend | Yes |
 | universal-ctags | gutentags tag generation | Yes |
 | C compiler (gcc/clang) | Build tree-sitter parser native modules | Yes (compile-time only) |
-| node | Runtime for npm-based LSP servers | No (needed for JS/TS/JSON/YAML/Shell/Vim LSP) |
+| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | Build tree-sitter parser modules | Yes (compile-time only) |
 
 ```bash
 # Ubuntu/Debian
 sudo apt-get install git ripgrep universal-ctags gcc
+# tree-sitter-cli is installed via npm:
+npm install -g tree-sitter-cli
 
 # Arch Linux
 sudo pacman -S git ripgrep ctags gcc
+# tree-sitter-cli is installed via npm:
+npm install -g tree-sitter-cli
 
 # macOS
 brew install git ripgrep universal-ctags gcc
+# tree-sitter-cli is installed via npm:
+npm install -g tree-sitter-cli
 ```
 
 #### 2.2 LSP servers
@@ -81,7 +87,7 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 
 ```bash
 # Ubuntu
-sudo apt-get install gcc g++ clangd clang-format
+sudo apt-get install gcc g++ clangd
 
 # Arch Linux
 sudo pacman -S gcc clang
