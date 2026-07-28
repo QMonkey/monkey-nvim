@@ -43,17 +43,23 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 | [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | Telescope live grep 后端 | 是 |
 | universal-ctags | gutentags 标签生成 | 是 |
 | C 编译器 (gcc/clang) | 编译 tree-sitter parser 原生模块 | 是（仅编译时） |
-| node | npm 安装的 LSP 服务器的运行环境 | 否（JS/TS/JSON/YAML/Shell/Vim 需要） |
+| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | 编译 tree-sitter parser 模块 | 是（仅编译时） |
 
 ```bash
 # Ubuntu/Debian
 sudo apt-get install git ripgrep universal-ctags gcc
+# tree-sitter-cli 通过 npm 安装：
+npm install -g tree-sitter-cli
 
 # Arch Linux
 sudo pacman -S git ripgrep ctags gcc
+# tree-sitter-cli 通过 npm 安装：
+npm install -g tree-sitter-cli
 
 # macOS
 brew install git ripgrep universal-ctags gcc
+# tree-sitter-cli 通过 npm 安装：
+npm install -g tree-sitter-cli
 ```
 
 #### 2.2 LSP 服务器
@@ -81,7 +87,7 @@ monkey-nvim 使用 Neovim 内建的 LSP 客户端（`vim.lsp.config`）。请根
 
 ```bash
 # Ubuntu
-sudo apt-get install gcc g++ clangd clang-format
+sudo apt-get install gcc g++ clangd
 
 # Arch Linux
 sudo pacman -S gcc clang
@@ -652,5 +658,3 @@ monkey-nvim 在检测到显示服务器时设置 `clipboard=unnamed,unnamedplus`
 ```bash
 export MANPAGER="nvim -R +MANPAGER -"
 ```
-
-
