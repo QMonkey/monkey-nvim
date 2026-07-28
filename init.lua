@@ -199,22 +199,22 @@ local filetype_group = vim.api.nvim_create_augroup('FileType', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
   group = filetype_group,
   pattern = { 'rust', 'python', 'markdown' },
-  callback = function()
-    vim.opt_local.expandtab = true
-    vim.opt_local.tabstop = 4
-    vim.opt_local.shiftwidth = 4
-    vim.opt_local.softtabstop = 4
+  callback = function(args)
+    vim.bo[args.buf].expandtab = true
+    vim.bo[args.buf].tabstop = 4
+    vim.bo[args.buf].shiftwidth = 4
+    vim.bo[args.buf].softtabstop = 4
   end,
 })
 
 vim.api.nvim_create_autocmd('FileType', {
   group = filetype_group,
   pattern = { 'javascript', 'typescript', 'lua', 'yaml', 'json' },
-  callback = function()
-    vim.opt_local.expandtab = true
-    vim.opt_local.tabstop = 2
-    vim.opt_local.shiftwidth = 2
-    vim.opt_local.softtabstop = 2
+  callback = function(args)
+    vim.bo[args.buf].expandtab = true
+    vim.bo[args.buf].tabstop = 2
+    vim.bo[args.buf].shiftwidth = 2
+    vim.bo[args.buf].softtabstop = 2
   end,
 })
 
