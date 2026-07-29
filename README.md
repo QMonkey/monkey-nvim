@@ -40,24 +40,25 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 | Tool | Purpose | Required |
 |---|---|---|
 | git | Plugin management via `vim.pack` | Yes |
-| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | Telescope live grep backend | Yes |
+| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | fzf-lua live grep backend | Yes |
+| [fzf](https://github.com/junegunn/fzf) | fzf-lua fuzzy finder backend | Yes |
 | universal-ctags | gutentags tag generation | Yes |
 | C compiler (gcc/clang) | Build tree-sitter parser native modules | Yes (compile-time only) |
 | [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | Build tree-sitter parser modules | Yes (compile-time only) |
 
 ```bash
 # Ubuntu/Debian
-sudo apt-get install git ripgrep universal-ctags gcc
+sudo apt-get install git ripgrep fzf universal-ctags gcc
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 
 # Arch Linux
-sudo pacman -S git ripgrep ctags gcc
+sudo pacman -S git ripgrep fzf ctags gcc
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 
 # macOS
-brew install git ripgrep universal-ctags gcc
+brew install git ripgrep fzf universal-ctags gcc
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 ```
@@ -228,7 +229,7 @@ Neovim detects true color support automatically via `termguicolors`. If running 
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs) | Auto-close brackets/parens |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim) | Substitute with clipboard |
 | [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim) | Visual marks |
-| [nvim-telescope/telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) | Fuzzy file/buffer/tag finder |
+| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua) | Fuzzy file/buffer/tag finder |
 | [folke/flash.nvim](https://github.com/folke/flash.nvim) | Easy motion |
 | [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo) | Folding |
 | [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | Syntax highlighting & parsing |
