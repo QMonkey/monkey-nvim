@@ -40,24 +40,25 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 | 工具 | 用途 | 是否必须 |
 |---|---|---|
 | git | 通过 `vim.pack` 管理插件 | 是 |
-| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | Telescope live grep 后端 | 是 |
+| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | fzf-lua live grep 后端 | 是 |
+| [fzf](https://github.com/junegunn/fzf) | fzf-lua 模糊查找后端 | 是 |
 | universal-ctags | gutentags 标签生成 | 是 |
 | C 编译器 (gcc/clang) | 编译 tree-sitter parser 原生模块 | 是（仅编译时） |
 | [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | 编译 tree-sitter parser 模块 | 是（仅编译时） |
 
 ```bash
 # Ubuntu/Debian
-sudo apt-get install git ripgrep universal-ctags gcc
+sudo apt-get install git ripgrep fzf universal-ctags gcc
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 
 # Arch Linux
-sudo pacman -S git ripgrep ctags gcc
+sudo pacman -S git ripgrep fzf ctags gcc
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 
 # macOS
-brew install git ripgrep universal-ctags gcc
+brew install git ripgrep fzf universal-ctags gcc
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 ```
@@ -228,7 +229,7 @@ Neovim 通过 `termguicolors` 自动检测真彩色支持。如果在传统 Linu
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs) | 自动配对括号 |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim) | 使用剪贴板替换 |
 | [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim) | 可视化书签 |
-| [nvim-telescope/telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) | 模糊文件/缓冲/tag 查找 |
+| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua) | 模糊文件/缓冲/tag 查找 |
 | [folke/flash.nvim](https://github.com/folke/flash.nvim) | 快速跳转 |
 | [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo) | 折叠 |
 | [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | 语法高亮与解析 |
