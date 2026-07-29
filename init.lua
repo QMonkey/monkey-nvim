@@ -1003,9 +1003,30 @@ vim.api.nvim_create_autocmd('LspAttach', {
     local bufopts = { buffer = buf, silent = true }
 
     vim.keymap.set('n', 'gh', vim.lsp.buf.hover, bufopts)
-    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
-    vim.keymap.set('n', 'gc', vim.lsp.buf.declaration, bufopts)
-    vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, bufopts)
+    vim.keymap.set('n', 'gd', function()
+      vim.lsp.buf.definition({
+        on_list = function(result)
+          vim.fn.setqflist({}, ' ', { items = result.items })
+          require('trouble').open('quickfix')
+        end
+      })
+    end, bufopts)
+    vim.keymap.set('n', 'gc', function()
+      vim.lsp.buf.declaration({
+        on_list = function(result)
+          vim.fn.setqflist({}, ' ', { items = result.items })
+          require('trouble').open('quickfix')
+        end
+      })
+    end, bufopts)
+    vim.keymap.set('n', 'gt', function()
+      vim.lsp.buf.type_definition({
+        on_list = function(result)
+          vim.fn.setqflist({}, ' ', { items = result.items })
+          require('trouble').open('quickfix')
+        end
+      })
+    end, bufopts)
     vim.keymap.set('n', 'gi', function()
       vim.lsp.buf.implementation({
         on_list = function(result)
