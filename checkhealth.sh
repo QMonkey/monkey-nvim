@@ -220,6 +220,7 @@ REQUIRED["rg"]="ripgrep"
 REQUIRED["ctags"]="universal-ctags"
 REQUIRED["cc"]="C compiler (gcc/clang)"
 REQUIRED["ts"]="tree-sitter-cli"
+REQUIRED["fzf"]="fzf"
 
 # packages for each OS (maps binary -> package name)
 declare -A APT_NAMES=(
@@ -231,6 +232,7 @@ declare -A APT_NAMES=(
 	["go"]="golang-go"
 	["python3"]="python3"
 	["node"]="nodejs"
+	["fzf"]="fzf"
 )
 declare -A PACMAN_NAMES=(
 	["rg"]="ripgrep"
@@ -244,6 +246,7 @@ declare -A PACMAN_NAMES=(
 	["lua-language-server"]="lua-language-server"
 	["marksman"]="marksman"
 	["glow"]="glow"
+	["fzf"]="fzf"
 )
 declare -A BREW_NAMES=(
 	["ctags"]="universal-ctags"
@@ -256,6 +259,7 @@ declare -A BREW_NAMES=(
 	["lua-language-server"]="lua-language-server"
 	["marksman"]="marksman"
 	["glow"]="glow"
+	["fzf"]="fzf"
 )
 
 pkg_name() {
@@ -313,6 +317,7 @@ check_bin "rg" "ripgrep" || { MISSING_REQUIRED+=("rg"); ALL_PASSED=false; }
 check_bin "ctags" "universal-ctags" || { MISSING_REQUIRED+=("ctags"); ALL_PASSED=false; }
 check_cc || { MISSING_REQUIRED+=("cc"); ALL_PASSED=false; }
 check_ts || { MISSING_REQUIRED+=("ts"); ALL_PASSED=false; }
+check_bin "fzf" || { MISSING_REQUIRED+=("fzf"); ALL_PASSED=false; }
 echo ""
 
 if $INSTALL_MODE && [[ ${#MISSING_REQUIRED[@]} -gt 0 ]]; then
