@@ -25,8 +25,7 @@ vim.pack.add({
   { src = 'https://github.com/gbprod/substitute.nvim' },
   { src = 'https://github.com/chentoast/marks.nvim' },
   -- Navigation / Search
-  { src = 'https://github.com/nvim-lua/plenary.nvim' },
-  { src = 'https://github.com/nvim-telescope/telescope.nvim' },
+  { src = 'https://github.com/ibhagwan/fzf-lua' },
   { src = 'https://github.com/folke/flash.nvim' },
   { src = 'https://github.com/kevinhwang91/promise-async' },
   { src = 'https://github.com/kevinhwang91/nvim-ufo' },
@@ -483,61 +482,46 @@ vim.keymap.set('n', 'S', require('substitute').eol, { silent = true })
 -- marks.nvim
 require('marks').setup()
 
--- telescope.nvim
-local telescope = require('telescope')
-local actions = require('telescope.actions')
-
-telescope.setup({
+-- fzf-lua
+local fzf_lua = require('fzf-lua')
+fzf_lua.setup({
   defaults = {
+    silent = true,
     file_ignore_patterns = { '.git/', '.hg/', '.svn/', '.bzr/' },
-    mappings = {
-      i = {
-        ['<C-j>'] = actions.move_selection_next,
-        ['<C-k>'] = actions.move_selection_previous,
-      },
+  },
+  keymap = {
+    builtin = {
+      ['<F2>'] = 'hide',
+    },
+    fzf = {
+      ['ctrl-j'] = 'down',
+      ['ctrl-k'] = 'up',
     },
   },
-  pickers = {
-    buffers = {
-      mappings = {
-        i = { ['<C-d>'] = actions.delete_buffer },
-        n = { ['<C-d>'] = actions.delete_buffer },
-      },
+  files = {
+    hidden = true,
+  },
+  grep = {
+    rg_opts = '--hidden',
+  },
+  buffers = {
+    actions = {
+      ['ctrl-d'] = { fn = fzf_lua.actions.buf_del, reload = true },
     },
-    live_grep = { additional_args = { '--hidden' } },
-    find_files = { hidden = true },
   },
 })
 
-local builtin = require('telescope.builtin')
-vim.keymap.set('n', '<C-p>', builtin.find_files, { silent = true })
-vim.keymap.set('n', '<leader>b', builtin.buffers, { silent = true })
-vim.keymap.set('n', '<leader>y', builtin.current_buffer_tags, { silent = true })
+vim.keymap.set('n', '<F1>', fzf_lua.live_grep, { silent = true })
+vim.keymap.set('n', '<F2>', fzf_lua.resume, { silent = true })
+vim.keymap.set('n', '<C-p>', fzf_lua.files, { silent = true })
+vim.keymap.set('n', '<leader>b', fzf_lua.buffers, { silent = true })
+vim.keymap.set('n', '<leader>y', fzf_lua.btags, { silent = true })
 vim.keymap.set('n', '<leader>f', function()
-  builtin.lsp_document_symbols({ symbols = { 'function', 'method' } })
+  fzf_lua.lsp_document_symbols({ symbols = { filter_kind = { 'Function', 'Method' } } })
 end, { silent = true })
-vim.keymap.set('n', '<leader>e', builtin.current_buffer_fuzzy_find, { silent = true })
-vim.keymap.set('n', '<leader>a', function()
-  builtin.grep_string({ default_text = vim.fn.expand('<cword>') })
-end, { silent = true })
-vim.keymap.set('v', '<leader>a', function()
-  local saved_reg = vim.fn.getreg('"')
-  local saved_regtype = vim.fn.getregtype('"')
-  vim.cmd('normal! "vy"')
-  local text = vim.fn.getreg('"')
-  vim.fn.setreg('"', saved_reg, saved_regtype)
-  builtin.grep_string({ default_text = text })
-end, { silent = true })
-vim.keymap.set('n', '<F1>', builtin.live_grep, { silent = true })
-vim.keymap.set({ 'n', 'i' }, '<F2>', function()
-  local state = require('telescope.state')
-  local prompt_bufs = state.get_existing_prompt_bufnrs()
-  if #prompt_bufs > 0 then
-    actions.close(prompt_bufs[#prompt_bufs])
-  else
-    builtin.resume()
-  end
-end, { silent = true })
+vim.keymap.set('n', '<leader>e', fzf_lua.blines, { silent = true })
+vim.keymap.set('n', '<leader>a', fzf_lua.grep_cword, { silent = true })
+vim.keymap.set('v', '<leader>a', fzf_lua.grep_visual, { silent = true })
 
 -- flash.nvim
 require('flash').setup({
