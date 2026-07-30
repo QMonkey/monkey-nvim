@@ -153,11 +153,11 @@ vim.api.nvim_create_autocmd('InsertEnter', {
   end,
 })
 
--- highlight
+-- Highlight
 vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('HighlightYank', { clear = true }),
   callback = function()
-    vim.highlight.on_yank({ higroup = 'Search', timeout = 200 })
+    vim.highlight.on_yank({ higroup = 'IncSearch', timeout = 200 })
   end,
 })
 
@@ -656,7 +656,7 @@ cmp.setup.cmdline({ '/', '?' }, {
   },
 })
 
--- git
+-- Git
 require('neogit').setup({
   diff_viewer = 'codediff',
   integrations = { codediff = true },
@@ -698,7 +698,7 @@ require('auto-session').setup({
 vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
 vim.keymap.set('n', '<leader>rs', '<cmd>AutoSession delete<CR>', { silent = true })
 
--- rooter
+-- Rooter
 local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
 
 local function cd_root()
@@ -1003,44 +1003,35 @@ vim.api.nvim_create_autocmd('LspAttach', {
     local bufopts = { buffer = buf, silent = true }
 
     vim.keymap.set('n', 'gh', vim.lsp.buf.hover, bufopts)
+    local function handle_locations(result)
+      if result.items and #result.items == 1 then
+        local item = result.items[1]
+        local b = vim.fn.bufadd(item.filename)
+        vim.cmd("normal! m'")
+        vim.bo[b].buflisted = true
+        vim.api.nvim_set_current_buf(b)
+        vim.api.nvim_win_set_cursor(0, { item.lnum, item.col - 1 })
+        return
+      end
+      vim.fn.setqflist({}, ' ', result)
+      require('trouble').open('quickfix')
+    end
+
     vim.keymap.set('n', 'gd', function()
-      vim.lsp.buf.definition({
-        on_list = function(result)
-          vim.fn.setqflist({}, ' ', { items = result.items })
-          require('trouble').open('quickfix')
-        end
-      })
+      vim.lsp.buf.definition({ on_list = handle_locations })
     end, bufopts)
     vim.keymap.set('n', 'gc', function()
-      vim.lsp.buf.declaration({
-        on_list = function(result)
-          vim.fn.setqflist({}, ' ', { items = result.items })
-          require('trouble').open('quickfix')
-        end
-      })
+      vim.lsp.buf.declaration({ on_list = handle_locations })
     end, bufopts)
     vim.keymap.set('n', 'gt', function()
-      vim.lsp.buf.type_definition({
-        on_list = function(result)
-          vim.fn.setqflist({}, ' ', { items = result.items })
-          require('trouble').open('quickfix')
-        end
-      })
+      vim.lsp.buf.type_definition({ on_list = handle_locations })
     end, bufopts)
     vim.keymap.set('n', 'gi', function()
-      vim.lsp.buf.implementation({
-        on_list = function(result)
-          vim.fn.setqflist({}, ' ', { items = result.items })
-          require('trouble').open('quickfix')
-        end
-      })
+      vim.lsp.buf.implementation({ on_list = handle_locations })
     end, bufopts)
     vim.keymap.set('n', 'gr', function()
       vim.lsp.buf.references({ includeDeclaration = true }, {
-        on_list = function(result)
-          vim.fn.setqflist({}, ' ', { items = result.items })
-          require('trouble').open('quickfix')
-        end
+        on_list = handle_locations,
       })
     end, bufopts)
 
@@ -1052,7 +1043,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
 
     local has_highlight = false
     for _, client in ipairs(vim.lsp.get_clients({ bufnr = buf })) do
-      if client.server_capabilities.documentHighlight then
+      if client:supports_method('textDocument/documentHighlight') then
         has_highlight = true
         break
       end
@@ -1060,10 +1051,17 @@ vim.api.nvim_create_autocmd('LspAttach', {
     if has_highlight then
       vim.api.nvim_create_autocmd('CursorHold', {
         buffer = buf,
-        callback = vim.lsp.buf.document_highlight,
+        group = vim.api.nvim_create_augroup('Lsp', { clear = false }),
+        callback = function()
+          if vim.fn.getcmdtype() ~= '' then
+            return
+          end
+          vim.lsp.buf.document_highlight()
+        end,
       })
       vim.api.nvim_create_autocmd('CursorMoved', {
         buffer = buf,
+        group = vim.api.nvim_create_augroup('Lsp', { clear = false }),
         callback = vim.lsp.buf.clear_references,
       })
     end
