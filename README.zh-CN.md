@@ -448,7 +448,8 @@ Leader+Leader+space  去除行尾空白字符 + \r（DOS 换行符）
 Leader+q            打开/关闭quickfix（trouble）
 Leader+l            打开/关闭location list（trouble）
 Leader+gg           打开 Neogit
-Leader+gl           打开 Neogit log
+Leader+gl           打开 Neogit log（当前文件）
+Leader+gL           打开 Neogit log（所有引用）
 Leader+gd           Gitsigns diff this
 Leader+gD           CodeDiff
 Leader+gb           Gitsigns blame line
@@ -462,6 +463,9 @@ Leader+hP           Gitsigns preview hunk
 Leader+hq           Gitsigns set quickfix
 Leader+hQ           Gitsigns set quickfix all
 Leader+hl           Gitsigns set loclist
+
+可视模式：
+Leader+gl           对选中行打开 Neogit log
 
 SudoWrite           使用 root 权限保存文件
 ```

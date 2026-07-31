@@ -174,9 +174,10 @@ vim.opt.jumpoptions:append('stack')
 -- Clipboard
 local has_display = vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0
 local has_wayland = vim.fn.empty(vim.fn.getenv('WAYLAND_DISPLAY')) == 0
-if vim.fn.has('unnamedplus') == 1 and (has_display or has_wayland) then
+local has_mac = vim.fn.has('mac') == 1
+if vim.fn.has('unnamedplus') == 1 and (has_display or has_wayland or has_mac) then
   vim.opt.clipboard = 'unnamed,unnamedplus'
-elseif has_display or has_wayland then
+elseif has_display or has_wayland or has_mac then
   vim.opt.clipboard = 'unnamed'
 end
 
@@ -671,6 +672,10 @@ gitsigns.setup()
 
 vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gl', '<cmd>NeogitLogCurrent<CR>', { silent = true })
+vim.keymap.set('x', '<leader>gl', ":'<,'>NeogitLogCurrent<CR>", { silent = true })
+vim.keymap.set('n', '<leader>gL', function()
+  require('neogit').action('log', 'log_all_references')()
+end, { silent = true })
 vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gD', '<cmd>CodeDiff<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns blame_line<CR>', { silent = true })

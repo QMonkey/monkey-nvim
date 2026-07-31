@@ -451,7 +451,8 @@ Leader+Leader+space  Strip trailing whitespace + \r (DOS newlines)
 Leader+q            Toggle quickfix (trouble)
 Leader+l            Toggle location list (trouble)
 Leader+gg           Open Neogit
-Leader+gl           Open Neogit log
+Leader+gl           Open Neogit log (current file)
+Leader+gL           Open Neogit log (all refs)
 Leader+gd           Gitsigns diff this
 Leader+gD           CodeDiff
 Leader+gb           Gitsigns blame line
@@ -465,6 +466,9 @@ Leader+hP           Gitsigns preview hunk
 Leader+hq           Gitsigns set quickfix
 Leader+hQ           Gitsigns set quickfix all
 Leader+hl           Gitsigns set loclist
+
+Visual mode:
+Leader+gl           Neogit log for selected lines
 
 SudoWrite           Save file with sudo
 ```
