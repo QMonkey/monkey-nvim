@@ -202,7 +202,7 @@ vim.opt.timeout = true
 vim.opt.timeoutlen = 1000
 vim.opt.ttimeout = true
 vim.opt.ttimeoutlen = 10
-vim.opt.updatetime = 500
+vim.opt.updatetime = 300
 
 -- Display
 vim.opt.list = true
