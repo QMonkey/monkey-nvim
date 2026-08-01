@@ -24,6 +24,7 @@ vim.pack.add({
   { src = 'https://github.com/windwp/nvim-autopairs' },
   { src = 'https://github.com/gbprod/substitute.nvim' },
   { src = 'https://github.com/chentoast/marks.nvim' },
+  { src = 'https://github.com/andymass/vim-matchup' },
   -- Navigation / Search
   { src = 'https://github.com/ibhagwan/fzf-lua' },
   { src = 'https://github.com/folke/flash.nvim' },
@@ -231,7 +232,7 @@ else
 end
 
 -- FileType
-local filetype_group = vim.api.nvim_create_augroup('FileType', { clear = true })
+local filetype_group = vim.api.nvim_create_augroup('FileTypes', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
   group = filetype_group,
   pattern = { 'rust', 'python', 'markdown' },
@@ -589,6 +590,10 @@ require('nvim-treesitter.install').install({
   'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
   'markdown_inline', 'yaml', 'json', 'sql',
 })
+
+-- vim-matchup
+vim.g.matchup_matchparen_offscreen = { method = 'popup' }
+vim.g.matchup_matchparen_deferred = 1
 
 -- nvim-cmp
 local cmp = require('cmp')
