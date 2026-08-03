@@ -310,8 +310,8 @@ Leader+o    输入打开文件的路径，并在当前窗口打开一个缓冲
 #### 1.4 分屏
 
 ```
-Leader+s    输入打开文件的路径，并创建一个水平分屏的窗口
-Leader+v    输入打开文件的路径，并创建一个垂直分屏的窗口
+Leader+Leader+s    输入打开文件的路径，并创建一个水平分屏的窗口
+Leader+Leader+v    输入打开文件的路径，并创建一个垂直分屏的窗口
 
 Ctrl+h      跳转到左窗口
 Ctrl+j      跳转到下窗口
@@ -323,7 +323,7 @@ Leader+z    窗口放大/恢复
 #### 1.5 Tab
 
 ```
-Leader+t      输入打开的文件路径，并创建一个新tab窗口
+Leader+Leader+t      输入打开的文件路径，并创建一个新tab窗口
 
 [+t         切换到上一个tab窗口
 ]+t         切换到下一个tab窗口
@@ -367,7 +367,8 @@ Leader+d           切换诊断列表（trouble）
 Ctrl+p      搜索文件
 
 Leader+b    搜索缓冲
-Leader+y    搜索当前文件Tag
+Leader+t    搜索当前文件Tag
+Leader+p    搜索项目Tag
 Leader+f    搜索当前文件函数
 Leader+e    搜索当前文件行
 Leader+a    当前目录搜索光标所在的词
