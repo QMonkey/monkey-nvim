@@ -310,8 +310,8 @@ Leader+o    Open a new buffer with given file path in current window
 #### 1.4 Split
 
 ```
-Leader+s    Open a horizontal split with given file path in current window
-Leader+v    Open a vertical split with given file path in current window
+Leader+Leader+s    Open a horizontal split with given file path in current window
+Leader+Leader+v    Open a vertical split with given file path in current window
 
 Ctrl+h      Jump to the left split
 Ctrl+j      Jump to the below split
@@ -323,7 +323,7 @@ Leader+z    Toggle zoom
 #### 1.5 Tab
 
 ```
-Leader+t    Open a tab with given file path in current window
+Leader+Leader+t  Open a tab with given file path in current window
 
 [+t         Jump to previous tab
 ]+t         Jump to next tab
@@ -367,7 +367,8 @@ Files are auto-formatted on save via LSP. Completion is enabled by default — L
 Ctrl+p      Search files
 
 Leader+b    Search buffers
-Leader+y    Search buffer tags
+Leader+t    Search buffer tags
+Leader+p    Search project tags
 Leader+f    Search function in buffer
 Leader+e    Search line in buffer
 Leader+a    Search current word in current directory
