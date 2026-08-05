@@ -52,6 +52,22 @@ sudo apt-get install git ripgrep fzf universal-ctags gcc
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 
+# fzf on older Debian/Ubuntu may be outdated; use Homebrew:
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew install fzf
+
+# OpenSUSE
+sudo zypper install git ripgrep fzf universal-ctags gcc
+# tree-sitter-cli is installed via npm:
+npm install -g tree-sitter-cli
+
+# CentOS (enable EPEL for ripgrep/fzf/universal-ctags)
+sudo yum install epel-release
+sudo yum install git ripgrep fzf universal-ctags gcc
+# tree-sitter-cli is installed via npm:
+npm install -g tree-sitter-cli
+
 # Arch Linux
 sudo pacman -S git ripgrep fzf ctags gcc
 # tree-sitter-cli is installed via npm:
@@ -69,7 +85,7 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 
 | Language | LSP Server | Install |
 |---|---|---|
-| C/C++ | clangd | `sudo apt-get install clangd`, `sudo pacman -S clang`, or `brew install llvm` |
+| C/C++ | clangd | `sudo apt-get install clangd`, `sudo zypper install clang`, `sudo yum install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
 | Go | gopls | `go install golang.org/x/tools/gopls@latest` |
 | Python | python-lsp-server | `pip3 install python-lsp-server` |
 | Rust | rust-analyzer | `rustup component add rust-analyzer` |
@@ -82,13 +98,19 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 | YAML | yaml-language-server | `npm install -g yaml-language-server` |
 | Markdown | marksman | `brew install marksman` or `sudo pacman -S marksman` |
 
-> Node.js is required for all `npm install -g` entries above. Install it via your system package manager (`sudo apt-get install nodejs`, `sudo pacman -S nodejs`, `brew install node`) or from [nodejs.org](https://nodejs.org/).
+> Node.js is required for all `npm install -g` entries above. Install it via your system package manager (`sudo apt-get install nodejs`, `sudo zypper install nodejs`, `sudo yum install nodejs`, `sudo pacman -S nodejs`, `brew install node`) or from [nodejs.org](https://nodejs.org/).
 
 #### 2.3 C/C++
 
 ```bash
-# Ubuntu
+# Ubuntu/Debian
 sudo apt-get install gcc g++ clangd
+
+# OpenSUSE
+sudo zypper install gcc gcc-c++ clang
+
+# CentOS
+sudo yum install gcc gcc-c++ clang clang-tools-extra
 
 # Arch Linux
 sudo pacman -S gcc clang
@@ -141,7 +163,8 @@ Preview Markdown in terminal via glow:
 # https://github.com/charmbracelet/glow
 brew install glow       # macOS / Linuxbrew
 sudo pacman -S glow     # Arch Linux
-go install github.com/charmbracelet/glow@latest  # any platform with Go
+sudo apt-get install glow  # Debian 13+
+go install github.com/charmbracelet/glow@latest  # Ubuntu / OpenSUSE / CentOS, or any platform with Go
 ```
 
 #### 2.10 Fonts (optional)
@@ -156,7 +179,7 @@ Verify that all required dependencies and optional LSP servers are available:
 ./checkhealth.sh
 ```
 
-Pass `--install` to automatically install missing dependencies (required tools + optional LSP servers). Supports apt/pacman/brew, npm, pip, go install, and rustup:
+Pass `--install` to automatically install missing dependencies (required tools + optional LSP servers). Supports apt/zypper/yum/pacman/brew, npm, pip, go install, and rustup:
 
 ```bash
 ./checkhealth.sh --install
@@ -178,6 +201,7 @@ ln -sf $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # global clang-format style (optional)
 nvim --headless -c 'PackUpdate' -c 'qa'   # Install all plugins
 nvim
+```
 
 ### 5. Update project
 
@@ -202,8 +226,13 @@ kmscon is a Linux KMS/DRM-based system console that replaces the legacy tty with
 # Ubuntu/Debian
 sudo apt-get install kmscon
 
+# OpenSUSE (Tumbleweed / Leap 15.x)
+sudo zypper install kmscon
+
 # Arch Linux
 sudo pacman -S kmscon
+
+# CentOS — not in the official/EPEL repos; install from source below instead.
 
 # Build from source (requires meson, ninja)
 git clone https://github.com/kmscon/kmscon.git
@@ -666,7 +695,7 @@ If you use a standalone clipboard manager (optional):
 | [cliphist](https://github.com/sentriz/cliphist) | Wayland | Clipboard history for wlroots-based compositors |
 | Built-in | macOS/WSL | System clipboard persists by default — no extra tool needed |
 
-## Recommended settings
+## Extra setup
 
 - Use Neovim to view man pages:
 

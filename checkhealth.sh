@@ -122,6 +122,8 @@ os_detect() {
 			case "$ID" in
 			ubuntu | debian | linuxmint | pop | elementary | zorin) echo "debian" ;;
 			arch | manjaro | endeavouros) echo "arch" ;;
+			opensuse | opensuse-leap | opensuse-tumbleweed | opensuse-microos | suse | sles) echo "opensuse" ;;
+			centos | rhel | fedora | rocky | almalinux | ol) echo "centos" ;;
 			*) echo "linux-unknown" ;;
 			esac
 		else
@@ -146,7 +148,29 @@ sudo_cmd() {
 install_pkg() {
 	if ! $INSTALL_MODE; then return 1; fi
 	case "$OS" in
-	debian) sudo_cmd apt-get install -y "$@" ;;
+	debian)
+		case "$*" in
+		*fzf*)
+			if command -v brew &>/dev/null; then
+				brew install "$@"
+			else
+				if ! command -v brew &>/dev/null; then
+					/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
+					eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && \
+					brew install "$@" || sudo_cmd apt-get install -y "$@"
+				fi
+			fi
+			;;
+		*)
+			sudo_cmd apt-get install -y "$@"
+			;;
+		esac
+		;;
+	opensuse) sudo_cmd zypper --non-interactive install -y "$@" ;;
+	centos)
+		sudo_cmd yum install -y epel-release || true
+		sudo_cmd yum install -y "$@"
+		;;
 	arch) sudo_cmd pacman -S --noconfirm "$@" ;;
 	macos) brew install "$@" ;;
 	*) return 1 ;;
@@ -206,6 +230,8 @@ install_optional_bin() {
 get_install_hint() {
 	case "$OS" in
 	debian) echo "sudo apt-get install ${*}" ;;
+	opensuse) echo "sudo zypper install ${*}" ;;
+	centos) echo "sudo yum install ${*}" ;;
 	arch) echo "sudo pacman -S ${*}" ;;
 	macos) echo "brew install ${*}" ;;
 	*) echo "install ${*} manually" ;;
@@ -261,11 +287,41 @@ declare -A BREW_NAMES=(
 	["glow"]="glow"
 	["fzf"]="fzf"
 )
+declare -A ZYPPER_NAMES=(
+	["rg"]="ripgrep"
+	["ctags"]="universal-ctags"
+	["clangd"]="clang"
+	["gcc"]="gcc"
+	["g++"]="gcc-c++"
+	["go"]="go"
+	["python3"]="python3"
+	["node"]="nodejs"
+	["lua-language-server"]="lua-language-server"
+	["marksman"]="marksman"
+	["glow"]="glow"
+	["fzf"]="fzf"
+)
+declare -A YUM_NAMES=(
+	["rg"]="ripgrep"
+	["ctags"]="universal-ctags"
+	["clangd"]="clang-tools-extra"
+	["gcc"]="gcc"
+	["g++"]="gcc-c++"
+	["go"]="golang"
+	["python3"]="python3"
+	["node"]="nodejs"
+	["lua-language-server"]="lua-language-server"
+	["marksman"]="marksman"
+	["glow"]="glow"
+	["fzf"]="fzf"
+)
 
 pkg_name() {
 	local bin="$1"
 	case "$OS" in
 	debian) echo "${APT_NAMES[$bin]:-$bin}" ;;
+	opensuse) echo "${ZYPPER_NAMES[$bin]:-$bin}" ;;
+	centos) echo "${YUM_NAMES[$bin]:-$bin}" ;;
 	arch) echo "${PACMAN_NAMES[$bin]:-$bin}" ;;
 	macos) echo "${BREW_NAMES[$bin]:-$bin}" ;;
 	*) echo "$bin" ;;
@@ -302,6 +358,8 @@ echo -e "${BOLD}Platform${NC}"
 echo -e "  OS: ${CYAN}$(uname -s)${NC}"
 case "$OS" in
 debian) echo -e "  Package manager: ${CYAN}apt${NC}" ;;
+opensuse) echo -e "  Package manager: ${CYAN}zypper${NC}" ;;
+centos) echo -e "  Package manager: ${CYAN}yum${NC}" ;;
 arch) echo -e "  Package manager: ${CYAN}pacman${NC}" ;;
 macos) echo -e "  Package manager: ${CYAN}homebrew${NC}" ;;
 *) echo -e "  ${WARN} Unsupported OS — install dependencies manually" ;;

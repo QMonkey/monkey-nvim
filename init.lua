@@ -507,6 +507,8 @@ fzf_lua.setup({
     rg_opts = '--hidden',
   },
   buffers = {
+    no_header_i = true,
+    fzf_opts = { ['--header-lines'] = '0' },
     actions = {
       ['ctrl-d'] = { fn = fzf_lua.actions.buf_del, reload = true },
     },

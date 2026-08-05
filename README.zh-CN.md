@@ -52,6 +52,22 @@ sudo apt-get install git ripgrep fzf universal-ctags gcc
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 
+# 旧版 Debian/Ubuntu 的 fzf 可能过旧，改用 Homebrew：
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew install fzf
+
+# OpenSUSE
+sudo zypper install git ripgrep fzf universal-ctags gcc
+# tree-sitter-cli 通过 npm 安装：
+npm install -g tree-sitter-cli
+
+# CentOS（需先启用 EPEL 仓库以获取 ripgrep/fzf/universal-ctags）
+sudo yum install epel-release
+sudo yum install git ripgrep fzf universal-ctags gcc
+# tree-sitter-cli 通过 npm 安装：
+npm install -g tree-sitter-cli
+
 # Arch Linux
 sudo pacman -S git ripgrep fzf ctags gcc
 # tree-sitter-cli 通过 npm 安装：
@@ -69,7 +85,7 @@ monkey-nvim 使用 Neovim 内建的 LSP 客户端（`vim.lsp.config`）。请根
 
 | 语言 | LSP 服务器 | 安装方式 |
 |---|---|---|
-| C/C++ | clangd | `sudo apt-get install clangd`、`sudo pacman -S clang` 或 `brew install llvm` |
+| C/C++ | clangd | `sudo apt-get install clangd`、`sudo zypper install clang`、`sudo yum install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
 | Go | gopls | `go install golang.org/x/tools/gopls@latest` |
 | Python | python-lsp-server | `pip3 install python-lsp-server` |
 | Rust | rust-analyzer | `rustup component add rust-analyzer` |
@@ -82,13 +98,19 @@ monkey-nvim 使用 Neovim 内建的 LSP 客户端（`vim.lsp.config`）。请根
 | YAML | yaml-language-server | `npm install -g yaml-language-server` |
 | Markdown | marksman | `brew install marksman` 或 `sudo pacman -S marksman` |
 
-> 所有 `npm install -g` 安装方式都需要 Node.js。通过系统包管理器（`sudo apt-get install nodejs`、`sudo pacman -S nodejs`、`brew install node`）或 [nodejs.org](https://nodejs.org/) 安装。
+> 所有 `npm install -g` 安装方式都需要 Node.js。通过系统包管理器（`sudo apt-get install nodejs`、`sudo zypper install nodejs`、`sudo yum install nodejs`、`sudo pacman -S nodejs`、`brew install node`）或 [nodejs.org](https://nodejs.org/) 安装。
 
 #### 2.3 C/C++
 
 ```bash
-# Ubuntu
+# Ubuntu/Debian
 sudo apt-get install gcc g++ clangd
+
+# OpenSUSE
+sudo zypper install gcc gcc-c++ clang
+
+# CentOS
+sudo yum install gcc gcc-c++ clang clang-tools-extra
 
 # Arch Linux
 sudo pacman -S gcc clang
@@ -141,7 +163,8 @@ npm install -g yaml-language-server
 # https://github.com/charmbracelet/glow
 brew install glow       # macOS / Linuxbrew
 sudo pacman -S glow     # Arch Linux
-go install github.com/charmbracelet/glow@latest  # 任意平台（需安装 Go）
+sudo apt-get install glow  # Debian 13+
+go install github.com/charmbracelet/glow@latest  # Ubuntu / OpenSUSE / CentOS，或其他已安装 Go 的平台
 ```
 
 #### 2.10 字体（可选）
@@ -156,7 +179,7 @@ Neovim 使用的 Unicode 字符（⎇, │, ▸, ·, ¬）无需额外字体即�
 ./checkhealth.sh
 ```
 
-加 `--install` 可自动安装缺失的依赖（必需工具 + 可选 LSP 服务器）。支持 apt/pacman/brew、npm、pip、go install 和 rustup：
+加 `--install` 可自动安装缺失的依赖（必需工具 + 可选 LSP 服务器）。支持 apt/zypper/yum/pacman/brew、npm、pip、go install 和 rustup：
 
 ```bash
 ./checkhealth.sh --install
@@ -178,6 +201,7 @@ ln -sf $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # 全局 clang-format 风格（可选）
 nvim --headless -c 'PackUpdate' -c 'qa'   # 安装所有插件
 nvim
+```
 
 ### 5. 更新
 
@@ -202,8 +226,13 @@ kmscon 是基于 Linux KMS/DRM 的系统级终端，替代传统的 Linux tty，
 # Ubuntu/Debian
 sudo apt-get install kmscon
 
+# OpenSUSE（Tumbleweed / Leap 15.x）
+sudo zypper install kmscon
+
 # Arch Linux
 sudo pacman -S kmscon
+
+# CentOS 官方仓库与 EPEL 均无 kmscon 包，请使用下面的源码编译方式。
 
 # 从源码编译（需要 meson、ninja）
 git clone https://github.com/kmscon/kmscon.git
@@ -661,7 +690,7 @@ monkey-nvim 在检测到显示服务器时设置 `clipboard=unnamed,unnamedplus`
 | [cliphist](https://github.com/sentriz/cliphist) | Wayland | wlroots 剪贴板历史管理 |
 | 系统自带 | macOS/WSL | 系统剪贴板默认持久化，无需额外工具 |
 
-## 推荐设置
+## 额外设置
 
 - 在 bashrc 中加入以下 Shell 代码，在 Neovim 中查看 man 文档：
 
