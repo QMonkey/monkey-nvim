@@ -423,6 +423,8 @@ F3      Open a terminal with one-off command
 F4      Toggle terminal buffer (open/hide)
 ```
 
+Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer.
+
 #### 1.13 Surround (mini.surround)
 
 ```
