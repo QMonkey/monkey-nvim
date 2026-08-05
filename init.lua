@@ -799,7 +799,7 @@ end)
 
 -- toggleterm.nvim
 require('toggleterm').setup({
-  size = 15,
+  size = 20,
   direction = 'horizontal',
   start_in_insert = true,
 })
@@ -811,7 +811,14 @@ vim.keymap.set('n', '<F3>', function()
   end
 end, { desc = 'Run one-off command in terminal' })
 
-vim.keymap.set({ 'n', 't' }, '<F4>', '<cmd>1ToggleTerm direction=horizontal<CR>', { desc = 'Toggle horizontal terminal' })
+vim.keymap.set({ 'n', 't' }, '<F4>', function()
+  local term = require('toggleterm.terminal').get(1)
+  local was_open = term and term:is_open()
+  vim.cmd('1ToggleTerm direction=horizontal')
+  if not was_open and require('toggleterm.terminal').get(1):is_open() then
+    vim.cmd('resize 20')
+  end
+end, { desc = 'Toggle horizontal terminal' })
 
 -- Key maps
 vim.keymap.set('n', 'Y', 'y$')
@@ -990,11 +997,15 @@ vim.api.nvim_create_autocmd('InsertLeave', {
 })
 
 -- Zoom
-vim.keymap.set('n', '<leader>z', function()
-  if vim.g.zoomed then
-    vim.cmd(vim.g.zoom_winrestcmd)
+vim.keymap.set({ 'n', 't' }, '<leader>z', function()
+  if vim.g.zoomed and vim.fn.win_id2win(vim.g.zoom_winid) ~= 0 then
+    if vim.fn.winnr('$') == vim.g.zoom_wincount then
+      vim.cmd(vim.g.zoom_winrestcmd)
+    end
     vim.g.zoomed = false
   else
+    vim.g.zoom_winid = vim.fn.win_getid()
+    vim.g.zoom_wincount = vim.fn.winnr('$')
     vim.g.zoom_winrestcmd = vim.fn.winrestcmd()
     vim.cmd('resize')
     vim.cmd('vertical resize')
