@@ -299,6 +299,8 @@ F3      在终端中运行一次性命令
 F4      切换终端窗口（打开/隐藏）
 ```
 
+使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。
+
 #### 1.3 缓冲
 
 ```
@@ -419,6 +421,8 @@ m/          在Location List里，查看当前buffer的所有标记
 F3      在终端中运行一次性命令
 F4      切换终端窗口（打开/隐藏）
 ```
+
+使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。
 
 #### 1.13 围绕字符编辑（mini.surround）
 
