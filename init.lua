@@ -804,7 +804,7 @@ require("cscope_maps").setup({
 })
 
 vim.keymap.set('n', 'gs', '<Cmd>Cscope find s<CR>', { silent = true })
-vim.keymap.set('n', 'gD', '<Cmd>Cscope find g<CR>', { silent = true })
+vim.keymap.set('n', 'gD', '<Cmd>Cstag<CR>', { silent = true })
 vim.keymap.set('n', 'gR', '<Cmd>Cscope find c<CR>', { silent = true })
 
 -- cscope_maps nils out vim.g.cscope_maps_db_file during setup; set it here.
@@ -828,7 +828,7 @@ local function gtags_update()
   if vim.fn.glob(gtags_dbpath .. '/GTAGS') == '' then return end
   if vim.g.gtags_building then return end
   vim.g.gtags_building = true
-  vim.system({ 'global', '-u' }, { cwd = project_root, text = true }, function(obj)
+  vim.system({ 'global', '--update' }, { cwd = project_root, text = true }, function(obj)
     vim.schedule(function()
       vim.g.gtags_building = nil
       if obj.code ~= 0 then
