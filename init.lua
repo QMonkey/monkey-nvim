@@ -773,21 +773,11 @@ vim.g.gutentags_define_advanced_commands = 1
 -- cscope_maps.nvim + gtags
 vim.env.GTAGSLABEL = 'native-pygments'
 
-local project_root = vim.fs.root(0, vim.g.gutentags_project_root or { '.git' }) or vim.fn.getcwd()
-local gtags_dbdir = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_root, ''))
-vim.env.GTAGSROOT = project_root
-vim.env.GTAGSDBPATH = gtags_dbdir
-
 require("cscope_maps").setup({
   disable_maps = true,
   cscope = {
     exec = 'gtags-cscope',
-    db_file = gtags_dbdir .. '/GTAGS::' .. project_root,
     picker = "trouble",
-    db_build_cmd = {
-      script = vim.fn.stdpath('data') .. '/gtags-build.sh',
-      args = {},
-    },
     project_rooter = {
       enable = false,
     },
@@ -797,31 +787,66 @@ require("cscope_maps").setup({
   },
 })
 
+local project_root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
+local gtags_dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_root, ''))
 -- cscope_maps nils out vim.g.cscope_maps_db_file during setup; set it here.
-vim.g.cscope_maps_db_file = gtags_dbdir .. '/GTAGS::' .. project_root
+vim.g.cscope_maps_db_file = gtags_dbpath .. '/GTAGS::' .. project_root
 
 vim.keymap.set('n', 'gs', '<Cmd>Cscope find s<CR>', { silent = true })
 vim.keymap.set('n', 'gD', '<Cmd>Cscope find g<CR>', { silent = true })
 vim.keymap.set('n', 'gR', '<Cmd>Cscope find c<CR>', { silent = true })
 
--- Auto-build GTAGS on BufEnter when missing
+-- Auto-build GTAGS
+local function gtags_build()
+  if vim.g.gtags_building then return end
+  vim.g.gtags_building = true
+  vim.system({ 'gtags', gtags_dbpath }, { cwd = project_root, text = true }, function(obj)
+    vim.schedule(function()
+      vim.g.gtags_building = nil
+      if obj.code ~= 0 then
+        vim.notify('gtags: build failed', vim.log.levels.ERROR)
+      end
+    end)
+  end)
+end
+
+local function gtags_update(fname)
+  if vim.fn.glob(gtags_dbpath .. '/GTAGS') == '' then return end
+  if vim.g.gtags_building then return end
+  vim.g.gtags_building = true
+  vim.system({ 'gtags', '--single-update', fname }, { cwd = project_root, text = true }, function(obj)
+    vim.schedule(function()
+      vim.g.gtags_building = nil
+      if obj.code ~= 0 then
+        vim.notify('gtags: update failed for ' .. fname, vim.log.levels.ERROR)
+      end
+    end)
+  end)
+end
+
+local gtags_group = vim.api.nvim_create_augroup('GTags', { clear = true })
+
+-- Build GTAGS on BufEnter when missing
 vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-  group = vim.api.nvim_create_augroup('GTagsBuild', { clear = true }),
+  group = gtags_group,
   callback = function(e)
-    if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then
-      return
-    end
-    if vim.fn.expand('#' .. e.buf .. ':p') == '' then
-      return
-    end
-    if vim.fn.glob(gtags_dbdir .. '/GTAGS') ~= '' then
-      return
-    end
-    if not vim.g.cscope_maps_statusline_indicator then
-      vim.schedule(function() vim.cmd('Cscope db build') end)
-    end
+    if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
+    if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
+    if vim.fn.glob(gtags_dbpath .. '/GTAGS') ~= '' then return end
+    gtags_build()
   end,
-  desc = 'auto-build GTAGS via Cscope db build',
+  desc = 'build GTAGS on BufEnter when missing',
+})
+
+-- Incremental update on BufWritePost
+vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
+  group = gtags_group,
+  callback = function(e)
+    if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
+    if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
+    gtags_update(e.file)
+  end,
+  desc = 'incremental GTAGS update on save',
 })
 
 -- trouble.nvim
