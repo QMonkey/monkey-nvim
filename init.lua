@@ -771,6 +771,30 @@ vim.g.gutentags_resolve_symlinks = 1
 vim.g.gutentags_define_advanced_commands = 1
 
 -- cscope_maps.nvim + gtags
+local candidates = {
+  '/usr/local/etc/gtags.conf',
+  '/etc/gtags.conf',
+  '/usr/share/gtags/gtags.conf',
+  '/usr/local/share/gtags/gtags.conf',
+  '/usr/local/opt/global/share/gtags/gtags.conf',
+  '/opt/homebrew/etc/gtags.conf',
+  '/opt/homebrew/share/gtags/gtags.conf',
+  '/opt/homebrew/opt/global/share/gtags/gtags.conf',
+}
+if vim.env.GTAGSCONF and vim.env.GTAGSCONF ~= '' then
+  table.insert(candidates, 1, vim.env.GTAGSCONF)
+end
+for _, conf in ipairs(candidates) do
+  local f = io.open(conf, 'r')
+  if f then
+    local content = f:read('*a')
+    f:close()
+    if content:find('native%-pygments:') then
+      vim.env.GTAGSCONF = conf
+      break
+    end
+  end
+end
 vim.env.GTAGSLABEL = 'native-pygments'
 
 -- Determine project root and gtags cache path once at startup
@@ -813,6 +837,7 @@ vim.g.cscope_maps_db_file = gtags_dbpath .. '/GTAGS::' .. project_root
 -- Auto-build GTAGS
 local function gtags_build()
   if vim.g.gtags_building then return end
+  vim.fn.mkdir(gtags_dbpath, 'p')
   vim.g.gtags_building = true
   vim.system({ 'gtags', gtags_dbpath }, { cwd = project_root, text = true }, function(obj)
     vim.schedule(function()
