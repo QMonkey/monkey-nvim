@@ -771,6 +771,8 @@ vim.g.gutentags_resolve_symlinks = 1
 vim.g.gutentags_define_advanced_commands = 1
 
 -- cscope_maps.nvim + gtags
+vim.env.GTAGSLABEL = 'native-pygments'
+
 local candidates = {
   '/usr/local/etc/gtags.conf',
   '/etc/gtags.conf',
@@ -795,7 +797,6 @@ for _, conf in ipairs(candidates) do
     end
   end
 end
-vim.env.GTAGSLABEL = 'native-pygments'
 
 -- Determine project root and gtags cache path once at startup
 local project_root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
