@@ -43,38 +43,41 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 | [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | fzf-lua live grep 后端 | 是 |
 | [fzf](https://github.com/junegunn/fzf) | fzf-lua 模糊查找后端 | 是 |
 | universal-ctags | gutentags 标签生成 | 是 |
+| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags（GTAGS）生成与导航 | 推荐 |
+| [Pygments](https://pygments.org/) | 非 C/C++ 语言的 gtags 解析器 | 推荐 |
 | C 编译器 (gcc/clang) | 编译 tree-sitter parser 原生模块 | 是（仅编译时） |
 | [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | 编译 tree-sitter parser 模块 | 是（仅编译时） |
+| [Homebrew](https://brew.sh/) | 系统仓库缺失时的后备包管理器（lua-language-server、marksman、fzf 等） | 必须 |
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install git ripgrep fzf universal-ctags gcc
-# tree-sitter-cli 通过 npm 安装：
-npm install -g tree-sitter-cli
-
-# 旧版 Debian/Ubuntu 的 fzf 可能过旧，改用 Homebrew：
+# 安装 Homebrew（所有 Linux 发行版 — 用于安装系统仓库中缺失的工具）
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# Ubuntu/Debian
+sudo apt-get install git ripgrep fzf universal-ctags global python3-pygments gcc nodejs npm
+# tree-sitter-cli 通过 npm 安装：
+npm install -g tree-sitter-cli
 brew install fzf
 
 # OpenSUSE
-sudo zypper install git ripgrep fzf universal-ctags gcc
+sudo zypper install git ripgrep fzf universal-ctags global python3-Pygments gcc nodejs npm
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 
 # CentOS（需先启用 EPEL 仓库以获取 ripgrep/fzf/universal-ctags）
-sudo yum install epel-release
-sudo yum install git ripgrep fzf universal-ctags gcc
+sudo dnf install epel-release
+sudo dnf install git ripgrep fzf universal-ctags global global-ctags python3-pygments gcc nodejs npm
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 
 # Arch Linux
-sudo pacman -S git ripgrep fzf ctags gcc
+sudo pacman -S git ripgrep fzf ctags global python-pygments gcc nodejs npm
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 
 # macOS
-brew install git ripgrep fzf universal-ctags gcc
+brew install git ripgrep fzf universal-ctags global pygments gcc node
 # tree-sitter-cli 通过 npm 安装：
 npm install -g tree-sitter-cli
 ```
@@ -85,7 +88,7 @@ monkey-nvim 使用 Neovim 内建的 LSP 客户端（`vim.lsp.config`）。请根
 
 | 语言 | LSP 服务器 | 安装方式 |
 |---|---|---|
-| C/C++ | clangd | `sudo apt-get install clangd`、`sudo zypper install clang`、`sudo yum install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
+| C/C++ | clangd | `sudo apt-get install clangd`、`sudo zypper install clang`、`sudo dnf install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
 | Go | gopls | `go install golang.org/x/tools/gopls@latest` |
 | Python | python-lsp-server | `pip3 install python-lsp-server` |
 | Rust | rust-analyzer | `rustup component add rust-analyzer` |
@@ -98,8 +101,6 @@ monkey-nvim 使用 Neovim 内建的 LSP 客户端（`vim.lsp.config`）。请根
 | YAML | yaml-language-server | `npm install -g yaml-language-server` |
 | Markdown | marksman | `brew install marksman` 或 `sudo pacman -S marksman` |
 
-> 所有 `npm install -g` 安装方式都需要 Node.js。通过系统包管理器（`sudo apt-get install nodejs`、`sudo zypper install nodejs`、`sudo yum install nodejs`、`sudo pacman -S nodejs`、`brew install node`）或 [nodejs.org](https://nodejs.org/) 安装。
-
 #### 2.3 C/C++
 
 ```bash
@@ -110,7 +111,7 @@ sudo apt-get install gcc g++ clangd
 sudo zypper install gcc gcc-c++ clang
 
 # CentOS
-sudo yum install gcc gcc-c++ clang clang-tools-extra
+sudo dnf install gcc gcc-c++ clang clang-tools-extra
 
 # Arch Linux
 sudo pacman -S gcc clang
@@ -179,7 +180,7 @@ Neovim 使用的 Unicode 字符（⎇, │, ▸, ·, ¬）无需额外字体即�
 ./checkhealth.sh
 ```
 
-加 `--install` 可自动安装缺失的依赖（必需工具 + 可选 LSP 服务器）。支持 apt/zypper/yum/pacman/brew、npm、pip、go install 和 rustup：
+加 `--install` 可自动安装缺失的依赖（必需工具 + 可选 LSP 服务器）。支持 apt/zypper/dnf/pacman/brew、npm、pip、go install 和 rustup：
 
 ```bash
 ./checkhealth.sh --install
@@ -255,14 +256,21 @@ Neovim 通过 `termguicolors` 自动检测真彩色支持。如果在传统 Linu
 | [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai) | 文本对象 |
 | [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround) | 围绕字符编辑 |
 | [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim) | 注释切换 |
+| [andymass/vim-matchup](https://github.com/andymass/vim-matchup) | 扩展 % 跳转配对 |
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs) | 自动配对括号 |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim) | 使用剪贴板替换 |
 | [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim) | 可视化书签 |
 | [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua) | 模糊文件/缓冲/tag 查找 |
 | [folke/flash.nvim](https://github.com/folke/flash.nvim) | 快速跳转 |
 | [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo) | 折叠 |
+| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async) | 异步库（ufo 依赖） |
 | [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | 语法高亮与解析 |
 | [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp) | 补全引擎 |
+| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp) | LSP 补全源 |
+| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer) | 缓冲区补全源 |
+| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path) | 路径补全源 |
+| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline) | 命令行补全 |
+| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip) | Luasnip 补全源 |
 | [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip) | 代码片段引擎 |
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets) | 常用代码片段集合 |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | Git 差异标记 |
@@ -271,12 +279,10 @@ Neovim 通过 `termguicolors` 自动检测真彩色支持。如果在传统 Linu
 | [rmagatti/auto-session](https://github.com/rmagatti/auto-session) | Session 管理 |
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim) | 文件管理器（替代 netrw） |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags) | 自动生成 ctags |
+| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成 |
 | [folke/trouble.nvim](https://github.com/folke/trouble.nvim) | 诊断/quickfix 列表 |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim) | 多光标编辑 |
 | [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) | 终端切换 |
-| [tpope/vim-eunuch](https://github.com/tpope/vim-eunuch) | UNIX Shell 辅助命令（:W sudo保存等） |
-| [tpope/vim-repeat](https://github.com/tpope/vim-repeat) | 使插件映射支持 `.` 重复 |
-| [williamboman/mason.nvim](https://github.com/williamboman/mason.nvim) | LSP/DAP/linter 安装器 |
 
 ## 快捷键
 
@@ -303,7 +309,7 @@ t       记录操作，相当于原来的q（普通模式和可视化模式）
 j       移至下一显示行（gj），在折行中正常移动
 k       移至上一显示行（gk），在折行中正常移动
 f       搜索 1 个字符跳转（flash.nvim 带提示）
-F       搜索 2 个连续字符跳转（flash.nvim 带提示）
+F       搜索字符并聚焦到匹配末尾（flash.nvim）
 ```
 
 以下按键在插入模式和命令行模式下均适用：
@@ -322,8 +328,8 @@ Ctrl+d  向前删除    (Del)
 #### 1.2 F1 ~ F4
 
 ```
-F1      打开 Telescope live grep
-F2      切换 Telescope 恢复/关闭
+F1      打开 fzf-lua live grep
+F2      切换 fzf-lua 恢复/关闭
 F3      在终端中运行一次性命令
 F4      切换终端窗口（打开/隐藏）
 ```
@@ -392,7 +398,7 @@ Leader+d           切换诊断列表（trouble）
 
 文件在保存时自动通过 LSP 格式化。自动补全默认开启 — LSP 建议会自动弹出。
 
-#### 1.8 文件/缓冲/Tag 导航（Telescope）
+#### 1.8 文件/缓冲/Tag 导航（fzf-lua）
 
 ```
 Ctrl+p      搜索文件
@@ -549,7 +555,7 @@ s       用剪贴板的内容替换选中文本
 #### 3.2 查找
 
 ```
-Leader+a        当前目录搜索选中字符串（Telescope）
+Leader+a        当前目录搜索选中字符串（fzf-lua）
 ```
 
 #### 3.3 替换
@@ -591,23 +597,23 @@ Ctrl+e  跳到命令行最后
 :SudoWrite
 ```
 
-### 2. Telescope
+### 2. fzf-lua
 
 ```vim
 " 搜索文件
-:Telescope find_files
+:FzfLua files
 
 " 搜索缓冲区
-:Telescope buffers
+:FzfLua buffers
 
 " 实时搜索
-:Telescope live_grep
+:FzfLua live_grep
 
 " 搜索 help 标签
-:Telescope help_tags
+:FzfLua help_tags
 
 " 恢复上次搜索
-:Telescope resume
+:FzfLua resume
 ```
 
 ### 3. Neogit
@@ -631,6 +637,16 @@ Ctrl+e  跳到命令行最后
 
 " 为整个工程生成tag
 :GutentagsUpdate!
+```
+
+如果安装了 GNU Global（`gtags`/`global`）和 Pygments（`pygmentize`），gutentags 会在 ctags 之外同时生成 `GTAGS`/`GRTAGS`/`GPATH` 数据库。首次 BufEnter 时自动构建 GTAGS，保存时增量更新。
+
+Cscope 快捷键（通过 cscope_maps.nvim）：
+
+```
+gs      查找光标下的符号（Cscope find s）
+gD      跳转到定义（Cstag）
+gR      查找调用者（Cscope find c）
 ```
 
 ## 在 Neovim 中使用 git
@@ -690,10 +706,23 @@ monkey-nvim 在检测到显示服务器时设置 `clipboard=unnamed,unnamedplus`
 | [cliphist](https://github.com/sentriz/cliphist) | Wayland | wlroots 剪贴板历史管理 |
 | 系统自带 | macOS/WSL | 系统剪贴板默认持久化，无需额外工具 |
 
+> 可选 CLI 工具：`wl-clipboard`（Wayland，提供 `wl-copy`/`wl-paste`）、`xclip` 或 `xsel`（X11）。Neovim 内建剪贴板支持，这些工具仅在 Neovim 外部需要命令行剪贴板访问时使用。
+
 ## 额外设置
 
 - 在 bashrc 中加入以下 Shell 代码，在 Neovim 中查看 man 文档：
 
 ```bash
 export MANPAGER="nvim -R +MANPAGER -"
+```
+
+## 从源码编译 Neovim
+
+获取最新版本或系统仓库中不包含的功能：
+
+```bash
+git clone https://github.com/neovim/neovim.git
+cd neovim
+make CMAKE_BUILD_TYPE=RelWithDebInfo
+sudo make install
 ```
