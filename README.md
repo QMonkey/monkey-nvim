@@ -43,38 +43,41 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 | [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | fzf-lua live grep backend | Yes |
 | [fzf](https://github.com/junegunn/fzf) | fzf-lua fuzzy finder backend | Yes |
 | universal-ctags | gutentags tag generation | Yes |
+| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags (GTAGS) generation & navigation | Recommended |
+| [Pygments](https://pygments.org/) | gtags parser for non-C/C++ languages | Recommended |
 | C compiler (gcc/clang) | Build tree-sitter parser native modules | Yes (compile-time only) |
 | [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | Build tree-sitter parser modules | Yes (compile-time only) |
+| [Homebrew](https://brew.sh/) | Fallback package manager for tools not in system repos (lua-language-server, marksman, fzf) | Required |
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install git ripgrep fzf universal-ctags gcc
-# tree-sitter-cli is installed via npm:
-npm install -g tree-sitter-cli
-
-# fzf on older Debian/Ubuntu may be outdated; use Homebrew:
+# Install Homebrew (all Linux distros — required for tools not in system repos)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# Ubuntu/Debian
+sudo apt-get install git ripgrep fzf universal-ctags global python3-pygments gcc nodejs npm
+# tree-sitter-cli is installed via npm:
+npm install -g tree-sitter-cli
 brew install fzf
 
 # OpenSUSE
-sudo zypper install git ripgrep fzf universal-ctags gcc
+sudo zypper install git ripgrep fzf universal-ctags global python3-Pygments gcc nodejs npm
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 
 # CentOS (enable EPEL for ripgrep/fzf/universal-ctags)
-sudo yum install epel-release
-sudo yum install git ripgrep fzf universal-ctags gcc
+sudo dnf install epel-release
+sudo dnf install git ripgrep fzf universal-ctags global global-ctags python3-pygments gcc nodejs npm
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 
 # Arch Linux
-sudo pacman -S git ripgrep fzf ctags gcc
+sudo pacman -S git ripgrep fzf ctags global python-pygments gcc nodejs npm
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 
 # macOS
-brew install git ripgrep fzf universal-ctags gcc
+brew install git ripgrep fzf universal-ctags global pygments gcc node
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 ```
@@ -85,7 +88,7 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 
 | Language | LSP Server | Install |
 |---|---|---|
-| C/C++ | clangd | `sudo apt-get install clangd`, `sudo zypper install clang`, `sudo yum install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
+| C/C++ | clangd | `sudo apt-get install clangd`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
 | Go | gopls | `go install golang.org/x/tools/gopls@latest` |
 | Python | python-lsp-server | `pip3 install python-lsp-server` |
 | Rust | rust-analyzer | `rustup component add rust-analyzer` |
@@ -98,8 +101,6 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 | YAML | yaml-language-server | `npm install -g yaml-language-server` |
 | Markdown | marksman | `brew install marksman` or `sudo pacman -S marksman` |
 
-> Node.js is required for all `npm install -g` entries above. Install it via your system package manager (`sudo apt-get install nodejs`, `sudo zypper install nodejs`, `sudo yum install nodejs`, `sudo pacman -S nodejs`, `brew install node`) or from [nodejs.org](https://nodejs.org/).
-
 #### 2.3 C/C++
 
 ```bash
@@ -110,7 +111,7 @@ sudo apt-get install gcc g++ clangd
 sudo zypper install gcc gcc-c++ clang
 
 # CentOS
-sudo yum install gcc gcc-c++ clang clang-tools-extra
+sudo dnf install gcc gcc-c++ clang clang-tools-extra
 
 # Arch Linux
 sudo pacman -S gcc clang
@@ -179,7 +180,7 @@ Verify that all required dependencies and optional LSP servers are available:
 ./checkhealth.sh
 ```
 
-Pass `--install` to automatically install missing dependencies (required tools + optional LSP servers). Supports apt/zypper/yum/pacman/brew, npm, pip, go install, and rustup:
+Pass `--install` to automatically install missing dependencies (required tools + optional LSP servers). Supports apt/zypper/dnf/pacman/brew, npm, pip, go install, and rustup:
 
 ```bash
 ./checkhealth.sh --install
@@ -255,14 +256,21 @@ Neovim detects true color support automatically via `termguicolors`. If running 
 | [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai) | Text objects |
 | [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround) | Surround text with parens/quotes/etc |
 | [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim) | Comment toggling |
+| [andymass/vim-matchup](https://github.com/andymass/vim-matchup) | Extended % matching |
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs) | Auto-close brackets/parens |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim) | Substitute with clipboard |
 | [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim) | Visual marks |
 | [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua) | Fuzzy file/buffer/tag finder |
 | [folke/flash.nvim](https://github.com/folke/flash.nvim) | Easy motion |
 | [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo) | Folding |
+| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async) | Async library (ufo dependency) |
 | [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | Syntax highlighting & parsing |
 | [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp) | Completion engine |
+| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp) | LSP completion source |
+| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer) | Buffer word completion source |
+| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path) | Path completion source |
+| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline) | Cmdline completion |
+| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip) | Luasnip completion source |
 | [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip) | Snippet engine |
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets) | Snippet collection |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | Git diff in sign column |
@@ -271,12 +279,10 @@ Neovim detects true color support automatically via `termguicolors`. If running 
 | [rmagatti/auto-session](https://github.com/rmagatti/auto-session) | Session management |
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim) | File explorer (replaces netrw) |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags) | Automatic ctags generation |
+| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope integration |
 | [folke/trouble.nvim](https://github.com/folke/trouble.nvim) | Diagnostics/quickfix list |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim) | Multiple cursors |
 | [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) | Terminal toggling |
-| [tpope/vim-eunuch](https://github.com/tpope/vim-eunuch) | UNIX shell helpers (:W for sudo write) |
-| [tpope/vim-repeat](https://github.com/tpope/vim-repeat) | Repeat plugin maps with `.` |
-| [williamboman/mason.nvim](https://github.com/williamboman/mason.nvim) | LSP/DAP/linter installer |
 
 ## Keyboard shortcut
 
@@ -303,7 +309,7 @@ t       Recording, same as the original q (normal and visual mode)
 j       Move down one display line (gj), works on wrapped lines
 k       Move up one display line (gk), works on wrapped lines
 f       Search 1 char to jump with hints (flash.nvim)
-F       Search 2 consecutive chars to jump with hints (flash.nvim)
+F       Search char with hint positioned at end of match (flash.nvim)
 ```
 
 The following remaps work in both Insert mode and Command-line mode:
@@ -322,8 +328,8 @@ Ctrl+d  Delete forward (Del)
 #### 1.2 F1 ~ F4
 
 ```
-F1      Open Telescope live grep
-F2      Toggle Telescope resume/close
+F1      Open fzf-lua live grep
+F2      Toggle fzf-lua resume/close
 F3      Run a one-off command in terminal
 F4      Toggle terminal buffer (open/hide)
 ```
@@ -390,7 +396,7 @@ Leader+d            Toggle diagnostics (trouble)
 
 Files are auto-formatted on save via LSP. Completion is enabled by default — LSP-powered suggestions appear automatically as you type.
 
-#### 1.8 File/Buffer/Tag navigation (Telescope)
+#### 1.8 File/Buffer/Tag navigation (fzf-lua)
 
 ```
 Ctrl+p      Search files
@@ -550,7 +556,7 @@ s       Replace selected text with clipboard content
 #### 3.2 Search
 
 ```
-Leader+a        Search selected text in current directory (Telescope)
+Leader+a        Search selected text in current directory (fzf-lua)
 ```
 
 #### 3.3 Replace
@@ -592,23 +598,23 @@ Ctrl+e  Jump to the end of the command line
 :SudoWrite
 ```
 
-### 2. Telescope
+### 2. fzf-lua
 
 ```vim
 " Search files
-:Telescope find_files
+:FzfLua files
 
 " Search buffers
-:Telescope buffers
+:FzfLua buffers
 
 " Live grep
-:Telescope live_grep
+:FzfLua live_grep
 
 " Search help tags
-:Telescope help_tags
+:FzfLua help_tags
 
 " Resume last picker
-:Telescope resume
+:FzfLua resume
 ```
 
 ### 3. Neogit
@@ -632,6 +638,16 @@ Ctrl+e  Jump to the end of the command line
 
 " Generate tags for current project
 :GutentagsUpdate!
+```
+
+If GNU Global (`gtags`/`global`) and Pygments (`pygmentize`) are installed, gutentags also generates the `GTAGS`/`GRTAGS`/`GPATH` databases alongside ctags. GTAGS are auto-built on first BufEnter and incrementally updated on save.
+
+Cscope keybindings (via cscope_maps.nvim):
+
+```
+gs      Find symbol under cursor (Cscope find s)
+gD      Jump to definition (Cstag)
+gR      Find callers (Cscope find c)
 ```
 
 ## Use git in Neovim
@@ -695,10 +711,23 @@ If you use a standalone clipboard manager (optional):
 | [cliphist](https://github.com/sentriz/cliphist) | Wayland | Clipboard history for wlroots-based compositors |
 | Built-in | macOS/WSL | System clipboard persists by default — no extra tool needed |
 
+> Optional CLI tools: `wl-clipboard` (Wayland, provides `wl-copy`/`wl-paste`), `xclip` or `xsel` (X11). Neovim has built-in clipboard support, so these are only needed for command-line clipboard access outside Neovim.
+
 ## Extra setup
 
 - Use Neovim to view man pages:
 
 ```bash
 export MANPAGER="nvim -R +MANPAGER -"
+```
+
+## Build Neovim from source
+
+For the latest version or features not in system packages:
+
+```bash
+git clone https://github.com/neovim/neovim.git
+cd neovim
+make CMAKE_BUILD_TYPE=RelWithDebInfo
+sudo make install
 ```
