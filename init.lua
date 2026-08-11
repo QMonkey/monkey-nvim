@@ -1036,29 +1036,37 @@ end
 vim.keymap.set('n', 'q', function()
   if close_gitsigns_diff() then return end
 
+  local cur_tab = vim.api.nvim_get_current_tabpage()
   local win_id = vim.api.nvim_get_current_win()
-  local will_be_only_aux = true
   local has_other_window = false
+  local total_valid = 0
+  local tab_valid = 0
 
   for _, w in ipairs(vim.api.nvim_list_wins()) do
     if w ~= win_id then
       has_other_window = true
+      local is_in_cur_tab = (vim.api.nvim_win_get_tabpage(w) == cur_tab)
       if not is_auxiliary_window(w) then
-        will_be_only_aux = false
-        break
+        total_valid = total_valid + 1
+        if is_in_cur_tab then
+          tab_valid = tab_valid + 1
+        end
       end
     end
   end
 
-  if not has_other_window or will_be_only_aux then
-    vim.cmd('confirm quitall')
+  if not has_other_window or total_valid == 0 then
+    vim.cmd('silent! confirm quitall!')
+  elseif tab_valid == 0 then
+    vim.cmd('tabclose')
+    focus_to_valid_window()
   else
     vim.cmd('quit')
     focus_to_valid_window()
   end
 end, { silent = true })
 
-vim.keymap.set('n', '<S-q>', '<cmd>quitall<CR>', { silent = true })
+vim.keymap.set('n', '<S-q>', '<cmd>silent! confirm quitall!<CR>', { silent = true })
 vim.keymap.set({ 'n', 'v' }, 't', 'q')
 
 -- Buffer
