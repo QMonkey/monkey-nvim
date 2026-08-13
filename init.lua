@@ -173,15 +173,77 @@ vim.opt.magic = true
 vim.opt.directory = vim.fn.stdpath("data") .. "/swap//"
 vim.opt.jumpoptions:append('stack')
 
--- Clipboard
+-- Clipboard {
+-- Detect the outermost terminal type by walking up the real process
+-- tree from the current Neovim (or its tmux client). A real console
+-- (kmscon/TTY/console) makes the GUI clipboard unusable even if
+-- $DISPLAY/$WAYLAND_DISPLAY is set.
+local function get_root_terminal_type()
+  local pid = vim.fn.getpid()
+  if vim.fn.empty(vim.fn.getenv('TMUX')) == 0 then
+    local pid_str = vim.fn.trim(vim.fn.system('tmux display-message -p "#{client_pid}" 2>/dev/null'))
+    if pid_str:match('^%d+$') then
+      pid = tonumber(pid_str)
+    end
+  end
+
+  local uname = vim.fn.trim(vim.fn.system('uname -s'))
+  if uname == '' or uname:lower():find('unknown') then
+    return 'unknown'
+  end
+
+  local last_tty = ''
+  for _ = 1, 10 do
+    local line = vim.fn.trim(vim.fn.system('ps -o ppid=,tty=,comm= -p ' .. pid))
+    local ppid, tty, comm = line:match('^%s*(%S+)%s+(%S+)%s*(.*)$')
+    if not ppid then
+      break
+    end
+    if comm == 'kmscon' or comm == 'login' then
+      return 'physical_console'
+    end
+    if tty ~= '' and tty ~= '?' then
+      last_tty = tty
+    end
+    if ppid == '' or tonumber(ppid) <= 1 then
+      break
+    end
+    pid = tonumber(ppid)
+  end
+
+  if last_tty == '' then
+    return 'no_tty'
+  end
+  local lower = uname:lower()
+  if lower:find('linux') then
+    if last_tty:match('^tty%d+$') then
+      return 'physical_console'
+    elseif last_tty:match('^pts/') then
+      return vim.fn.empty(vim.fn.getenv('SSH_TTY')) == 0 and 'remote_ssh' or 'pseudo_terminal'
+    end
+  end
+  if lower:find('darwin') then
+    return (last_tty == 'console' or last_tty == '/dev/console') and 'physical_console' or 'pseudo_terminal'
+  end
+  return 'unknown'
+end
+
+-- Choose the clipboard backend for the +/* registers.
+-- Use the GUI clipboard (X11/Wayland/macOS) when a display is available
+-- and we are not on a real console (kmscon/TTY), where the GUI clipboard
+-- is unusable; there, fall back to tmux buffers.
 local has_display = vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0
 local has_wayland = vim.fn.empty(vim.fn.getenv('WAYLAND_DISPLAY')) == 0
 local has_mac = vim.fn.has('mac') == 1
-if vim.fn.has('unnamedplus') == 1 and (has_display or has_wayland or has_mac) then
+local has_tmux = vim.fn.empty(vim.fn.getenv('TMUX')) == 0
+local has_unnamedplus = vim.fn.has('unnamedplus') == 1
+if get_root_terminal_type() ~= 'physical_console' and (has_display or has_wayland or has_mac) then
+  vim.opt.clipboard = has_unnamedplus and 'unnamed,unnamedplus' or 'unnamed'
+elseif has_tmux then
   vim.opt.clipboard = 'unnamed,unnamedplus'
-elseif has_display or has_wayland or has_mac then
-  vim.opt.clipboard = 'unnamed'
+  vim.g.clipboard = 'tmux'
 end
+-- }
 
 -- Indent
 vim.opt.smartindent = true
