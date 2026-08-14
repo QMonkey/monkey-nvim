@@ -101,11 +101,20 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 | YAML | yaml-language-server | `npm install -g yaml-language-server` |
 | Markdown | marksman | `brew install marksman` or `sudo pacman -S marksman` |
 
+Some LSP servers offload formatting/linting to **external tools** that must be installed separately. Without them the feature silently degrades (falls back to built-in diagnostics or skips the tool):
+
+| Language | Tool | Role | Install |
+|---|---|---|---|
+| C/C++ | clang-tidy | linter (via `clangd --clang-tidy`) | `sudo apt-get install clang-tidy`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
+| Go | staticcheck | linter (via `gopls` `staticcheck`) | `go install honnef.co/go/tools/cmd/staticcheck@latest` |
+| Shell | shfmt | formatter (via `bash-language-server`) | `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
+| Python | black | formatter (via `pylsp` black plugin) | `pip3 install black` |
+
 #### 2.3 C/C++
 
 ```bash
 # Ubuntu/Debian
-sudo apt-get install gcc g++ clangd
+sudo apt-get install gcc g++ clangd clang-tidy
 
 # OpenSUSE
 sudo zypper install gcc gcc-c++ clang
@@ -125,6 +134,8 @@ brew install gcc llvm
 ```bash
 # Install the latest version of Go, then:
 go install golang.org/x/tools/gopls@latest
+# Optional: staticcheck linter (used by gopls)
+go install honnef.co/go/tools/cmd/staticcheck@latest
 ```
 
 #### 2.5 Python
@@ -132,8 +143,8 @@ go install golang.org/x/tools/gopls@latest
 ```bash
 # Python 3 is required (install via system package manager if not present)
 pip3 install python-lsp-server
-# Optional: formatters/linters
-pip3 install autopep8 flake8 pylint
+# Optional: formatters/linters (black is used by the pylsp black plugin)
+pip3 install black autopep8 flake8 pylint
 ```
 
 #### 2.6 JavaScript / TypeScript
@@ -155,7 +166,15 @@ rustup component add rust-analyzer
 npm install -g yaml-language-server
 ```
 
-#### 2.9 Markdown
+#### 2.9 Shell
+
+```bash
+# Install LSP server, then the shfmt formatter it depends on
+npm install -g bash-language-server
+go install mvdan.cc/sh/v3/cmd/shfmt@latest
+```
+
+#### 2.10 Markdown
 
 Preview Markdown in terminal via glow:
 
@@ -168,7 +187,7 @@ sudo apt-get install glow  # Debian 13+
 go install github.com/charmbracelet/glow@latest  # Ubuntu / OpenSUSE / CentOS, or any platform with Go
 ```
 
-#### 2.10 Fonts (optional)
+#### 2.11 Fonts (optional)
 
 Neovim uses common Unicode characters (⎇, │, ▸, ·, ¬) and works without extra fonts. A [Nerd Font](https://github.com/ryanoasis/nerd-fonts) is optional if you prefer the Powerline-style look.
 
