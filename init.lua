@@ -501,7 +501,14 @@ require('lualine').setup({
     lualine_z = {},
   },
   tabline = {
-    lualine_a = { { 'tabs', mode = 1 } },
+    lualine_a = {
+      {
+        'tabs',
+        mode = 1,
+        max_length = math.huge,
+        tabs_color = { active = 'TabLineSel' },
+      },
+    },
     lualine_b = {},
     lualine_c = {},
     lualine_x = {},
