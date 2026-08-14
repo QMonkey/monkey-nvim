@@ -324,6 +324,12 @@ vim.api.nvim_create_autocmd('FileType', {
   command = 'wincmd J',
 })
 
+vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
+  group = filetype_group,
+  pattern = { '*.gotmpl', '*.go.tmpl' },
+  command = 'setfiletype gotmpl',
+})
+
 vim.api.nvim_create_autocmd('BufNewFile', {
   group = filetype_group,
   pattern = '*.sh',
@@ -1317,7 +1323,7 @@ vim.lsp.config('rust_analyzer', {
 
 vim.lsp.config('gopls', {
   cmd = { 'gopls' },
-  filetypes = { 'go', 'gomod', 'gowork' },
+  filetypes = { 'go', 'gomod', 'gowork', 'gosum', 'gotmpl' },
   root_markers = { 'go.work', 'go.mod' },
   settings = {
     gopls = {
@@ -1443,6 +1449,7 @@ vim.lsp.config('vscode-json-language-server', {
   cmd = { 'vscode-json-language-server', '--stdio' },
   filetypes = { 'json' },
   root_markers = { '.git' },
+  init_options = { provideFormatter = true },
 })
 
 local cmp_nvim_lsp = require('cmp_nvim_lsp')
