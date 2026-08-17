@@ -87,14 +87,98 @@ end, {})
 
 vim.cmd('syntax on')
 
--- sonokai
-vim.g.sonokai_style = 'andromeda'
-vim.g.sonokai_better_performance = 1
-vim.g.sonokai_diagnostic_text_highlight = 1
-vim.g.sonokai_diagnostic_virtual_text = 'colored'
-vim.g.sonokai_dim_inactive_windows = 1
+-- Terminal type detection
+-- Detect the outermost terminal type by walking up the real process
+-- tree from the current Neovim (or its tmux client). Needed before the
+-- color block because a tmux client running on a physical tty reports
+-- $TERM = tmux-256color, hiding the 8/16-color console behind it.
+-- Return value: 'kmscon' | 'tty' | 'physical_console' | 'pseudo_terminal'
+--             | 'remote_ssh' | 'no_tty' | 'unknown'
+local function get_root_terminal_type()
+  local pid = vim.fn.getpid()
+  if vim.fn.empty(vim.fn.getenv('TMUX')) == 0 then
+    local pid_str = vim.fn.trim(vim.fn.system('tmux display-message -p "#{client_pid}" 2>/dev/null'))
+    if pid_str:match('^%d+$') then
+      pid = tonumber(pid_str)
+    end
+  end
+
+  local uname = vim.fn.trim(vim.fn.system('uname -s'))
+  if uname == '' or uname:lower():find('unknown') then
+    return 'unknown'
+  end
+
+  local last_tty = ''
+  local saw_login = false
+  for _ = 1, 10 do
+    local line = vim.fn.trim(vim.fn.system('ps -o ppid=,tty=,comm= -p ' .. pid))
+    local ppid, tty, comm = line:match('^%s*(%S+)%s+(%S+)%s*(.*)$')
+    if not ppid then
+      break
+    end
+    if comm == 'kmscon' then
+      return 'kmscon'
+    end
+    if comm == 'login' then
+      saw_login = true
+    end
+    if tty ~= '' and tty ~= '?' then
+      last_tty = tty
+    end
+    if ppid == '' or tonumber(ppid) <= 1 then
+      break
+    end
+    pid = tonumber(ppid)
+  end
+
+  if last_tty == '' and not saw_login then
+    return 'no_tty'
+  end
+  local lower = uname:lower()
+  if lower:find('linux') then
+    if last_tty:match('^tty%d+$') or saw_login then
+      return 'tty'
+    elseif last_tty:match('^pts/') then
+      return vim.fn.empty(vim.fn.getenv('SSH_TTY')) == 0 and 'remote_ssh' or 'pseudo_terminal'
+    end
+  end
+  if lower:find('darwin') then
+    return (last_tty == 'console' or last_tty == '/dev/console') and 'physical_console' or 'pseudo_terminal'
+  end
+  return 'unknown'
+end
+
+local root_terminal = get_root_terminal_type()
+local is_tty_console = (vim.env.TERM or ''):match('^linux') ~= nil or root_terminal == 'tty'
+
+-- Color support
+-- The Linux framebuffer console (tty1-tty63, TERM=linux) has no true
+-- color and sonokai is a true-color-only theme (its `&t_Co < 256 -> finish`
+-- guard makes it a no-op there). Detect it, moreover via a physical tty
+-- under a tmux client that masks the term as tmux-256color, so we can fall
+-- back to the built-in unokai theme below.
+if vim.fn.has('termguicolors') == 1 and not is_tty_console then
+  vim.opt.termguicolors = true
+else
+  vim.opt.termguicolors = false
+end
+
+-- Theme
 vim.opt.background = 'dark'
-vim.cmd('colorscheme sonokai')
+if not is_tty_console then
+  -- sonokai settings must be set before :colorscheme
+  vim.g.sonokai_style = 'andromeda'
+  vim.g.sonokai_better_performance = 1
+  vim.g.sonokai_diagnostic_text_highlight = 1
+  vim.g.sonokai_diagnostic_virtual_text = 'colored'
+  vim.g.sonokai_dim_inactive_windows = 1
+  vim.cmd('colorscheme sonokai')
+else
+  -- unokai is a built-in Monokai-style theme whose named-color branches
+  -- match the console's fixed VGA palette, keeping a sonokai-like look when
+  -- is_tty_console.
+  vim.cmd('colorscheme unokai')
+end
 
 -- Leader
 vim.g.mapleader = ','
@@ -174,70 +258,17 @@ vim.opt.directory = vim.fn.stdpath("data") .. "/swap//"
 vim.opt.jumpoptions:append('stack')
 
 -- Clipboard {
--- Detect the outermost terminal type by walking up the real process
--- tree from the current Neovim (or its tmux client). A real console
--- (kmscon/TTY/console) makes the GUI clipboard unusable even if
--- $DISPLAY/$WAYLAND_DISPLAY is set.
-local function get_root_terminal_type()
-  local pid = vim.fn.getpid()
-  if vim.fn.empty(vim.fn.getenv('TMUX')) == 0 then
-    local pid_str = vim.fn.trim(vim.fn.system('tmux display-message -p "#{client_pid}" 2>/dev/null'))
-    if pid_str:match('^%d+$') then
-      pid = tonumber(pid_str)
-    end
-  end
-
-  local uname = vim.fn.trim(vim.fn.system('uname -s'))
-  if uname == '' or uname:lower():find('unknown') then
-    return 'unknown'
-  end
-
-  local last_tty = ''
-  for _ = 1, 10 do
-    local line = vim.fn.trim(vim.fn.system('ps -o ppid=,tty=,comm= -p ' .. pid))
-    local ppid, tty, comm = line:match('^%s*(%S+)%s+(%S+)%s*(.*)$')
-    if not ppid then
-      break
-    end
-    if comm == 'kmscon' or comm == 'login' then
-      return 'physical_console'
-    end
-    if tty ~= '' and tty ~= '?' then
-      last_tty = tty
-    end
-    if ppid == '' or tonumber(ppid) <= 1 then
-      break
-    end
-    pid = tonumber(ppid)
-  end
-
-  if last_tty == '' then
-    return 'no_tty'
-  end
-  local lower = uname:lower()
-  if lower:find('linux') then
-    if last_tty:match('^tty%d+$') then
-      return 'physical_console'
-    elseif last_tty:match('^pts/') then
-      return vim.fn.empty(vim.fn.getenv('SSH_TTY')) == 0 and 'remote_ssh' or 'pseudo_terminal'
-    end
-  end
-  if lower:find('darwin') then
-    return (last_tty == 'console' or last_tty == '/dev/console') and 'physical_console' or 'pseudo_terminal'
-  end
-  return 'unknown'
-end
-
 -- Choose the clipboard backend for the +/* registers.
 -- Use the GUI clipboard (X11/Wayland/macOS) when a display is available
 -- and we are not on a real console (kmscon/TTY), where the GUI clipboard
 -- is unusable; there, fall back to tmux buffers.
+local is_physical_console = root_terminal == 'kmscon' or root_terminal == 'tty' or root_terminal == 'physical_console'
 local has_display = vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0
 local has_wayland = vim.fn.empty(vim.fn.getenv('WAYLAND_DISPLAY')) == 0
 local has_mac = vim.fn.has('mac') == 1
 local has_tmux = vim.fn.empty(vim.fn.getenv('TMUX')) == 0
 local has_unnamedplus = vim.fn.has('unnamedplus') == 1
-if get_root_terminal_type() ~= 'physical_console' and (has_display or has_wayland or has_mac) then
+if not is_physical_console and (has_display or has_wayland or has_mac) then
   vim.opt.clipboard = has_unnamedplus and 'unnamed,unnamedplus' or 'unnamed'
 elseif has_tmux then
   vim.opt.clipboard = 'unnamed,unnamedplus'
@@ -286,13 +317,6 @@ vim.opt.showtabline = 1
 vim.opt.laststatus = 2
 
 vim.opt.sessionoptions:remove({ 'blank', 'options', 'folds', 'terminal' })
-
--- Color support
-if vim.fn.has('termguicolors') == 1 then
-  vim.opt.termguicolors = true
-else
-  vim.opt.t_Co = 256
-end
 
 -- FileType
 local filetype_group = vim.api.nvim_create_augroup('FileTypes', { clear = true })
@@ -431,7 +455,7 @@ end
 
 require('lualine').setup({
   options = {
-    theme = 'sonokai',
+    theme = not is_tty_console and 'sonokai' or '16color',
     component_separators = '',
     section_separators = '',
     always_show_tabline = false,
@@ -459,6 +483,9 @@ require('lualine').setup({
         end,
         color = function()
           if mc_active() then
+            if is_tty_console then
+              return { fg = 0, bg = 13, gui = 'bold' }
+            end
             local purple = vim.fn.mode() ~= 'n' and '#9d7cd8' or '#bb9af7'
             return { fg = '#1a1b26', bg = purple, gui = 'bold' }
           end
