@@ -13,7 +13,7 @@ monkey-nvim项目，旨在基于 Neovim 打造一个强大、快速的纯终端�
 | Linux 终端 | xterm, kitty, alacritty, wezterm, gnome-terminal 等 |
 | macOS 终端 | Terminal.app, iTerm2, kitty 等 |
 | WSL | Windows Subsystem for Linux（推荐 WSL2） |
-| 服务器 TTY | 原生 Linux 控制台（tty1–tty63），256 色降级 |
+| 服务器 TTY | 原生 Linux 控制台（tty1–tty63），回退到内置 unokai 8/16 色（sonokai 需要 ≥256 色） |
 
 窗口/分屏管理交给 tmux 或终端模拟器的原生标签页。
 
@@ -238,12 +238,12 @@ git pull
 
 ### 6. kmscon 安装与使用（可选）
 
-kmscon 是基于 Linux KMS/DRM 的系统级终端，替代传统的 Linux tty，提供完整的 Unicode 支持和真彩色渲染。
+[kmscon](https://github.com/kmscon/kmscon) 是基于 Linux KMS/DRM 的系统级终端，替代传统的 Linux tty，提供完整的 Unicode 支持、multi-seat 能力和真彩色渲染。它是 monkey-nvim 在无头服务器上的绝佳搭档。
 
 #### 6.1 安装 kmscon
 
 ```bash
-# Ubuntu/Debian
+# Ubuntu/Debian（旧版，不含 terminfo）
 sudo apt-get install kmscon
 
 # OpenSUSE（Tumbleweed / Leap 15.x）
@@ -252,18 +252,154 @@ sudo zypper install kmscon
 # Arch Linux
 sudo pacman -S kmscon
 
-# CentOS 官方仓库与 EPEL 均无 kmscon 包，请使用下面的源码编译方式。
-
-# 从源码编译（需要 meson、ninja）
+# CentOS — 官方与 EPEL 仓库均未提供，改用下方源码编译
+# 从源码编译（需要 meson、ninja 和 ncurses 提供的 tic）
 git clone https://github.com/kmscon/kmscon.git
 cd kmscon
 meson setup builddir/
 meson install -C builddir/
 ```
 
-#### 6.2 真彩色支持
+从源码编译时会自动通过 `tic` 编译并安装 kmscon 的 terminfo 条目，nvim 无需任何 `TERM` 变通即可正确检测终端能力。默认安装 prefix 为 `/usr/local`，如需安装到系统路径请在 meson setup 时追加 `--prefix=/usr`。
 
-Neovim 通过 `termguicolors` 自动检测真彩色支持。如果在传统 Linux tty 上运行，monkey-nvim 将自动降级到 256 色模式。
+在较旧的系统上，`libtsm` 等依赖版本可能不满足编译要求。此时使用包管理器版本并通过 6.3 节的 `TERM` 变通方案即可。
+
+#### 6.2 用 kmscon 替代 tty（永久生效）
+
+让 kmscon 取代传统的 tty/getty 成为默认系统控制台：
+
+```bash
+# 停止 tty1 上原有的 getty
+sudo systemctl stop getty@tty1.service
+sudo systemctl disable getty@tty1.service
+
+# 为 tty1 创建 kmscon systemd 服务
+sudo mkdir -p /etc/systemd/system/getty.target.wants
+sudo ln -s /usr/lib/systemd/system/kmsconvt@.service \
+    /etc/systemd/system/getty.target.wants/kmsconvt@tty1.service
+
+# 覆写 ExecStart 使用 kmscon 自带的终端类型
+sudo systemctl edit kmsconvt@tty1.service
+```
+
+添加以下覆写内容：
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/usr/bin/kmscon "--vt=%I" --seats=seat0 --no-switchvt --login -- /sbin/agetty -o '-p -- \\u' - kmscon
+```
+
+最后一个参数 `kmscon` 是 agetty 的 `<termtype>` 位置参数，用于设置 `TERM=kmscon`，与编译时安装的 terminfo 条目匹配。
+
+由于 `kmscon` 这个 terminfo 条目从 **10.0.0** 才开始随源码提供，不同版本的终端类型设置也不同：
+
+```ini
+# kmscon 10.0.0+（自带 scripts/terminfo/kmscon.ti，默认 TERM=kmscon）
+ExecStart=/usr/bin/kmscon "--vt=%I" --seats=seat0 --no-switchvt --login -- /sbin/agetty -o '-p -- \\u' - kmscon
+
+# kmscon 9.x（没有 kmscon terminfo 条目，改用 xterm-256color）
+ExecStart=/usr/bin/kmscon "--vt=%I" --seats=seat0 --no-switchvt --login -- /sbin/agetty -o '-p -- \\u' - xterm-256color
+```
+
+如果你的 `agetty` 版本支持 `--noclear` 参数，可以在 `-` 之前加入它，以在登录提示符上保留 kmscon 启动画面；它纯粹是外观选项。
+
+```bash
+# 在 tty1 上启动 kmscon
+sudo systemctl start kmsconvt@tty1.service
+```
+
+重启后，按 `Ctrl+Alt+F1` 即可切换到支持真彩色和 Unicode 的 kmscon 终端。可按需对 tty2–tty6 重复相同操作。
+
+**`start` 与 `enable` 的区别——常见坑。**
+
+`systemctl start` 只是运行一次单元，完全不读取 `[Install]` 段，因此不会触碰 `autovt@.service`。`systemctl enable` 会读取 `[Install]` 并创建符号链接，包括 `Alias=autovt@.service`。
+
+tty2–tty6 **并不**由 `getty.target.wants` 启动；systemd-logind 会把每个新激活的 VT 以 `autovt@ttyN.service` 的方式拉起，它通过 `autovt@.service` 这个别名来解析。Debian/Ubuntu 打包的 `kmsconvt@.service` 自带了该别名：
+
+```ini
+[Install]
+WantedBy=getty.target
+DefaultInstance=tty1
+Alias=autovt@.service
+```
+
+因此：
+
+- `systemctl enable kmsconvt@tty1.service` → 只影响 tty1（实例别名 `autovt@tty1.service`）。
+- `systemctl enable kmsconvt@.service`（模板，不带 ttyN）→ **所有 VT**，因为它会创建 `/etc/systemd/system/autovt@.service -> kmsconvt@.service`。
+
+上面的 `ln -s ... kmsconvt@tty1.service` + `start` 流程因此只作用于 tty1。如果发现 tty2–tty6 意外也变成了 kmscon，请检查残留的别名（回退方法见 6.5 节）。
+
+#### 6.3 真彩色支持
+
+kmscon 支持真彩色（24-bit）。monkey-nvim 通过 `termguicolors` 自动检测并使用 GUI 颜色渲染。
+
+如果通过包管理器安装的 kmscon 版本较旧（不含 terminfo）或 terminfo 条目缺失，nvim 会报错 `E558: Terminal entry not found in terminfo`。此时在 shell 配置中添加以下内容即可：
+
+```bash
+# 添加到 shell 配置文件中（~/.bashrc、~/.zshrc 等）
+export TERM=xterm-256color
+export COLORTERM=truecolor
+```
+
+`COLORTERM=truecolor` 必须在 `TERM=xterm-256color` 时设置，否则 nvim 无法检测到真彩色支持。注意使用 `xterm-256color` 替代 kmscon 原生 terminfo 可能导致一定的终端刷新异常。如需最佳体验，请从源码（10.0.0+）编译获取原生 terminfo 条目。
+
+如果在 kmscon 中使用 tmux，tmux 会把 `$TERM` 覆盖为 `tmux` / `tmux-256color`。这是正常且正确的行为——**不要**改回去。tmux 会根据外层终端生成自己的内部 `TERM` 并对外暴露准确的能力，nvim 等 ncurses 程序因此能正确工作。只有**外层**（进入 tmux 之前）的 `$TERM` 才重要：10.0.0+ 保持 `kmscon`，9.x 保持 `xterm-256color`。
+
+Linux 原生控制台（tty1–tty63，`TERM=linux`）只提供 8/16 色，这会触发 sonokai 的守卫条件（`&t_Co < 256 -> finish`），从而保留内置的 8/16 色高亮，保证代码仍可阅读。sonokai 本身并不要求真彩色——在任何 256 色终端上都能通过 `cterm` 调色板正常渲染——但它在可用颜色少于 256 时会拒绝加载。monkey-nvim 因此在裸 tty 上回退到内置的 `unokai` 主题。如需在物理控制台上获得完整的 sonokai 配色，请用 kmscon 替代 tty（见 6.2 节）或改用任意 256 色/真彩色终端。
+
+如果在裸 tty（非 kmscon）上运行 tmux，tmux 默认 `default-terminal=tmux-256color`，会向其中的所有程序宣称「256 色 + xterm 风格键序列」——即便底层控制台只有 8/16 色。monkey-nvim 已经能识别这种情况（它向上遍历进程树，看到 tmux 客户端背后的真实 tty），并回退到内置高亮，因此 nvim 自身始终正确。但其他程序没有这层保护，可能输出控制台无法显示的 256 色转义序列。要让它们也正确，把 tmux 的终端类型设为与 8 色控制台匹配：
+
+```bash
+# 写入 ~/.tmux.conf —— 仅适用于在裸 Linux tty 上运行的 tmux
+set -g default-terminal "tmux"
+set -g terminal-overrides ",linux:colors=16"
+```
+
+第一行让 tmux 向程序宣称普通的 8 色终端；第二行告诉 tmux 底层 `linux` 控制台有 16 色（8 基础色 + 8 亮色），使其能合理降级。**不要**在 kmscon 或普通终端模拟器下运行 tmux 时添加这两行——那些场景 `tmux-256color` 才是正确的。
+
+#### 6.4 字体（可选）
+
+kmscon 使用系统内建的字体渲染器。如需 Powerline 风格图标，安装任意系统等宽字体即可。
+
+#### 6.5 回退到传统 tty/getty
+
+将虚拟控制台交还给 agetty：
+
+```bash
+# 停止 kmscon 实例
+sudo systemctl stop kmsconvt@tty1.service
+
+# 删除 6.2 节创建的 tty1 wants 链接
+sudo rm -f /etc/systemd/system/getty.target.wants/kmsconvt@tty1.service
+
+# 在 tty1 上恢复 getty
+sudo systemctl enable getty@tty1.service
+sudo systemctl start getty@tty1.service
+```
+
+如果之前执行过 `systemctl enable kmsconvt@.service`（模板），`autovt@.service` 别名现在指向 kmscon，会继续替换所有 VT。需要显式回退：
+
+```bash
+# 让 autovt@.service 指回 getty（去掉 kmscon 别名）
+sudo systemctl disable kmsconvt@.service
+sudo rm -f /etc/systemd/system/autovt@.service
+
+# 重新启用 getty（同时恢复 getty@tty1.service）
+sudo systemctl enable getty@.service
+
+# 重新加载，让 logind 对新激活的 VT 生效
+sudo systemctl daemon-reload
+```
+
+验证别名已指回 getty：
+
+```bash
+readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.service
+```
+
+应解析到 `getty@.service`。
 
 ## 插件列表
 
