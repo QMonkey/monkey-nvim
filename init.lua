@@ -373,7 +373,7 @@ vim.api.nvim_create_autocmd('BufNewFile', {
 vim.g.markdown_syntax_conceal = 0
 vim.g.markdown_minlines = 100
 vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash=sh',
-  'vim', 'sql', 'yaml', 'json' }
+  'zsh', 'vim', 'sql', 'yaml', 'json' }
 
 -- Docset
 vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
