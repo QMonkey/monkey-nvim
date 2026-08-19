@@ -11,12 +11,19 @@
 --    Email: Thinking.QMonkey@GMail.com
 --
 
+-- Leader
+vim.g.mapleader = ','
+vim.g.maplocalleader = ','
+
 -- Plugins
-vim.pack.add({
-  -- Theme / UI
+vim.pack.add({ 'https://github.com/zuqini/zpack.nvim' })
+
+local theme_specs = {
   { src = 'https://github.com/sainnhe/sonokai' },
   { src = 'https://github.com/nvim-lualine/lualine.nvim' },
-  -- Editor
+}
+
+local editor_specs = {
   { src = 'https://github.com/echasnovski/mini.indentscope' },
   { src = 'https://github.com/echasnovski/mini.ai' },
   { src = 'https://github.com/echasnovski/mini.surround' },
@@ -24,13 +31,113 @@ vim.pack.add({
   { src = 'https://github.com/windwp/nvim-autopairs' },
   { src = 'https://github.com/gbprod/substitute.nvim' },
   { src = 'https://github.com/chentoast/marks.nvim' },
-  { src = 'https://github.com/andymass/vim-matchup' },
-  -- Navigation / Search
-  { src = 'https://github.com/ibhagwan/fzf-lua' },
-  { src = 'https://github.com/folke/flash.nvim' },
-  { src = 'https://github.com/kevinhwang91/promise-async' },
-  { src = 'https://github.com/kevinhwang91/nvim-ufo' },
-  -- Code Intelligence
+  {
+    src = 'https://github.com/andymass/vim-matchup',
+    init = function()
+      vim.g.matchup_matchparen_offscreen = { method = 'popup' }
+      vim.g.matchup_matchparen_deferred = 1
+    end,
+  },
+}
+
+local nav_specs = {
+  {
+    src = 'https://github.com/ibhagwan/fzf-lua',
+    cmd = 'FzfLua',
+    keys = {
+      { '<F1>',      function() require('fzf-lua').live_grep() end,                                                                    desc = 'Live grep' },
+      { '<F2>',      function() require('fzf-lua').resume() end,                                                                       desc = 'Resume fzf-lua' },
+      { '<C-p>',     function() require('fzf-lua').files() end,                                                                        desc = 'Find files' },
+      { '<leader>b', function() require('fzf-lua').buffers() end,                                                                      desc = 'Find buffers' },
+      { '<leader>t', function() require('fzf-lua').btags() end,                                                                        desc = 'Buffer tags' },
+      { '<leader>p', function() require('fzf-lua').tags() end,                                                                         desc = 'Project tags' },
+      { '<leader>f', function() require('fzf-lua').lsp_document_symbols({ regex_filter = function(item) return item.kind == 'Function' or item.kind == 'Method' end }) end, desc = 'Document functions' },
+      { '<leader>e', function() require('fzf-lua').blines() end,                                                                       desc = 'Buffer lines' },
+      { '<leader>a', function() require('fzf-lua').grep_cword() end,                                                                   desc = 'Grep cword' },
+      { '<leader>a', function() require('fzf-lua').grep_visual() end,                                                                  mode = 'v',                 desc = 'Grep visual' },
+    },
+    config = function()
+      local fzf_lua = require('fzf-lua')
+      fzf_lua.setup({
+        defaults = {
+          silent = true,
+          file_ignore_patterns = { '.git/', '.hg/', '.svn/', '.bzr/' },
+        },
+        keymap = {
+          builtin = { ['<F2>'] = 'hide' },
+          fzf = { ['ctrl-j'] = 'down', ['ctrl-k'] = 'up' },
+        },
+        files = { hidden = true },
+        grep = { rg_opts = '--hidden' },
+        buffers = {
+          no_header_i = true,
+          fzf_opts = { ['--header-lines'] = '0' },
+          actions = { ['ctrl-d'] = { fn = fzf_lua.actions.buf_del, reload = true } },
+        },
+      })
+    end,
+  },
+  {
+    src = 'https://github.com/folke/flash.nvim',
+    keys = {
+      { 'f', function() require('flash').jump() end,                           mode = { 'n', 'x', 'o' } },
+      { 'F', function() require('flash').jump({ jump = { pos = 'end' } }) end, mode = 'n' },
+      { 'F', function() require('flash').treesitter() end,                     mode = { 'x', 'o' } },
+    },
+    config = function()
+      require('flash').setup({
+        labels = 'asdfghjklqwertyuiopzxcvbnm',
+        search = { mode = 'exact' },
+        modes = { char = { enabled = false } },
+      })
+    end,
+  },
+  {
+    src = 'https://github.com/kevinhwang91/nvim-ufo',
+    dependencies = { { src = 'https://github.com/kevinhwang91/promise-async' } },
+    event = 'VeryLazy',
+    cmd = { 'UfoEnable', 'UfoDisable', 'UfoInspect', 'UfoAttach', 'UfoDetach', 'UfoEnableFold', 'UfoDisableFold' },
+    config = function()
+      vim.opt.foldcolumn = '0'
+      vim.opt.foldlevel = 99
+      vim.opt.foldlevelstart = 99
+      vim.opt.foldenable = true
+      require('ufo').setup({
+        provider_selector = function(_, _, _)
+          return { 'treesitter', 'indent' }
+        end,
+        fold_virt_text_handler = function(virt_text, lnum, end_lnum, width, truncate)
+          local new_virt_text = {}
+          local suffix = '  ' .. (end_lnum - lnum) .. ' lines'
+          local suf_width = vim.fn.strdisplaywidth(suffix)
+          local target_width = width - suf_width
+          local cur_width = 0
+          for _, chunk in ipairs(virt_text) do
+            local chunk_text = chunk[1]
+            local chunk_width = vim.fn.strdisplaywidth(chunk_text)
+            if target_width > cur_width + chunk_width then
+              table.insert(new_virt_text, chunk)
+            else
+              chunk_text = truncate(chunk_text, target_width - cur_width)
+              local hl_group = chunk[2]
+              table.insert(new_virt_text, { chunk_text, hl_group })
+              chunk_width = vim.fn.strdisplaywidth(chunk_text)
+              if cur_width + chunk_width < target_width then
+                suffix = suffix .. (' '):rep(target_width - cur_width - chunk_width)
+              end
+              break
+            end
+            cur_width = cur_width + chunk_width
+          end
+          table.insert(new_virt_text, { suffix, 'MoreMsg' })
+          return new_virt_text
+        end,
+      })
+    end,
+  },
+}
+
+local code_specs = {
   { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
   { src = 'https://github.com/hrsh7th/nvim-cmp' },
   { src = 'https://github.com/hrsh7th/cmp-nvim-lsp' },
@@ -40,50 +147,179 @@ vim.pack.add({
   { src = 'https://github.com/L3MON4D3/LuaSnip' },
   { src = 'https://github.com/saadparwaiz1/cmp_luasnip' },
   { src = 'https://github.com/rafamadriz/friendly-snippets' },
-  -- Git
+}
+
+local git_specs = {
   { src = 'https://github.com/lewis6991/gitsigns.nvim' },
-  { src = 'https://github.com/NeogitOrg/neogit' },
-  { src = 'https://github.com/esmuellert/codediff.nvim' },
-  -- Project
+  {
+    src = 'https://github.com/NeogitOrg/neogit',
+    cmd = { 'Neogit', 'NeogitResetState', 'NeogitLogCurrent', 'NeogitCommit' },
+    keys = {
+      { '<leader>gL', function() require('neogit').action('log', 'log_all_references')() end, desc = 'Neogit log (all)' },
+    },
+    dependencies = { { src = 'https://github.com/esmuellert/codediff.nvim' } },
+    config = function()
+      require('neogit').setup({ diff_viewer = 'codediff', integrations = { codediff = true } })
+      require('codediff').setup({ diff = { compact = true } })
+    end,
+  },
+  {
+    src = 'https://github.com/esmuellert/codediff.nvim',
+    cmd = { 'CodeDiff', 'VscodeDiff' },
+  },
+}
+
+local project_specs = {
   { src = 'https://github.com/rmagatti/auto-session' },
-  { src = 'https://github.com/stevearc/oil.nvim' },
-  { src = 'https://github.com/ludovicchabant/vim-gutentags' },
-  { src = 'https://github.com/dhananjaylatkar/cscope_maps.nvim' },
-  -- Tools
-  { src = 'https://github.com/folke/trouble.nvim' },
-  { src = 'https://github.com/jake-stewart/multicursor.nvim' },
-  { src = 'https://github.com/akinsho/toggleterm.nvim' },
-})
+  {
+    src = 'https://github.com/stevearc/oil.nvim',
+    cmd = 'Oil',
+    keys = {
+      { '-', function() require('oil').open(vim.fn.expand('%:p:h')) end, desc = 'Open parent dir' },
+      {
+        '~',
+        function()
+          local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
+          local root = vim.fs.root(0, patterns) or vim.fn.expand('~')
+          require('oil').open(root)
+        end,
+        desc = 'Open project root or home'
+      },
+    },
+    config = function()
+      require('oil').setup({ view_options = { show_hidden = true, show_icons = false } })
+    end,
+  },
+  {
+    src = 'https://github.com/ludovicchabant/vim-gutentags',
+    init = function()
+      vim.g.gutentags_modules = { 'ctags' }
+      vim.g.gutentags_project_root = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
+      vim.g.gutentags_cache_dir = vim.fn.stdpath("data") .. '/tags/'
+      vim.g.gutentags_ctags_tagfile = '.tags'
+      vim.g.gutentags_ctags_auto_set_tags = 1
+      vim.g.gutentags_ctags_extra_args = {
+        '--fields=+liaS',
+        '--extras=+q',
+        '--langmap=c:.c.h,vim:.vim.vimrc',
+        '--c-kinds=+p',
+        '--c++-kinds=+p',
+        '--python-kinds=+i',
+      }
+      vim.g.gutentags_generate_on_missing = 1
+      vim.g.gutentags_generate_on_new = 0
+      vim.g.gutentags_generate_on_write = 1
+      vim.g.gutentags_background_update = 1
+      vim.g.gutentags_resolve_symlinks = 1
+      vim.g.gutentags_define_advanced_commands = 1
+    end,
+  },
+  {
+    src = 'https://github.com/dhananjaylatkar/cscope_maps.nvim',
+    cmd = { 'Cscope', 'Cs', 'Cstag', 'CsPrompt' },
+    init = function()
+      package.preload["cscope.pickers.trouble"] = function()
+        return {
+          run = function(opts)
+            vim.fn.setqflist(opts.cscope.parsed_output)
+            vim.fn.setqflist({}, "a", { title = opts.cscope.prompt_title })
+            vim.cmd("Trouble quickfix")
+          end,
+        }
+      end
+    end,
+    config = function()
+      local project_root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
+      local gtags_dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_root, ''))
+      require("cscope_maps").setup({
+        disable_maps = true,
+        cscope = {
+          exec = 'gtags-cscope',
+          picker = "trouble",
+          project_rooter = { enable = false },
+          tag = { keymap = false },
+        },
+      })
+      vim.g.cscope_maps_db_file = gtags_dbpath .. '/GTAGS::' .. project_root
+    end,
+  },
+}
 
--- Pack management
-vim.api.nvim_create_user_command('PackUpdate', function()
-  vim.pack.update()
-  vim.notify('Packages updated', vim.log.levels.INFO)
-end, {})
+local tools_specs = {
+  {
+    src = 'https://github.com/folke/trouble.nvim',
+    cmd = 'Trouble',
+    config = function()
+      require('trouble').setup({ auto_close = true, auto_refresh = true, height = 10 })
+    end,
+  },
+  {
+    src = 'https://github.com/jake-stewart/multicursor.nvim',
+    keys = {
+      { '<c-n>', function() require('multicursor-nvim').matchAddCursor(1) end, mode = { 'n', 'x' } },
+    },
+    config = function()
+      local mc = require('multicursor-nvim')
+      mc.setup({ hlsearch = true })
+      mc.addKeymapLayer(function(layer_set)
+        layer_set({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
+        layer_set({ 'n', 'x' }, '<c-p>', function() mc.matchAddCursor(-1) end)
+        layer_set({ 'n', 'x' }, '<c-x>', function() mc.matchSkipCursor(1) end)
+        layer_set({ 'n', 'x' }, '<c-q>', function() mc.matchSkipCursor(-1) end)
+        layer_set('n', '<esc>', function()
+          if not mc.cursorsEnabled() then
+            mc.enableCursors()
+          else
+            mc.clearCursors()
+          end
+        end)
+      end)
+    end,
+  },
+  {
+    src = 'https://github.com/akinsho/toggleterm.nvim',
+    cmd = { 'TermSelect', 'TermExec', 'TermNew', 'ToggleTerm', 'ToggleTermToggleAll', 'ToggleTermSendVisualLines', 'ToggleTermSendVisualSelection', 'ToggleTermSendCurrentLine', 'ToggleTermSetName' },
+    keys = {
+      {
+        '<F3>',
+        function()
+          local cmd = vim.fn.input('Command: ')
+          if cmd ~= '' then
+            vim.cmd('2TermExec cmd=' .. vim.fn.shellescape(cmd))
+          end
+        end,
+        desc = 'Run one-off command'
+      },
+      {
+        '<F4>',
+        function()
+          local term = require('toggleterm.terminal').get(1)
+          local was_open = term and term:is_open()
+          vim.cmd('1ToggleTerm direction=horizontal')
+          if not was_open and require('toggleterm.terminal').get(1):is_open() then
+            vim.cmd('resize 20')
+          end
+        end,
+        mode = { 'n', 't' },
+        desc = 'Toggle horizontal terminal'
+      },
+    },
+    config = function()
+      require('toggleterm').setup({ size = 20, direction = 'horizontal', start_in_insert = true })
+    end,
+  },
+}
 
-vim.api.nvim_create_user_command('PackClean', function()
-  local names = vim.iter(vim.pack.get())
-      :filter(function(x) return not x.active end)
-      :map(function(x) return x.spec.name end)
-      :totable()
+local spec = {}
+vim.list_extend(spec, theme_specs)
+vim.list_extend(spec, editor_specs)
+vim.list_extend(spec, nav_specs)
+vim.list_extend(spec, code_specs)
+vim.list_extend(spec, git_specs)
+vim.list_extend(spec, project_specs)
+vim.list_extend(spec, tools_specs)
 
-  if #names == 0 then
-    vim.notify('No unused plugins found', vim.log.levels.INFO)
-    return
-  end
-
-  local list = vim.iter(names):fold('', function(acc, name)
-    return acc .. '  ' .. name .. '\n'
-  end)
-  local choice = vim.fn.confirm(
-    'Remove ' .. #names .. ' unused plugin(s)?\n\n' .. list .. '\n',
-    '&Yes\n&No', 2
-  )
-  if choice == 1 then
-    vim.pack.del(names)
-    vim.notify('Removed ' .. #names .. ' plugin(s)', vim.log.levels.INFO)
-  end
-end, {})
+require('zpack').setup({ spec = spec })
 
 vim.cmd('syntax on')
 
@@ -92,8 +328,7 @@ vim.cmd('syntax on')
 -- tree from the current Neovim (or its tmux client). Needed before the
 -- color block because a tmux client running on a physical tty reports
 -- $TERM = tmux-256color, hiding the 8/16-color console behind it.
--- Return value: 'kmscon' | 'tty' | 'physical_console' | 'pseudo_terminal'
---             | 'remote_ssh' | 'no_tty' | 'unknown'
+-- Return value: 'kmscon' | 'tty' | 'physical_console' | 'pseudo_terminal' | 'remote_ssh' | 'no_tty' | 'unknown'
 local function get_root_terminal_type()
   local pid = vim.fn.getpid()
   if vim.fn.empty(vim.fn.getenv('TMUX')) == 0 then
@@ -179,10 +414,6 @@ else
   -- is_tty_console.
   vim.cmd('colorscheme unokai')
 end
-
--- Leader
-vim.g.mapleader = ','
-vim.g.maplocalleader = ','
 
 -- Encoding
 vim.opt.encoding = 'utf-8'
@@ -448,9 +679,11 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
 })
 
 -- lualine.nvim
-local mc = require('multicursor-nvim')
+local function mc()
+  return package.loaded['multicursor-nvim']
+end
 local function mc_active()
-  return mc.hasCursors()
+  return mc() ~= nil and mc().hasCursors()
 end
 
 require('lualine').setup({
@@ -507,7 +740,7 @@ require('lualine').setup({
           if not mc_active() then
             return ''
           end
-          local result = mc.numCursors() .. ' cursors'
+          local result = mc().numCursors() .. ' cursors'
           if vim.v.hlsearch and vim.fn.getreg('/') ~= '' then
             result = result .. '  /' .. vim.fn.getreg('/')
           end
@@ -587,105 +820,6 @@ vim.keymap.set('n', 'S', require('substitute').eol, { silent = true })
 -- marks.nvim
 require('marks').setup()
 
--- fzf-lua
-local fzf_lua = require('fzf-lua')
-fzf_lua.setup({
-  defaults = {
-    silent = true,
-    file_ignore_patterns = { '.git/', '.hg/', '.svn/', '.bzr/' },
-  },
-  keymap = {
-    builtin = {
-      ['<F2>'] = 'hide',
-    },
-    fzf = {
-      ['ctrl-j'] = 'down',
-      ['ctrl-k'] = 'up',
-    },
-  },
-  files = {
-    hidden = true,
-  },
-  grep = {
-    rg_opts = '--hidden',
-  },
-  buffers = {
-    no_header_i = true,
-    fzf_opts = { ['--header-lines'] = '0' },
-    actions = {
-      ['ctrl-d'] = { fn = fzf_lua.actions.buf_del, reload = true },
-    },
-  },
-})
-
-vim.keymap.set('n', '<F1>', fzf_lua.live_grep, { silent = true })
-vim.keymap.set('n', '<F2>', fzf_lua.resume, { silent = true })
-vim.keymap.set('n', '<C-p>', fzf_lua.files, { silent = true })
-vim.keymap.set('n', '<leader>b', fzf_lua.buffers, { silent = true })
-vim.keymap.set('n', '<leader>t', fzf_lua.btags, { silent = true })
-vim.keymap.set('n', '<leader>p', fzf_lua.tags, { silent = true })
-vim.keymap.set('n', '<leader>f', function()
-  fzf_lua.lsp_document_symbols({ symbols = { filter_kind = { 'Function', 'Method' } } })
-end, { silent = true })
-vim.keymap.set('n', '<leader>e', fzf_lua.blines, { silent = true })
-vim.keymap.set('n', '<leader>a', fzf_lua.grep_cword, { silent = true })
-vim.keymap.set('v', '<leader>a', fzf_lua.grep_visual, { silent = true })
-
--- flash.nvim
-require('flash').setup({
-  labels = 'asdfghjklqwertyuiopzxcvbnm',
-  search = { mode = 'exact' },
-  modes = { char = { enabled = false } },
-})
-
-vim.keymap.set({ 'n', 'x', 'o' }, 'f', function()
-  require('flash').jump()
-end)
-vim.keymap.set('n', 'F', function()
-  require('flash').jump({ jump = { pos = 'end' } })
-end)
-vim.keymap.set({ 'x', 'o' }, 'F', function()
-  require('flash').treesitter()
-end)
-
--- nvim-ufo
-vim.opt.foldcolumn = '0'
-vim.opt.foldlevel = 99
-vim.opt.foldlevelstart = 99
-vim.opt.foldenable = true
-
-require('ufo').setup({
-  provider_selector = function(_, _, _)
-    return { 'treesitter', 'indent' }
-  end,
-  fold_virt_text_handler = function(virt_text, lnum, end_lnum, width, truncate)
-    local new_virt_text = {}
-    local suffix = '  ' .. (end_lnum - lnum) .. ' lines'
-    local suf_width = vim.fn.strdisplaywidth(suffix)
-    local target_width = width - suf_width
-    local cur_width = 0
-    for _, chunk in ipairs(virt_text) do
-      local chunk_text = chunk[1]
-      local chunk_width = vim.fn.strdisplaywidth(chunk_text)
-      if target_width > cur_width + chunk_width then
-        table.insert(new_virt_text, chunk)
-      else
-        chunk_text = truncate(chunk_text, target_width - cur_width)
-        local hl_group = chunk[2]
-        table.insert(new_virt_text, { chunk_text, hl_group })
-        chunk_width = vim.fn.strdisplaywidth(chunk_text)
-        if cur_width + chunk_width < target_width then
-          suffix = suffix .. (' '):rep(target_width - cur_width - chunk_width)
-        end
-        break
-      end
-      cur_width = cur_width + chunk_width
-    end
-    table.insert(new_virt_text, { suffix, 'MoreMsg' })
-    return new_virt_text
-  end,
-})
-
 -- nvim-treesitter
 require('nvim-treesitter').setup({
   highlight = { enable = true },
@@ -696,10 +830,6 @@ require('nvim-treesitter.install').install({
   'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
   'markdown_inline', 'yaml', 'json', 'sql',
 })
-
--- vim-matchup
-vim.g.matchup_matchparen_offscreen = { method = 'popup' }
-vim.g.matchup_matchparen_deferred = 1
 
 -- nvim-cmp
 local cmp = require('cmp')
@@ -769,24 +899,12 @@ cmp.setup.cmdline({ '/', '?' }, {
 })
 
 -- Git
-require('neogit').setup({
-  diff_viewer = 'codediff',
-  integrations = { codediff = true },
-})
-
-require('codediff').setup({
-  diff = { compact = true },
-})
-
 local gitsigns = require('gitsigns')
 gitsigns.setup()
 
 vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gl', '<cmd>NeogitLogCurrent<CR>', { silent = true })
 vim.keymap.set('x', '<leader>gl', ":'<,'>NeogitLogCurrent<CR>", { silent = true })
-vim.keymap.set('n', '<leader>gL', function()
-  require('neogit').action('log', 'log_all_references')()
-end, { silent = true })
 vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gD', '<cmd>CodeDiff<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns blame_line<CR>', { silent = true })
@@ -832,45 +950,10 @@ vim.api.nvim_create_autocmd('VimEnter', {
   callback = cd_root,
 })
 
--- oil.nvim
-require('oil').setup({
-  view_options = { show_hidden = true, show_icons = false },
-})
-
-vim.keymap.set('n', '-', function()
-  require('oil').open(vim.fn.expand('%:p:h'))
-end, { silent = true })
-
-vim.keymap.set('n', '~', function()
-  local root = vim.fs.root(0, patterns) or vim.fn.expand('~')
-  require('oil').open(root)
-end, { silent = true })
-
 -- sudo write
 vim.api.nvim_create_user_command('SudoWrite', function()
   vim.cmd('write !sudo tee % >/dev/null && edit!')
 end, {})
-
--- gutentags
-vim.g.gutentags_modules = { 'ctags' }
-vim.g.gutentags_project_root = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
-vim.g.gutentags_cache_dir = vim.fn.stdpath("data") .. '/tags/'
-vim.g.gutentags_ctags_tagfile = '.tags'
-vim.g.gutentags_ctags_auto_set_tags = 1
-vim.g.gutentags_ctags_extra_args = {
-  '--fields=+liaS',
-  '--extras=+q',
-  '--langmap=c:.c.h,vim:.vim.vimrc',
-  '--c-kinds=+p',
-  '--c++-kinds=+p',
-  '--python-kinds=+i',
-}
-vim.g.gutentags_generate_on_missing = 1
-vim.g.gutentags_generate_on_new = 0
-vim.g.gutentags_generate_on_write = 1
-vim.g.gutentags_background_update = 1
-vim.g.gutentags_resolve_symlinks = 1
-vim.g.gutentags_define_advanced_commands = 1
 
 -- cscope_maps.nvim + gtags
 vim.env.GTAGSLABEL = 'native-pygments'
@@ -907,36 +990,9 @@ local gtags_dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_
 vim.env.GTAGSROOT = project_root
 vim.env.GTAGSDBPATH = gtags_dbpath
 
-package.preload["cscope.pickers.trouble"] = function()
-  return {
-    run = function(opts)
-      vim.fn.setqflist(opts.cscope.parsed_output)
-      vim.fn.setqflist({}, "a", { title = opts.cscope.prompt_title })
-      vim.cmd("Trouble quickfix")
-    end,
-  }
-end
-
-require("cscope_maps").setup({
-  disable_maps = true,
-  cscope = {
-    exec = 'gtags-cscope',
-    picker = "trouble",
-    project_rooter = {
-      enable = false,
-    },
-    tag = {
-      keymap = false,
-    }
-  },
-})
-
 vim.keymap.set('n', 'gs', '<Cmd>Cscope find s<CR>', { silent = true })
 vim.keymap.set('n', 'gD', '<Cmd>Cstag<CR>', { silent = true })
 vim.keymap.set('n', 'gR', '<Cmd>Cscope find c<CR>', { silent = true })
-
--- cscope_maps nils out vim.g.cscope_maps_db_file during setup; set it here.
-vim.g.cscope_maps_db_file = gtags_dbpath .. '/GTAGS::' .. project_root
 
 -- Auto-build GTAGS
 local function gtags_build()
@@ -993,57 +1049,9 @@ vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
 })
 
 -- trouble.nvim
-require('trouble').setup({
-  auto_close = true,
-  auto_refresh = true,
-  height = 10,
-})
-
 vim.keymap.set('n', '<leader>d', '<cmd>Trouble diagnostics toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>q', '<cmd>Trouble quickfix toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = true })
-
--- multicursor.nvim
-mc = require('multicursor-nvim')
-mc.setup({ hlsearch = true })
-
-vim.keymap.set({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
-mc.addKeymapLayer(function(layer_set)
-  layer_set({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
-  layer_set({ 'n', 'x' }, '<c-p>', function() mc.matchAddCursor(-1) end)
-  layer_set({ 'n', 'x' }, '<c-x>', function() mc.matchSkipCursor(1) end)
-  layer_set({ 'n', 'x' }, '<c-q>', function() mc.matchSkipCursor(-1) end)
-  layer_set('n', '<esc>', function()
-    if not mc.cursorsEnabled() then
-      mc.enableCursors()
-    else
-      mc.clearCursors()
-    end
-  end)
-end)
-
--- toggleterm.nvim
-require('toggleterm').setup({
-  size = 20,
-  direction = 'horizontal',
-  start_in_insert = true,
-})
-
-vim.keymap.set('n', '<F3>', function()
-  local cmd = vim.fn.input('Command: ')
-  if cmd ~= '' then
-    vim.cmd('2TermExec cmd=' .. vim.fn.shellescape(cmd))
-  end
-end, { desc = 'Run one-off command in terminal' })
-
-vim.keymap.set({ 'n', 't' }, '<F4>', function()
-  local term = require('toggleterm.terminal').get(1)
-  local was_open = term and term:is_open()
-  vim.cmd('1ToggleTerm direction=horizontal')
-  if not was_open and require('toggleterm.terminal').get(1):is_open() then
-    vim.cmd('resize 20')
-  end
-end, { desc = 'Toggle horizontal terminal' })
 
 -- Key maps
 vim.keymap.set('n', 'Y', 'y$')
