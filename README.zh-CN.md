@@ -219,7 +219,7 @@ nvim --headless -c 'checkhealth' -c 'qa'
 cd monkey-nvim
 ln -sf $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # 全局 clang-format 风格（可选）
-nvim --headless -c 'PackUpdate' -c 'qa'   # 安装所有插件
+nvim --headless -c 'ZPack sync' -c 'qa'   # 安装所有插件
 nvim
 ```
 
@@ -233,7 +233,7 @@ git pull
 然后在 Neovim 中：
 
 ```vim
-:PackUpdate
+:ZPack update
 ```
 
 ### 6. kmscon 安装与使用（可选）
@@ -405,6 +405,7 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 
 | 插件 | 用途 |
 |---|---|
+| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim) | 基于内置 `vim.pack` 的懒加载插件管理器 |
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai) | 配色方案 |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) | 状态栏 |
 | [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope) | 缩进参考线 |
