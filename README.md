@@ -219,7 +219,7 @@ nvim --headless -c 'checkhealth' -c 'qa'
 cd monkey-nvim
 ln -sf $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # global clang-format style (optional)
-nvim --headless -c 'PackUpdate' -c 'qa'   # Install all plugins
+nvim --headless -c 'ZPack sync' -c 'qa'   # Install all plugins
 nvim
 ```
 
@@ -233,7 +233,7 @@ git pull
 Then in Neovim:
 
 ```vim
-:PackUpdate
+:ZPack update
 ```
 
 ### 6. kmscon setup (optional)
@@ -405,6 +405,7 @@ It should resolve to `getty@.service`.
 
 | Plugin | Purpose |
 |---|---|
+| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim) | Lazy-loading plugin manager on top of built-in `vim.pack` |
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai) | Colorscheme |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) | Status line |
 | [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope) | Indent guide |
