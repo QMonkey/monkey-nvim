@@ -648,7 +648,11 @@ vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
   callback = function(e)
     if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
     if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
-    gtags_update()
+    if vim.fn.glob(gtags_dbpath .. '/GTAGS') == '' then
+      gtags_build()
+    else
+      gtags_update()
+    end
   end,
   desc = 'incremental GTAGS update on save',
 })
@@ -815,22 +819,16 @@ vim.keymap.set('c', '<C-h>', '<BackSpace>')
 vim.keymap.set('c', '<C-d>', '<Del>')
 
 -- Buffer
+vim.keymap.set('n', '[b', '<cmd>bprevious<CR>', { silent = true })
+vim.keymap.set('n', ']b', '<cmd>bnext<CR>', { silent = true })
 vim.keymap.set('n', '<leader>o', function()
   local name = vim.fn.input('New buffer name: ', '', 'file')
   if name ~= '' then
     vim.cmd('edit ' .. vim.fn.fnameescape(name))
   end
 end, { silent = true })
-vim.keymap.set('n', '[b', '<cmd>bprevious<CR>', { silent = true })
-vim.keymap.set('n', ']b', '<cmd>bnext<CR>', { silent = true })
 
 -- Tab
-vim.keymap.set('n', '<leader><leader>t', function()
-  local name = vim.fn.input('New tab name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
 vim.keymap.set('n', '[t', '<cmd>tabprevious<CR>', { silent = true })
 vim.keymap.set('n', ']t', '<cmd>tabnext<CR>', { silent = true })
 for i = 1, 9 do
@@ -838,6 +836,12 @@ for i = 1, 9 do
 end
 vim.keymap.set('n', '<leader>[', '<cmd>tabfirst<CR>', { silent = true })
 vim.keymap.set('n', '<leader>]', '<cmd>tablast<CR>', { silent = true })
+vim.keymap.set('n', '<leader><leader>t', function()
+  local name = vim.fn.input('New tab name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
 
 -- Split
 vim.keymap.set('n', '<C-j>', '<C-w>j')
@@ -953,7 +957,6 @@ vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typ
 
 -- Docset
 vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
--- 'keywordprg' defaults to ':Man' on non-Windows, so no global override is needed.
 
 local docset_group = vim.api.nvim_create_augroup('DocSet', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
@@ -1091,6 +1094,24 @@ end, { silent = true })
 vim.keymap.set('n', '<S-q>', '<cmd>silent! confirm quitall!<CR>', { silent = true })
 vim.keymap.set({ 'n', 'v' }, 't', 'q')
 
+-- Rooter
+local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
+
+local function cd_root()
+  local root = vim.fs.root(0, patterns)
+  if root then
+    vim.cmd('cd ' .. vim.fn.fnameescape(root))
+  end
+end
+
+vim.keymap.set('n', '<leader>cr', cd_root, { silent = true })
+
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = vim.api.nvim_create_augroup('ChangeRoot', { clear = true }),
+  once = true,
+  callback = cd_root,
+})
+
 -- Ctags
 -- Resolve a tag's real line number by searching its pattern in the target buffer.
 local function ctags_resolve_lnum(t)
@@ -1208,73 +1229,6 @@ require('nvim-treesitter.install').install({
   'markdown_inline', 'yaml', 'json', 'sql',
 })
 
--- nvim-cmp
-local cmp = require('cmp')
-local luasnip = require('luasnip')
-
-require('luasnip.loaders.from_vscode').lazy_load()
-
-cmp.setup({
-  snippet = {
-    expand = function(args)
-      luasnip.lsp_expand(args.body)
-    end,
-  },
-  mapping = cmp.mapping.preset.insert({
-    ['<Tab>'] = cmp.mapping(function(fallback)
-      if luasnip.jumpable(1) then
-        luasnip.jump(1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<S-Tab>'] = cmp.mapping(function(fallback)
-      if luasnip.jumpable(-1) then
-        luasnip.jump(-1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<C-l>'] = cmp.mapping(function(fallback)
-      if cmp.visible() then
-        cmp.confirm({ select = true })
-      elseif luasnip.expand_or_jumpable() then
-        luasnip.expand_or_jump()
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<CR>'] = cmp.mapping.confirm({ select = true }),
-    ['<C-j>'] = cmp.mapping.select_next_item(),
-    ['<C-k>'] = cmp.mapping.select_prev_item(),
-  }),
-  sources = cmp.config.sources({
-    { name = 'nvim_lsp' },
-    { name = 'luasnip' },
-  }, {
-    { name = 'buffer' },
-    { name = 'path' },
-  }),
-})
-
-require('cmp_cmdline')
-
-cmp.setup.cmdline(':', {
-  mapping = cmp.mapping.preset.cmdline(),
-  sources = cmp.config.sources({
-    { name = 'path' },
-  }, {
-    { name = 'cmdline' },
-  }),
-})
-
-cmp.setup.cmdline({ '/', '?' }, {
-  mapping = cmp.mapping.preset.cmdline(),
-  sources = {
-    { name = 'buffer' },
-  },
-})
-
 -- Git
 local gitsigns = require('gitsigns')
 gitsigns.setup()
@@ -1298,24 +1252,6 @@ vim.keymap.set('n', '<leader>hs', '<cmd>Gitsigns stage_hunk<CR>', { silent = tru
 vim.keymap.set('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>', { silent = true })
 vim.keymap.set('n', '<leader>hr', '<cmd>Gitsigns reset_hunk<CR>', { silent = true })
 vim.keymap.set('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>', { silent = true })
-
--- Rooter
-local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
-
-local function cd_root()
-  local root = vim.fs.root(0, patterns)
-  if root then
-    vim.cmd('cd ' .. vim.fn.fnameescape(root))
-  end
-end
-
-vim.keymap.set('n', '<leader>cr', cd_root, { silent = true })
-
-vim.api.nvim_create_autocmd('VimEnter', {
-  group = vim.api.nvim_create_augroup('ChangeRoot', { clear = true }),
-  once = true,
-  callback = cd_root,
-})
 
 -- sudo write
 vim.api.nvim_create_user_command('SudoWrite', function()
@@ -1588,4 +1524,71 @@ vim.api.nvim_create_autocmd('BufWritePre', {
     if #clients == 0 then return end
     vim.lsp.buf.format({ async = false, timeout_ms = 5000 })
   end,
+})
+
+-- nvim-cmp
+local cmp = require('cmp')
+local luasnip = require('luasnip')
+
+require('luasnip.loaders.from_vscode').lazy_load()
+
+cmp.setup({
+  snippet = {
+    expand = function(args)
+      luasnip.lsp_expand(args.body)
+    end,
+  },
+  mapping = cmp.mapping.preset.insert({
+    ['<Tab>'] = cmp.mapping(function(fallback)
+      if luasnip.jumpable(1) then
+        luasnip.jump(1)
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+    ['<S-Tab>'] = cmp.mapping(function(fallback)
+      if luasnip.jumpable(-1) then
+        luasnip.jump(-1)
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+    ['<C-l>'] = cmp.mapping(function(fallback)
+      if cmp.visible() then
+        cmp.confirm({ select = true })
+      elseif luasnip.expand_or_jumpable() then
+        luasnip.expand_or_jump()
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }),
+    ['<C-j>'] = cmp.mapping.select_next_item(),
+    ['<C-k>'] = cmp.mapping.select_prev_item(),
+  }),
+  sources = cmp.config.sources({
+    { name = 'nvim_lsp' },
+    { name = 'luasnip' },
+  }, {
+    { name = 'buffer' },
+    { name = 'path' },
+  }),
+})
+
+require('cmp_cmdline')
+
+cmp.setup.cmdline(':', {
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = cmp.config.sources({
+    { name = 'path' },
+  }, {
+    { name = 'cmdline' },
+  }),
+})
+
+cmp.setup.cmdline({ '/', '?' }, {
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = {
+    { name = 'buffer' },
+  },
 })
