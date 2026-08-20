@@ -536,7 +536,8 @@ S           用剪贴板内容替换从光标到行尾
 #### 1.7 LSP（Language Server Protocol）
 
 ```
-K (gh)             查看光标所在符号的文档说明
+K (gh)             查看光标所在符号的文档说明（LSP 文件类型）
+K                   其他文件类型使用 `:Man`，Vim/help 文件使用 `:help`
 
 gd                 跳转到定义（无 LSP 时回退到标签跳转）
 gc                 跳转到声明
