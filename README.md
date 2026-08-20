@@ -536,7 +536,7 @@ S           Replace from cursor to end of line with clipboard content
 ```
 K (gh)              Hover documentation for symbol under cursor
 
-gd                  Go to definition
+gd                  Go to definition (falls back to tag jump when no LSP)
 gc                  Go to declaration
 gt                  Go to type definition
 gi                  Go to implementation (results in trouble)
@@ -804,6 +804,7 @@ Cscope keybindings (via cscope_maps.nvim):
 gs      Find symbol under cursor (Cscope find s)
 gD      Jump to definition (Cstag)
 gR      Find callers (Cscope find c)
+g]      Jump to tag and open quickfix
 ```
 
 ## Use git in Neovim
