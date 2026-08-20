@@ -45,16 +45,27 @@ local nav_specs = {
     src = 'https://github.com/ibhagwan/fzf-lua',
     cmd = 'FzfLua',
     keys = {
-      { '<F1>',      function() require('fzf-lua').live_grep() end,                                                                    desc = 'Live grep' },
-      { '<F2>',      function() require('fzf-lua').resume() end,                                                                       desc = 'Resume fzf-lua' },
-      { '<C-p>',     function() require('fzf-lua').files() end,                                                                        desc = 'Find files' },
-      { '<leader>b', function() require('fzf-lua').buffers() end,                                                                      desc = 'Find buffers' },
-      { '<leader>t', function() require('fzf-lua').btags() end,                                                                        desc = 'Buffer tags' },
-      { '<leader>p', function() require('fzf-lua').tags() end,                                                                         desc = 'Project tags' },
-      { '<leader>f', function() require('fzf-lua').lsp_document_symbols({ regex_filter = function(item) return item.kind == 'Function' or item.kind == 'Method' end }) end, desc = 'Document functions' },
-      { '<leader>e', function() require('fzf-lua').blines() end,                                                                       desc = 'Buffer lines' },
-      { '<leader>a', function() require('fzf-lua').grep_cword() end,                                                                   desc = 'Grep cword' },
-      { '<leader>a', function() require('fzf-lua').grep_visual() end,                                                                  mode = 'v',                 desc = 'Grep visual' },
+      { '<F1>',      function() require('fzf-lua').live_grep() end, desc = 'Live grep' },
+      { '<F2>',      function() require('fzf-lua').resume() end,    desc = 'Resume fzf-lua' },
+      { '<C-p>',     function() require('fzf-lua').files() end,     desc = 'Find files' },
+      { '<leader>b', function() require('fzf-lua').buffers() end,   desc = 'Find buffers' },
+      { '<leader>t', function() require('fzf-lua').btags() end,     desc = 'Buffer tags' },
+      { '<leader>p', function() require('fzf-lua').tags() end,      desc = 'Project tags' },
+      {
+        '<leader>f',
+        function()
+          require('fzf-lua').lsp_document_symbols({
+            regex_filter = function(item)
+              return item.kind ==
+                  'Function' or item.kind == 'Method'
+            end
+          })
+        end,
+        desc = 'Document functions'
+      },
+      { '<leader>e', function() require('fzf-lua').blines() end,      desc = 'Buffer lines' },
+      { '<leader>a', function() require('fzf-lua').grep_cword() end,  desc = 'Grep cword' },
+      { '<leader>a', function() require('fzf-lua').grep_visual() end, mode = 'v',           desc = 'Grep visual' },
     },
     config = function()
       local fzf_lua = require('fzf-lua')
@@ -672,6 +683,57 @@ vim.api.nvim_create_autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorH
 })
 
 -- Ctags
+-- Resolve a tag's real line number by searching its pattern in the target buffer.
+local function ctags_resolve_lnum(t)
+  local cmd = t.cmd or ''
+  local pattern = cmd:match('^/(.*)/$')
+  if not pattern then
+    return tonumber(cmd:match('^(%d+)'))
+  end
+  local bufnr = vim.fn.bufnr(t.filename)
+  if bufnr == -1 then
+    bufnr = vim.fn.bufadd(t.filename)
+  end
+  vim.fn.bufload(bufnr)
+  local re = vim.regex(pattern)
+  for i = 1, vim.api.nvim_buf_line_count(bufnr) do
+    local line = vim.api.nvim_buf_get_lines(bufnr, i - 1, i, false)[1]
+    if re:match_str(line) then
+      return i
+    end
+  end
+  return tonumber(cmd:match('^(%d+)'))
+end
+
+vim.keymap.set('n', 'gd', '<C-]>')
+vim.keymap.set('n', 'g]', function()
+  local tagfunc = vim.bo.tagfunc
+  vim.bo.tagfunc = nil
+  local name = vim.fn.expand('<cword>')
+  local tags = vim.fn.taglist('^' .. vim.fn.escape(name, '\\^$.') .. '$')
+  local items = {}
+  for _, t in ipairs(tags) do
+    table.insert(items, {
+      filename = t.filename,
+      lnum = ctags_resolve_lnum(t) or 0,
+      col = 1,
+      text = t.name,
+    })
+  end
+
+  local ok = pcall(vim.cmd, 'tag ' .. name)
+  if not ok then
+    vim.bo.tagfunc = tagfunc
+    vim.notify('Tag not found: ' .. name, vim.log.levels.ERROR)
+    return
+  end
+  vim.fn.setqflist(items, 'r')
+  vim.fn.setqflist({}, 'a', { title = 'tag ' .. name })
+
+  vim.bo.tagfunc = tagfunc
+  require('trouble').open('quickfix')
+end, { silent = true, desc = 'tag + open quickfix' })
+
 vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
   group = vim.api.nvim_create_augroup('Ctags', { clear = true }),
   pattern = '*.tags',
@@ -781,7 +843,12 @@ require('lualine').setup({
 require('mini.indentscope').setup({ draw = { delay = 0 } })
 
 -- mini.ai
-require('mini.ai').setup()
+require('mini.ai').setup({
+  mappings = {
+    goto_left = '',
+    goto_right = '',
+  },
+})
 
 -- mini.surround (vim-surround compatible mappings)
 require('mini.surround').setup({
