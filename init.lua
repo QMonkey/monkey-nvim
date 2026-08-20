@@ -785,6 +785,115 @@ vim.opt.mouse = 'nvi'
 vim.opt.showtabline = 1
 vim.opt.laststatus = 2
 
+-- Key maps
+vim.keymap.set('n', 'Y', 'y$')
+vim.keymap.set({ 'n', 'v' }, 'j', 'gj')
+vim.keymap.set({ 'n', 'v' }, 'k', 'gk')
+vim.keymap.set({ 'n', 'v' }, 'H', '^')
+vim.keymap.set({ 'n', 'v' }, 'L', '$')
+vim.keymap.set('v', '<', '<gv')
+vim.keymap.set('v', '>', '>gv')
+vim.keymap.set({ 'n', 'v' }, ';', ':')
+vim.keymap.set('n', 'U', '<C-r>')
+
+vim.keymap.set('i', '<C-p>', '<Up>')
+vim.keymap.set('i', '<C-n>', '<Down>')
+vim.keymap.set('i', '<C-b>', '<Left>')
+vim.keymap.set('i', '<C-f>', '<Right>')
+vim.keymap.set('i', '<C-a>', '<Home>')
+vim.keymap.set('i', '<C-e>', '<End>')
+vim.keymap.set('i', '<C-h>', '<BackSpace>')
+vim.keymap.set('i', '<C-d>', '<Del>')
+
+vim.keymap.set('c', '<C-p>', '<Up>')
+vim.keymap.set('c', '<C-n>', '<Down>')
+vim.keymap.set('c', '<C-b>', '<Left>')
+vim.keymap.set('c', '<C-f>', '<Right>')
+vim.keymap.set('c', '<C-a>', '<Home>')
+vim.keymap.set('c', '<C-e>', '<End>')
+vim.keymap.set('c', '<C-h>', '<BackSpace>')
+vim.keymap.set('c', '<C-d>', '<Del>')
+
+-- Buffer
+vim.keymap.set('n', '<leader>o', function()
+  local name = vim.fn.input('New buffer name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('edit ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+vim.keymap.set('n', '[b', '<cmd>bprevious<CR>', { silent = true })
+vim.keymap.set('n', ']b', '<cmd>bnext<CR>', { silent = true })
+
+-- Tab
+vim.keymap.set('n', '<leader><leader>t', function()
+  local name = vim.fn.input('New tab name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+vim.keymap.set('n', '[t', '<cmd>tabprevious<CR>', { silent = true })
+vim.keymap.set('n', ']t', '<cmd>tabnext<CR>', { silent = true })
+for i = 1, 9 do
+  vim.keymap.set('n', '<leader>' .. i, i .. 'gt')
+end
+vim.keymap.set('n', '<leader>[', '<cmd>tabfirst<CR>', { silent = true })
+vim.keymap.set('n', '<leader>]', '<cmd>tablast<CR>', { silent = true })
+
+-- Split
+vim.keymap.set('n', '<C-j>', '<C-w>j')
+vim.keymap.set('n', '<C-k>', '<C-w>k')
+vim.keymap.set('n', '<C-h>', '<C-w>h')
+vim.keymap.set('n', '<C-l>', '<C-w>l')
+vim.keymap.set('n', '<leader><leader>s', function()
+  local name = vim.fn.input('New split name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('split ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+vim.keymap.set('n', '<leader><leader>v', function()
+  local name = vim.fn.input('New vsplit name: ', '', 'file')
+  if name ~= '' then
+    vim.cmd('vsplit ' .. vim.fn.fnameescape(name))
+  end
+end, { silent = true })
+
+-- Toggle
+vim.keymap.set('n', 'cod', function()
+  vim.cmd(vim.wo.diff and 'diffoff' or 'diffthis')
+end, { silent = true })
+vim.keymap.set('n', 'cop', '<cmd>set invpaste<CR>', { silent = true })
+vim.keymap.set('n', 'col', '<cmd>set invlist<CR>', { silent = true })
+vim.keymap.set('n', 'con', '<cmd>set nohlsearch<CR>', { silent = true })
+vim.keymap.set('n', '<leader><Space>', '<cmd>%s/\\s\\+$//e<CR>', { silent = true })
+vim.keymap.set('n', '<leader><leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:%s/\\r$//e<CR>', { silent = true })
+
+vim.api.nvim_create_autocmd('InsertLeave', {
+  group = vim.api.nvim_create_augroup('PasteMode', { clear = true }),
+  command = 'setlocal nopaste',
+})
+
+-- Resize
+vim.api.nvim_create_autocmd('VimResized', {
+  group = vim.api.nvim_create_augroup('AutoResize', { clear = true }),
+  command = 'tabdo wincmd =',
+})
+
+vim.keymap.set({ 'n', 't' }, '<leader>z', function()
+  if vim.g.zoomed and vim.fn.win_id2win(vim.g.zoom_winid) ~= 0 then
+    if vim.fn.winnr('$') == vim.g.zoom_wincount then
+      vim.cmd(vim.g.zoom_winrestcmd)
+    end
+    vim.g.zoomed = false
+  else
+    vim.g.zoom_winid = vim.fn.win_getid()
+    vim.g.zoom_wincount = vim.fn.winnr('$')
+    vim.g.zoom_winrestcmd = vim.fn.winrestcmd()
+    vim.cmd('resize')
+    vim.cmd('vertical resize')
+    vim.g.zoomed = true
+  end
+end, { silent = true })
+
 -- FileType
 local filetype_group = vim.api.nvim_create_augroup('FileTypes', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
@@ -883,6 +992,104 @@ vim.api.nvim_create_autocmd('FileType', {
     vim.bo.keywordprg = ':help!'
   end,
 })
+
+-- Quit
+local function is_auxiliary_window(win_id)
+  if not vim.api.nvim_win_is_valid(win_id) then
+    return true
+  end
+
+  local buf = vim.api.nvim_win_get_buf(win_id)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return true
+  end
+
+  local buftype = vim.api.nvim_get_option_value('buftype', { buf = buf })
+  local filetype = vim.api.nvim_get_option_value('filetype', { buf = buf })
+  local is_preview = vim.api.nvim_get_option_value('previewwindow', { win = win_id })
+  local win_config = vim.api.nvim_win_get_config(win_id)
+
+  if is_preview then return true end
+  if buftype == 'quickfix' then return true end
+  if buftype == 'help' then return true end
+  if buftype == 'terminal' then return true end
+  if buftype == 'nofile' and filetype == 'man' then return true end
+
+  if filetype == 'NvimTree' or filetype == 'neo-tree' then return true end
+  if filetype == 'dap-repl' or filetype == 'dapui_watches' or filetype == 'dapui_breakpoints' then return true end
+
+  if win_config.relative ~= '' then return true end
+
+  if buftype == 'nofile' and vim.api.nvim_buf_get_name(buf) == '' and
+      not vim.api.nvim_get_option_value('modified', { buf = buf }) then
+    return true
+  end
+
+  return false
+end
+
+local function focus_to_valid_window()
+  local current = vim.api.nvim_get_current_win()
+  if vim.api.nvim_win_is_valid(current) and not is_auxiliary_window(current) then
+    return true
+  end
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(win) and not is_auxiliary_window(win) then
+      vim.api.nvim_set_current_win(win)
+      return true
+    end
+  end
+
+  return false
+end
+
+local function close_gitsigns_diff()
+  if not vim.wo.diff then return false end
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.fn.bufname(vim.api.nvim_win_get_buf(win)):match('^gitsigns:') then
+      vim.api.nvim_win_close(win, false)
+      return true
+    end
+  end
+  return false
+end
+
+vim.keymap.set('n', 'q', function()
+  if close_gitsigns_diff() then return end
+
+  local cur_tab = vim.api.nvim_get_current_tabpage()
+  local win_id = vim.api.nvim_get_current_win()
+  local has_other_window = false
+  local total_valid = 0
+  local tab_valid = 0
+
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if w ~= win_id then
+      has_other_window = true
+      local is_in_cur_tab = (vim.api.nvim_win_get_tabpage(w) == cur_tab)
+      if not is_auxiliary_window(w) then
+        total_valid = total_valid + 1
+        if is_in_cur_tab then
+          tab_valid = tab_valid + 1
+        end
+      end
+    end
+  end
+
+  if not has_other_window or total_valid == 0 then
+    vim.cmd('silent! confirm quitall!')
+  elseif tab_valid == 0 then
+    vim.cmd('tabclose')
+    focus_to_valid_window()
+  else
+    vim.cmd('quit')
+    focus_to_valid_window()
+  end
+end, { silent = true })
+
+vim.keymap.set('n', '<S-q>', '<cmd>silent! confirm quitall!<CR>', { silent = true })
+vim.keymap.set({ 'n', 'v' }, 't', 'q')
 
 -- Ctags
 -- Resolve a tag's real line number by searching its pattern in the target buffer.
@@ -1119,213 +1326,6 @@ end, {})
 vim.keymap.set('n', '<leader>d', '<cmd>Trouble diagnostics toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>q', '<cmd>Trouble quickfix toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = true })
-
--- Key maps
-vim.keymap.set('n', 'Y', 'y$')
-vim.keymap.set({ 'n', 'v' }, 'j', 'gj')
-vim.keymap.set({ 'n', 'v' }, 'k', 'gk')
-vim.keymap.set({ 'n', 'v' }, 'H', '^')
-vim.keymap.set({ 'n', 'v' }, 'L', '$')
-vim.keymap.set('v', '<', '<gv')
-vim.keymap.set('v', '>', '>gv')
-vim.keymap.set({ 'n', 'v' }, ';', ':')
-vim.keymap.set('n', 'U', '<C-r>')
-
-vim.keymap.set('i', '<C-p>', '<Up>')
-vim.keymap.set('i', '<C-n>', '<Down>')
-vim.keymap.set('i', '<C-b>', '<Left>')
-vim.keymap.set('i', '<C-f>', '<Right>')
-vim.keymap.set('i', '<C-a>', '<Home>')
-vim.keymap.set('i', '<C-e>', '<End>')
-vim.keymap.set('i', '<C-h>', '<BackSpace>')
-vim.keymap.set('i', '<C-d>', '<Del>')
-
-vim.keymap.set('c', '<C-p>', '<Up>')
-vim.keymap.set('c', '<C-n>', '<Down>')
-vim.keymap.set('c', '<C-b>', '<Left>')
-vim.keymap.set('c', '<C-f>', '<Right>')
-vim.keymap.set('c', '<C-a>', '<Home>')
-vim.keymap.set('c', '<C-e>', '<End>')
-vim.keymap.set('c', '<C-h>', '<BackSpace>')
-vim.keymap.set('c', '<C-d>', '<Del>')
-
--- Quit
-local function is_auxiliary_window(win_id)
-  if not vim.api.nvim_win_is_valid(win_id) then
-    return true
-  end
-
-  local buf = vim.api.nvim_win_get_buf(win_id)
-  if not vim.api.nvim_buf_is_valid(buf) then
-    return true
-  end
-
-  local buftype = vim.api.nvim_get_option_value('buftype', { buf = buf })
-  local filetype = vim.api.nvim_get_option_value('filetype', { buf = buf })
-  local is_preview = vim.api.nvim_get_option_value('previewwindow', { win = win_id })
-  local win_config = vim.api.nvim_win_get_config(win_id)
-
-  if is_preview then return true end
-  if buftype == 'quickfix' then return true end
-  if buftype == 'help' then return true end
-  if buftype == 'terminal' then return true end
-  if buftype == 'nofile' and filetype == 'man' then return true end
-
-  if filetype == 'NvimTree' or filetype == 'neo-tree' then return true end
-  if filetype == 'dap-repl' or filetype == 'dapui_watches' or filetype == 'dapui_breakpoints' then return true end
-
-  if win_config.relative ~= '' then return true end
-
-  if buftype == 'nofile' and vim.api.nvim_buf_get_name(buf) == '' and
-      not vim.api.nvim_get_option_value('modified', { buf = buf }) then
-    return true
-  end
-
-  return false
-end
-
-local function focus_to_valid_window()
-  local current = vim.api.nvim_get_current_win()
-  if vim.api.nvim_win_is_valid(current) and not is_auxiliary_window(current) then
-    return true
-  end
-
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_is_valid(win) and not is_auxiliary_window(win) then
-      vim.api.nvim_set_current_win(win)
-      return true
-    end
-  end
-
-  return false
-end
-
-local function close_gitsigns_diff()
-  if not vim.wo.diff then return false end
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.fn.bufname(vim.api.nvim_win_get_buf(win)):match('^gitsigns:') then
-      vim.api.nvim_win_close(win, false)
-      return true
-    end
-  end
-  return false
-end
-
-vim.keymap.set('n', 'q', function()
-  if close_gitsigns_diff() then return end
-
-  local cur_tab = vim.api.nvim_get_current_tabpage()
-  local win_id = vim.api.nvim_get_current_win()
-  local has_other_window = false
-  local total_valid = 0
-  local tab_valid = 0
-
-  for _, w in ipairs(vim.api.nvim_list_wins()) do
-    if w ~= win_id then
-      has_other_window = true
-      local is_in_cur_tab = (vim.api.nvim_win_get_tabpage(w) == cur_tab)
-      if not is_auxiliary_window(w) then
-        total_valid = total_valid + 1
-        if is_in_cur_tab then
-          tab_valid = tab_valid + 1
-        end
-      end
-    end
-  end
-
-  if not has_other_window or total_valid == 0 then
-    vim.cmd('silent! confirm quitall!')
-  elseif tab_valid == 0 then
-    vim.cmd('tabclose')
-    focus_to_valid_window()
-  else
-    vim.cmd('quit')
-    focus_to_valid_window()
-  end
-end, { silent = true })
-
-vim.keymap.set('n', '<S-q>', '<cmd>silent! confirm quitall!<CR>', { silent = true })
-vim.keymap.set({ 'n', 'v' }, 't', 'q')
-
--- Buffer
-vim.keymap.set('n', '<leader>o', function()
-  local name = vim.fn.input('New buffer name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('edit ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-vim.keymap.set('n', '[b', '<cmd>bprevious<CR>', { silent = true })
-vim.keymap.set('n', ']b', '<cmd>bnext<CR>', { silent = true })
-
--- Tab
-vim.keymap.set('n', '<leader><leader>t', function()
-  local name = vim.fn.input('New tab name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-vim.keymap.set('n', '[t', '<cmd>tabprevious<CR>', { silent = true })
-vim.keymap.set('n', ']t', '<cmd>tabnext<CR>', { silent = true })
-for i = 1, 9 do
-  vim.keymap.set('n', '<leader>' .. i, i .. 'gt')
-end
-vim.keymap.set('n', '<leader>[', '<cmd>tabfirst<CR>', { silent = true })
-vim.keymap.set('n', '<leader>]', '<cmd>tablast<CR>', { silent = true })
-
--- Split
-vim.keymap.set('n', '<C-j>', '<C-w>j')
-vim.keymap.set('n', '<C-k>', '<C-w>k')
-vim.keymap.set('n', '<C-h>', '<C-w>h')
-vim.keymap.set('n', '<C-l>', '<C-w>l')
-vim.keymap.set('n', '<leader><leader>s', function()
-  local name = vim.fn.input('New split name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('split ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-vim.keymap.set('n', '<leader><leader>v', function()
-  local name = vim.fn.input('New vsplit name: ', '', 'file')
-  if name ~= '' then
-    vim.cmd('vsplit ' .. vim.fn.fnameescape(name))
-  end
-end, { silent = true })
-
--- Toggle
-vim.keymap.set('n', 'cod', function()
-  vim.cmd(vim.wo.diff and 'diffoff' or 'diffthis')
-end, { silent = true })
-vim.keymap.set('n', 'cop', '<cmd>set invpaste<CR>', { silent = true })
-vim.keymap.set('n', 'col', '<cmd>set invlist<CR>', { silent = true })
-vim.keymap.set('n', 'con', '<cmd>set nohlsearch<CR>', { silent = true })
-vim.keymap.set('n', '<leader><Space>', '<cmd>%s/\\s\\+$//e<CR>', { silent = true })
-vim.keymap.set('n', '<leader><leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:%s/\\r$//e<CR>', { silent = true })
-
-vim.api.nvim_create_autocmd('InsertLeave', {
-  group = vim.api.nvim_create_augroup('PasteMode', { clear = true }),
-  command = 'setlocal nopaste',
-})
-
--- Resize
-vim.api.nvim_create_autocmd('VimResized', {
-  group = vim.api.nvim_create_augroup('AutoResize', { clear = true }),
-  command = 'tabdo wincmd =',
-})
-
-vim.keymap.set({ 'n', 't' }, '<leader>z', function()
-  if vim.g.zoomed and vim.fn.win_id2win(vim.g.zoom_winid) ~= 0 then
-    if vim.fn.winnr('$') == vim.g.zoom_wincount then
-      vim.cmd(vim.g.zoom_winrestcmd)
-    end
-    vim.g.zoomed = false
-  else
-    vim.g.zoom_winid = vim.fn.win_getid()
-    vim.g.zoom_wincount = vim.fn.winnr('$')
-    vim.g.zoom_winrestcmd = vim.fn.winrestcmd()
-    vim.cmd('resize')
-    vim.cmd('vertical resize')
-    vim.g.zoomed = true
-  end
-end, { silent = true })
 
 -- LSP
 vim.api.nvim_set_hl(0, 'LspReferenceText', { link = 'Search' })
