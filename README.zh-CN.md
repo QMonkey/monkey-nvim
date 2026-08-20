@@ -538,7 +538,7 @@ S           用剪贴板内容替换从光标到行尾
 ```
 K (gh)             查看光标所在符号的文档说明
 
-gd                 跳转到定义
+gd                 跳转到定义（无 LSP 时回退到标签跳转）
 gc                 跳转到声明
 gt                 跳转到类型定义
 gi                 跳转到实现（结果在 trouble 中）
@@ -803,6 +803,7 @@ Cscope 快捷键（通过 cscope_maps.nvim）：
 gs      查找光标下的符号（Cscope find s）
 gD      跳转到定义（Cstag）
 gR      查找调用者（Cscope find c）
+g]      跳转到标签并打开 quickfix
 ```
 
 ## 在 Neovim 中使用 git
