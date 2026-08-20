@@ -426,6 +426,233 @@ else
   vim.cmd('colorscheme unokai')
 end
 
+-- CheckFileChanges
+vim.api.nvim_create_autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorHold' }, {
+  group = vim.api.nvim_create_augroup('CheckFileChanges', { clear = true }),
+  callback = function()
+    if vim.fn.getcmdtype() == '' then
+      vim.cmd('checktime')
+    end
+  end,
+})
+
+-- lualine.nvim
+local function mc()
+  return package.loaded['multicursor-nvim']
+end
+local function mc_active()
+  return mc() ~= nil and mc().hasCursors()
+end
+
+require('lualine').setup({
+  options = {
+    theme = not is_tty_console and 'sonokai' or '16color',
+    component_separators = '',
+    section_separators = '',
+    always_show_tabline = false,
+    icons_enabled = false,
+  },
+  sections = {
+    lualine_a = {
+      {
+        function()
+          if mc_active() then
+            local m = vim.fn.mode()
+            local prefix
+            if m == 'n' then
+              prefix = 'N'
+            elseif m == 'v' then
+              prefix = 'V'
+            elseif m == 'V' then
+              prefix = 'V-L'
+            else
+              prefix = 'V-B'
+            end
+            return prefix .. '-MULTI'
+          end
+          return require('lualine.utils.mode').get_mode()
+        end,
+        color = function()
+          if mc_active() then
+            if is_tty_console then
+              return { fg = 0, bg = 13, gui = 'bold' }
+            end
+            local purple = vim.fn.mode() ~= 'n' and '#9d7cd8' or '#bb9af7'
+            return { fg = '#1a1b26', bg = purple, gui = 'bold' }
+          end
+          return {}
+        end,
+      },
+    },
+    lualine_b = {
+      { 'branch', icon = '⎇' },
+      { 'diff' },
+      { 'diagnostics' },
+    },
+    lualine_c = {
+      { 'filename', path = 0 },
+    },
+    lualine_x = {
+      {
+        function()
+          if not mc_active() then
+            return ''
+          end
+          local result = mc().numCursors() .. ' cursors'
+          if vim.v.hlsearch and vim.fn.getreg('/') ~= '' then
+            result = result .. '  /' .. vim.fn.getreg('/')
+          end
+          return result
+        end,
+      },
+      'filetype', 'fileformat', 'encoding',
+    },
+    lualine_y = { 'progress' },
+    lualine_z = { 'location' },
+  },
+  inactive_sections = {
+    lualine_a = {},
+    lualine_b = {},
+    lualine_c = { 'filename' },
+    lualine_x = {},
+    lualine_y = {},
+    lualine_z = {},
+  },
+  tabline = {
+    lualine_a = {
+      {
+        'tabs',
+        mode = 1,
+        max_length = math.huge,
+        tabs_color = { active = 'TabLineSel' },
+      },
+    },
+    lualine_b = {},
+    lualine_c = {},
+    lualine_x = {},
+    lualine_y = {},
+    lualine_z = {},
+  },
+})
+
+-- Session / Restore
+vim.opt.sessionoptions:remove({ 'blank', 'options', 'folds', 'terminal' })
+
+-- auto-session
+require('auto-session').setup({
+  log_level = 'error',
+  auto_save_enabled = true,
+  auto_restore_enabled = true,
+})
+
+vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
+vim.keymap.set('n', '<leader>rs', '<cmd>AutoSession delete<CR>', { silent = true })
+
+-- RestoreCursorPosition
+vim.api.nvim_create_autocmd('BufReadPost', {
+  group = vim.api.nvim_create_augroup('RestoreCursorPosition', { clear = true }),
+  callback = function()
+    local mark = vim.api.nvim_buf_get_mark(0, '"')
+    local lcount = vim.api.nvim_buf_line_count(0)
+    if mark[1] > 1 and mark[1] <= lcount then
+      vim.api.nvim_win_set_cursor(0, mark)
+    end
+  end,
+})
+
+-- cscope_maps.nvim + gtags
+vim.env.GTAGSLABEL = 'native-pygments'
+
+local candidates = {
+  '/usr/local/etc/gtags.conf',
+  '/etc/gtags.conf',
+  '/etc/gtags/gtags.conf',
+  '/usr/share/gtags/gtags.conf',
+  '/usr/local/share/gtags/gtags.conf',
+  '/usr/local/opt/global/share/gtags/gtags.conf',
+  '/opt/homebrew/etc/gtags.conf',
+  '/opt/homebrew/share/gtags/gtags.conf',
+  '/opt/homebrew/opt/global/share/gtags/gtags.conf',
+}
+if vim.env.GTAGSCONF and vim.env.GTAGSCONF ~= '' then
+  table.insert(candidates, 1, vim.env.GTAGSCONF)
+end
+for _, conf in ipairs(candidates) do
+  local f = io.open(conf, 'r')
+  if f then
+    local content = f:read('*a')
+    f:close()
+    if content:find('native%-pygments:') then
+      vim.env.GTAGSCONF = conf
+      break
+    end
+  end
+end
+
+-- Determine project root and gtags cache path once at startup
+local project_root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
+local gtags_dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_root, ''))
+vim.env.GTAGSROOT = project_root
+vim.env.GTAGSDBPATH = gtags_dbpath
+
+vim.keymap.set('n', 'gs', '<Cmd>Cscope find s<CR>', { silent = true })
+vim.keymap.set('n', 'gD', '<Cmd>Cstag<CR>', { silent = true })
+vim.keymap.set('n', 'gR', '<Cmd>Cscope find c<CR>', { silent = true })
+
+-- Auto-build GTAGS
+local function gtags_build()
+  if vim.g.gtags_building then return end
+  vim.fn.mkdir(gtags_dbpath, 'p')
+  vim.g.gtags_building = true
+  vim.system({ 'gtags', gtags_dbpath }, { cwd = project_root, text = true }, function(obj)
+    vim.schedule(function()
+      vim.g.gtags_building = nil
+      if obj.code ~= 0 then
+        vim.notify('gtags: build failed', vim.log.levels.ERROR)
+      end
+    end)
+  end)
+end
+
+local function gtags_update()
+  if vim.fn.glob(gtags_dbpath .. '/GTAGS') == '' then return end
+  if vim.g.gtags_building then return end
+  vim.g.gtags_building = true
+  vim.system({ 'global', '--update' }, { cwd = project_root, text = true }, function(obj)
+    vim.schedule(function()
+      vim.g.gtags_building = nil
+      if obj.code ~= 0 then
+        vim.notify('gtags: update failed', vim.log.levels.ERROR)
+      end
+    end)
+  end)
+end
+
+local gtags_group = vim.api.nvim_create_augroup('GTags', { clear = true })
+
+-- Build GTAGS on BufEnter when missing
+vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+  group = gtags_group,
+  callback = function(e)
+    if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
+    if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
+    if vim.fn.glob(gtags_dbpath .. '/GTAGS') ~= '' then return end
+    gtags_build()
+  end,
+  desc = 'build GTAGS on BufEnter when missing',
+})
+
+-- Incremental update on BufWritePost
+vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
+  group = gtags_group,
+  callback = function(e)
+    if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
+    if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
+    gtags_update()
+  end,
+  desc = 'incremental GTAGS update on save',
+})
+
 -- Encoding
 vim.opt.encoding = 'utf-8'
 vim.opt.fileencodings = 'utf-8,gb18030,cp936,ucs-bom,big5,euc-jp,euc-kr,latin1'
@@ -558,8 +785,6 @@ vim.opt.mouse = 'nvi'
 vim.opt.showtabline = 1
 vim.opt.laststatus = 2
 
-vim.opt.sessionoptions:remove({ 'blank', 'options', 'folds', 'terminal' })
-
 -- FileType
 local filetype_group = vim.api.nvim_create_augroup('FileTypes', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
@@ -619,7 +844,7 @@ vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typ
 
 -- Docset
 vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
-vim.opt.keywordprg = ':LspHover'
+-- 'keywordprg' defaults to ':Man' on non-Windows, so no global override is needed.
 
 local docset_group = vim.api.nvim_create_augroup('DocSet', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
@@ -630,18 +855,23 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
+-- LSP-enabled file types prefer :LspHover over the default :Man
 vim.api.nvim_create_autocmd('FileType', {
   group = docset_group,
-  pattern = { 'c', 'man' },
+  pattern = { 'cpp', 'rust', 'go', 'gomod', 'gowork', 'gosum', 'gotmpl',
+    'javascript', 'typescript', 'python', 'lua', 'sh', 'markdown', 'yaml', 'json' },
   callback = function()
-    vim.bo.keywordprg = ':Man'
+    vim.bo.keywordprg = ':LspHover'
   end,
 })
 
+-- C keeps :Man but with a custom section order. Must set keywordprg explicitly
+-- (not leave it empty) so Neovim's LSP does not auto-map K to hover on attach.
 vim.api.nvim_create_autocmd('FileType', {
   group = docset_group,
   pattern = 'c',
   callback = function()
+    vim.bo.keywordprg = ':Man'
     vim.env.MANSECT = '2:3:1:4:5:6:7:8:9'
   end,
 })
@@ -650,35 +880,7 @@ vim.api.nvim_create_autocmd('FileType', {
   group = docset_group,
   pattern = { 'vim', 'help' },
   callback = function()
-    vim.bo.keywordprg = ':help'
-  end,
-})
-
--- AutoResize
-vim.api.nvim_create_autocmd('VimResized', {
-  group = vim.api.nvim_create_augroup('AutoResize', { clear = true }),
-  command = 'tabdo wincmd =',
-})
-
--- RestoreCursorPosition
-vim.api.nvim_create_autocmd('BufReadPost', {
-  group = vim.api.nvim_create_augroup('RestoreCursorPosition', { clear = true }),
-  callback = function()
-    local mark = vim.api.nvim_buf_get_mark(0, '"')
-    local lcount = vim.api.nvim_buf_line_count(0)
-    if mark[1] > 1 and mark[1] <= lcount then
-      vim.api.nvim_win_set_cursor(0, mark)
-    end
-  end,
-})
-
--- CheckFileChanges
-vim.api.nvim_create_autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorHold' }, {
-  group = vim.api.nvim_create_augroup('CheckFileChanges', { clear = true }),
-  callback = function()
-    if vim.fn.getcmdtype() == '' then
-      vim.cmd('checktime')
-    end
+    vim.bo.keywordprg = ':help!'
   end,
 })
 
@@ -738,105 +940,6 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
   group = vim.api.nvim_create_augroup('Ctags', { clear = true }),
   pattern = '*.tags',
   command = 'setfiletype tags',
-})
-
--- lualine.nvim
-local function mc()
-  return package.loaded['multicursor-nvim']
-end
-local function mc_active()
-  return mc() ~= nil and mc().hasCursors()
-end
-
-require('lualine').setup({
-  options = {
-    theme = not is_tty_console and 'sonokai' or '16color',
-    component_separators = '',
-    section_separators = '',
-    always_show_tabline = false,
-    icons_enabled = false,
-  },
-  sections = {
-    lualine_a = {
-      {
-        function()
-          if mc_active() then
-            local m = vim.fn.mode()
-            local prefix
-            if m == 'n' then
-              prefix = 'N'
-            elseif m == 'v' then
-              prefix = 'V'
-            elseif m == 'V' then
-              prefix = 'V-L'
-            else
-              prefix = 'V-B'
-            end
-            return prefix .. '-MULTI'
-          end
-          return require('lualine.utils.mode').get_mode()
-        end,
-        color = function()
-          if mc_active() then
-            if is_tty_console then
-              return { fg = 0, bg = 13, gui = 'bold' }
-            end
-            local purple = vim.fn.mode() ~= 'n' and '#9d7cd8' or '#bb9af7'
-            return { fg = '#1a1b26', bg = purple, gui = 'bold' }
-          end
-          return {}
-        end,
-      },
-    },
-    lualine_b = {
-      { 'branch', icon = '⎇' },
-      { 'diff' },
-      { 'diagnostics' },
-    },
-    lualine_c = {
-      { 'filename', path = 0 },
-    },
-    lualine_x = {
-      {
-        function()
-          if not mc_active() then
-            return ''
-          end
-          local result = mc().numCursors() .. ' cursors'
-          if vim.v.hlsearch and vim.fn.getreg('/') ~= '' then
-            result = result .. '  /' .. vim.fn.getreg('/')
-          end
-          return result
-        end,
-      },
-      'filetype', 'fileformat', 'encoding',
-    },
-    lualine_y = { 'progress' },
-    lualine_z = { 'location' },
-  },
-  inactive_sections = {
-    lualine_a = {},
-    lualine_b = {},
-    lualine_c = { 'filename' },
-    lualine_x = {},
-    lualine_y = {},
-    lualine_z = {},
-  },
-  tabline = {
-    lualine_a = {
-      {
-        'tabs',
-        mode = 1,
-        max_length = math.huge,
-        tabs_color = { active = 'TabLineSel' },
-      },
-    },
-    lualine_b = {},
-    lualine_c = {},
-    lualine_x = {},
-    lualine_y = {},
-    lualine_z = {},
-  },
 })
 
 -- mini.indentscope
@@ -989,16 +1092,6 @@ vim.keymap.set('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>', { silent = t
 vim.keymap.set('n', '<leader>hr', '<cmd>Gitsigns reset_hunk<CR>', { silent = true })
 vim.keymap.set('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>', { silent = true })
 
--- auto-session
-require('auto-session').setup({
-  log_level = 'error',
-  auto_save_enabled = true,
-  auto_restore_enabled = true,
-})
-
-vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
-vim.keymap.set('n', '<leader>rs', '<cmd>AutoSession delete<CR>', { silent = true })
-
 -- Rooter
 local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
 
@@ -1021,99 +1114,6 @@ vim.api.nvim_create_autocmd('VimEnter', {
 vim.api.nvim_create_user_command('SudoWrite', function()
   vim.cmd('write !sudo tee % >/dev/null && edit!')
 end, {})
-
--- cscope_maps.nvim + gtags
-vim.env.GTAGSLABEL = 'native-pygments'
-
-local candidates = {
-  '/usr/local/etc/gtags.conf',
-  '/etc/gtags.conf',
-  '/etc/gtags/gtags.conf',
-  '/usr/share/gtags/gtags.conf',
-  '/usr/local/share/gtags/gtags.conf',
-  '/usr/local/opt/global/share/gtags/gtags.conf',
-  '/opt/homebrew/etc/gtags.conf',
-  '/opt/homebrew/share/gtags/gtags.conf',
-  '/opt/homebrew/opt/global/share/gtags/gtags.conf',
-}
-if vim.env.GTAGSCONF and vim.env.GTAGSCONF ~= '' then
-  table.insert(candidates, 1, vim.env.GTAGSCONF)
-end
-for _, conf in ipairs(candidates) do
-  local f = io.open(conf, 'r')
-  if f then
-    local content = f:read('*a')
-    f:close()
-    if content:find('native%-pygments:') then
-      vim.env.GTAGSCONF = conf
-      break
-    end
-  end
-end
-
--- Determine project root and gtags cache path once at startup
-local project_root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
-local gtags_dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_root, ''))
-vim.env.GTAGSROOT = project_root
-vim.env.GTAGSDBPATH = gtags_dbpath
-
-vim.keymap.set('n', 'gs', '<Cmd>Cscope find s<CR>', { silent = true })
-vim.keymap.set('n', 'gD', '<Cmd>Cstag<CR>', { silent = true })
-vim.keymap.set('n', 'gR', '<Cmd>Cscope find c<CR>', { silent = true })
-
--- Auto-build GTAGS
-local function gtags_build()
-  if vim.g.gtags_building then return end
-  vim.fn.mkdir(gtags_dbpath, 'p')
-  vim.g.gtags_building = true
-  vim.system({ 'gtags', gtags_dbpath }, { cwd = project_root, text = true }, function(obj)
-    vim.schedule(function()
-      vim.g.gtags_building = nil
-      if obj.code ~= 0 then
-        vim.notify('gtags: build failed', vim.log.levels.ERROR)
-      end
-    end)
-  end)
-end
-
-local function gtags_update()
-  if vim.fn.glob(gtags_dbpath .. '/GTAGS') == '' then return end
-  if vim.g.gtags_building then return end
-  vim.g.gtags_building = true
-  vim.system({ 'global', '--update' }, { cwd = project_root, text = true }, function(obj)
-    vim.schedule(function()
-      vim.g.gtags_building = nil
-      if obj.code ~= 0 then
-        vim.notify('gtags: update failed', vim.log.levels.ERROR)
-      end
-    end)
-  end)
-end
-
-local gtags_group = vim.api.nvim_create_augroup('GTags', { clear = true })
-
--- Build GTAGS on BufEnter when missing
-vim.api.nvim_create_autocmd({ 'BufEnter' }, {
-  group = gtags_group,
-  callback = function(e)
-    if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
-    if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
-    if vim.fn.glob(gtags_dbpath .. '/GTAGS') ~= '' then return end
-    gtags_build()
-  end,
-  desc = 'build GTAGS on BufEnter when missing',
-})
-
--- Incremental update on BufWritePost
-vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
-  group = gtags_group,
-  callback = function(e)
-    if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
-    if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
-    gtags_update()
-  end,
-  desc = 'incremental GTAGS update on save',
-})
 
 -- trouble.nvim
 vim.keymap.set('n', '<leader>d', '<cmd>Trouble diagnostics toggle<CR>', { silent = true })
@@ -1149,6 +1149,7 @@ vim.keymap.set('c', '<C-e>', '<End>')
 vim.keymap.set('c', '<C-h>', '<BackSpace>')
 vim.keymap.set('c', '<C-d>', '<Del>')
 
+-- Quit
 local function is_auxiliary_window(win_id)
   if not vim.api.nvim_win_is_valid(win_id) then
     return true
@@ -1304,7 +1305,12 @@ vim.api.nvim_create_autocmd('InsertLeave', {
   command = 'setlocal nopaste',
 })
 
--- Zoom
+-- Resize
+vim.api.nvim_create_autocmd('VimResized', {
+  group = vim.api.nvim_create_augroup('AutoResize', { clear = true }),
+  command = 'tabdo wincmd =',
+})
+
 vim.keymap.set({ 'n', 't' }, '<leader>z', function()
   if vim.g.zoomed and vim.fn.win_id2win(vim.g.zoom_winid) ~= 0 then
     if vim.fn.winnr('$') == vim.g.zoom_wincount then
