@@ -534,7 +534,8 @@ S           Replace from cursor to end of line with clipboard content
 #### 1.7 LSP (Language Server Protocol)
 
 ```
-K (gh)              Hover documentation for symbol under cursor
+K (gh)              Hover documentation for symbol under cursor (LSP filetypes)
+K                   `:Man` for other filetypes, `:help` in Vim/help files
 
 gd                  Go to definition (falls back to tag jump when no LSP)
 gc                  Go to declaration
