@@ -182,25 +182,7 @@ local git_specs = {
 
 local project_specs = {
   { src = 'https://github.com/rmagatti/auto-session' },
-  {
-    src = 'https://github.com/stevearc/oil.nvim',
-    cmd = 'Oil',
-    keys = {
-      { '-', function() require('oil').open(vim.fn.expand('%:p:h')) end, desc = 'Open parent dir' },
-      {
-        '~',
-        function()
-          local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
-          local root = vim.fs.root(0, patterns) or vim.fn.expand('~')
-          require('oil').open(root)
-        end,
-        desc = 'Open project root or home'
-      },
-    },
-    config = function()
-      require('oil').setup({ view_options = { show_hidden = true, show_icons = false } })
-    end,
-  },
+  { src = 'https://github.com/stevearc/oil.nvim' },
   {
     src = 'https://github.com/ludovicchabant/vim-gutentags',
     init = function()
@@ -1252,6 +1234,20 @@ vim.keymap.set('n', '<leader>hs', '<cmd>Gitsigns stage_hunk<CR>', { silent = tru
 vim.keymap.set('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>', { silent = true })
 vim.keymap.set('n', '<leader>hr', '<cmd>Gitsigns reset_hunk<CR>', { silent = true })
 vim.keymap.set('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>', { silent = true })
+
+-- oil.nvim
+require('oil').setup({
+  view_options = { show_hidden = true, show_icons = false },
+})
+
+vim.keymap.set('n', '-', function()
+  require('oil').open(vim.fn.expand('%:p:h'))
+end, { silent = true })
+
+vim.keymap.set('n', '~', function()
+  local root = vim.fs.root(0, patterns) or vim.fn.expand('~')
+  require('oil').open(root)
+end, { silent = true })
 
 -- sudo write
 vim.api.nvim_create_user_command('SudoWrite', function()
