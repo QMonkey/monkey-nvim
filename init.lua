@@ -314,8 +314,6 @@ vim.list_extend(spec, tools_specs)
 
 require('zpack').setup({ spec = spec })
 
-vim.cmd('syntax on')
-
 -- Terminal type detection
 -- Detect the outermost terminal type by walking up the real process
 -- tree from the current Neovim (or its tmux client). Needed before the
@@ -682,12 +680,14 @@ end
 local function tags_update_ctags()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.b[buf].gutentags_root == project_root and vim.b[buf].gutentags_files then
-      local prev = vim.api.nvim_get_current_buf()
-      vim.api.nvim_set_current_buf(buf)
-      if vim.fn.exists(':GutentagsUpdate') == 2 then
-        vim.cmd('GutentagsUpdate!')
-      end
-      vim.api.nvim_set_current_buf(prev)
+      -- Run in the project buffer without touching the visible buffer/window.
+      -- GutentagsUpdate is buffer-local, so it must execute with that buffer
+      -- current; nvim_buf_call restores the current buffer automatically.
+      vim.api.nvim_buf_call(buf, function()
+        if vim.fn.exists(':GutentagsUpdate') == 2 then
+          vim.cmd('GutentagsUpdate!')
+        end
+      end)
       return
     end
   end
