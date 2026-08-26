@@ -338,6 +338,7 @@ local function get_root_terminal_type()
 
   local last_tty = ''
   local saw_login = false
+  local saw_sshd = false
   for _ = 1, 10 do
     local line = vim.fn.trim(vim.fn.system('ps -o ppid=,tty=,comm= -p ' .. pid))
     local ppid, tty, comm = line:match('^%s*(%S+)%s+(%S+)%s*(.*)$')
@@ -349,6 +350,9 @@ local function get_root_terminal_type()
     end
     if comm == 'login' then
       saw_login = true
+    end
+    if comm:match('^sshd') then
+      saw_sshd = true
     end
     if tty ~= '' and tty ~= '?' then
       last_tty = tty
@@ -367,7 +371,7 @@ local function get_root_terminal_type()
     if last_tty:match('^tty%d+$') or saw_login then
       return 'tty'
     elseif last_tty:match('^pts/') then
-      return vim.fn.empty(vim.fn.getenv('SSH_TTY')) == 0 and 'remote_ssh' or 'pseudo_terminal'
+      return saw_sshd and 'remote_ssh' or 'pseudo_terminal'
     end
   end
   if lower:find('darwin') then
@@ -648,6 +652,26 @@ if vim.g.tags_branch_aware == nil then
 end
 local tags_branch_baseline = nil
 
+local function tags_head_file()
+  return gtags_dbpath .. '/.tags-head'
+end
+
+local function tags_load_head()
+  local f = io.open(tags_head_file(), 'r')
+  if not f then return '' end
+  local head = f:read('*a')
+  f:close()
+  return vim.trim(head)
+end
+
+local function tags_save_head(head)
+  local f = io.open(tags_head_file(), 'w')
+  if f then
+    f:write(head)
+    f:close()
+  end
+end
+
 local function tags_branch_identity()
   local branch = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(project_root) .. ' branch --show-current'))
   local head = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(project_root) .. ' rev-parse HEAD'))
@@ -680,6 +704,15 @@ local function tags_check_branch()
   if not info then return end
 
   if tags_branch_baseline == nil then
+    -- No in-memory baseline yet (fresh nvim). Rebuild only if the DB was
+    -- generated for a different HEAD; trust the existing DB otherwise.
+    local saved = tags_load_head()
+    if saved == '' then
+      tags_save_head(info.head)
+    elseif saved ~= info.head then
+      tags_do_rebuild()
+      tags_save_head(info.head)
+    end
     tags_branch_baseline = info
     return
   end
@@ -690,9 +723,10 @@ local function tags_check_branch()
   -- Rebuild on a real switch (branch+HEAD both changed) or a detached HEAD
   -- move. Same-branch commit is ignored; rename only refreshes the baseline.
   local rebuild = (base.branch ~= info.branch and base.head ~= info.head)
-      or (info.branch == '' and base.head ~= info.head)
+    or (info.branch == '' and base.head ~= info.head)
   if rebuild then
     tags_do_rebuild()
+    tags_save_head(info.head)
     tags_branch_baseline = info
   elseif base.branch ~= info.branch then
     tags_branch_baseline.branch = info.branch
@@ -706,6 +740,7 @@ local function tags_rebuild()
     return
   end
   tags_do_rebuild()
+  tags_save_head(info.head)
   tags_branch_baseline = info
 end
 
@@ -803,20 +838,47 @@ vim.opt.jumpoptions:append('stack')
 
 -- Clipboard {
 -- Choose the clipboard backend for the +/* registers.
--- Use the GUI clipboard (X11/Wayland/macOS) when a display is available
--- and we are not on a real console (kmscon/TTY), where the GUI clipboard
--- is unusable; there, fall back to tmux buffers.
-local is_physical_console = root_terminal == 'kmscon' or root_terminal == 'tty' or root_terminal == 'physical_console'
+-- Over ssh, prefer OSC 52 so yanks reach the local clipboard; the remote
+-- X11/Wayland clipboard is otherwise unreachable from here.
+local is_physical_console = (vim.env.TERM or ''):match('^linux') ~= nil
+  or root_terminal == 'kmscon' or root_terminal == 'tty' or root_terminal == 'physical_console'
+local is_ssh = vim.fn.empty(vim.fn.getenv('SSH_CONNECTION')) == 0
+  or vim.fn.empty(vim.fn.getenv('SSH_CLIENT')) == 0
+  or vim.fn.empty(vim.fn.getenv('SSH_TTY')) == 0
+  or root_terminal == 'remote_ssh'
 local has_display = vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0
 local has_wayland = vim.fn.empty(vim.fn.getenv('WAYLAND_DISPLAY')) == 0
 local has_mac = vim.fn.has('mac') == 1
 local has_tmux = vim.fn.empty(vim.fn.getenv('TMUX')) == 0
+local has_osc52 = pcall(require, 'vim.ui.clipboard.osc52')
+
+-- Set g:clipboard BEFORE any has('clipboard')/has('unnamedplus') call, since
+-- those trigger provider initialization and would ignore a later g:clipboard.
+if is_ssh and has_osc52 then
+  -- osc52 provider (nvim 0.10+): yanks to the local clipboard via OSC 52.
+  -- In tmux, only force osc52 when the remote tmux has set-clipboard on
+  -- (it answers the OSC52 paste query, so `p` won't block); otherwise fall
+  -- back to the tmux provider. Outside tmux, rely on nvim's built-in OSC 52
+  -- auto-detection.
+  if has_tmux then
+    local sc = vim.fn.trim(vim.fn.system('tmux show-options -s set-clipboard 2>/dev/null'))
+    vim.g.clipboard = sc:match('on') and 'osc52' or 'tmux'
+  else
+    vim.g.clipboard = 'osc52'
+  end
+elseif not is_physical_console and (has_display or has_wayland or has_mac) then
+  -- GUI clipboard: leave g:clipboard unset for auto-detection.
+elseif has_tmux then
+  vim.g.clipboard = 'tmux'
+end
+
 local has_unnamedplus = vim.fn.has('unnamedplus') == 1
-if not is_physical_console and (has_display or has_wayland or has_mac) then
+if is_ssh and has_osc52 then
+  vim.opt.clipboard = 'unnamed,unnamedplus'
+elseif not is_physical_console and (has_display or has_wayland or has_mac) then
   vim.opt.clipboard = has_unnamedplus and 'unnamed,unnamedplus' or 'unnamed'
 elseif has_tmux then
   vim.opt.clipboard = 'unnamed,unnamedplus'
-  vim.g.clipboard = 'tmux'
 end
 -- }
 
