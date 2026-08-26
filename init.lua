@@ -639,6 +639,95 @@ vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
   desc = 'incremental GTAGS update on save',
 })
 
+-- Branch-aware gtags rebuild. Detect a branch switch by comparing the joint
+-- (branch, HEAD) identity against a session baseline, then force a full
+-- rebuild; detached HEAD compares HEAD only. Incremental gtags updates can't
+-- handle deleted/renamed files after a branch switch.
+if vim.g.tags_branch_aware == nil then
+  vim.g.tags_branch_aware = 1
+end
+local tags_branch_baseline = nil
+
+local function tags_branch_identity()
+  local branch = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(project_root) .. ' branch --show-current'))
+  local head = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(project_root) .. ' rev-parse HEAD'))
+  if head == '' then return nil end
+  return { branch = branch, head = head }
+end
+
+local function tags_update_ctags()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.b[buf].gutentags_root == project_root and vim.b[buf].gutentags_files then
+      local prev = vim.api.nvim_get_current_buf()
+      vim.api.nvim_set_current_buf(buf)
+      if vim.fn.exists(':GutentagsUpdate') == 2 then
+        vim.cmd('GutentagsUpdate!')
+      end
+      vim.api.nvim_set_current_buf(prev)
+      return
+    end
+  end
+end
+
+local function tags_do_rebuild()
+  gtags_build()
+  tags_update_ctags()
+end
+
+local function tags_check_branch()
+  if not vim.g.tags_branch_aware then return end
+  local info = tags_branch_identity()
+  if not info then return end
+
+  if tags_branch_baseline == nil then
+    tags_branch_baseline = info
+    return
+  end
+
+  local base = tags_branch_baseline
+  if base.branch == info.branch and base.head == info.head then return end
+
+  -- Rebuild on a real switch (branch+HEAD both changed) or a detached HEAD
+  -- move. Same-branch commit is ignored; rename only refreshes the baseline.
+  local rebuild = (base.branch ~= info.branch and base.head ~= info.head)
+      or (info.branch == '' and base.head ~= info.head)
+  if rebuild then
+    tags_do_rebuild()
+    tags_branch_baseline = info
+  elseif base.branch ~= info.branch then
+    tags_branch_baseline.branch = info.branch
+  end
+end
+
+local function tags_rebuild()
+  local info = tags_branch_identity()
+  if not info then
+    vim.notify('TagsRebuild: cannot determine project root', vim.log.levels.ERROR)
+    return
+  end
+  tags_do_rebuild()
+  tags_branch_baseline = info
+end
+
+vim.api.nvim_create_user_command('TagsRebuild', tags_rebuild, {})
+
+local tags_group = vim.api.nvim_create_augroup('TagsBranchAware', { clear = true })
+vim.api.nvim_create_autocmd({ 'BufEnter', 'VimEnter' }, {
+  group = tags_group,
+  callback = function() tags_check_branch() end,
+})
+vim.api.nvim_create_autocmd('FocusGained', {
+  group = tags_group,
+  callback = function() tags_check_branch() end,
+})
+for _, ev in ipairs({ 'NeogitBranchCheckout', 'NeogitReset', 'NeogitMerge', 'NeogitRebase', 'NeogitStash', 'NeogitPullComplete' }) do
+  vim.api.nvim_create_autocmd('User', {
+    group = tags_group,
+    pattern = ev,
+    callback = function() tags_check_branch() end,
+  })
+end
+
 -- Encoding
 vim.opt.encoding = 'utf-8'
 vim.opt.fileencodings = 'utf-8,gb18030,cp936,ucs-bom,big5,euc-jp,euc-kr,latin1'
