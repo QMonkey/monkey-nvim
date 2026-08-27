@@ -218,6 +218,12 @@ install_optional_bin() {
 	marksman)
 		install_pkg "$(pkg_name "$bin")" || brew install marksman 2>/dev/null || ok=false
 		;;
+	zig)
+		brew install zig 2>/dev/null || install_pkg "$(pkg_name "$bin")" || ok=false
+		;;
+	zls)
+		brew install zls 2>/dev/null || install_pkg "$(pkg_name "$bin")" || ok=false
+		;;
 	*)
 		install_pkg "$(pkg_name "$bin")" || ok=false
 		;;
@@ -298,6 +304,8 @@ declare -A BREW_NAMES=(
 	["fzf"]="fzf"
 	["global"]="global"
 	["pygmentize"]="pygments"
+	["zig"]="zig"
+	["zls"]="zls"
 )
 declare -A ZYPPER_NAMES=(
 	["rg"]="ripgrep"
@@ -352,6 +360,7 @@ declare -A DEPS_BY_GROUP
 DEPS_BY_GROUP["C/C++"]="gcc g++ clangd clang-tidy"
 DEPS_BY_GROUP["Go"]="go gopls staticcheck"
 DEPS_BY_GROUP["Python"]="python3 pylsp black"
+DEPS_BY_GROUP["Zig"]="zig zls"
 DEPS_BY_GROUP["Rust"]="cargo rust-analyzer"
 DEPS_BY_GROUP["Lua"]="lua-language-server"
 DEPS_BY_GROUP["Shell"]="node bash-language-server shfmt"
@@ -461,7 +470,7 @@ fi
 
 if $INSTALL_MODE; then
 	MISSING_OPTIONAL=()
-	for group in "C/C++" "Go" "Python" "Rust" "Lua" "Shell" "Vim" "JavaScript/TypeScript" "JSON" "YAML" "Markdown" "Optional tools"; do
+	for group in "C/C++" "Go" "Python" "Zig" "Rust" "Lua" "Shell" "Vim" "JavaScript/TypeScript" "JSON" "YAML" "Markdown" "Optional tools"; do
 		for bin in ${DEPS_BY_GROUP[$group]}; do
 			if ! command -v "$bin" &>/dev/null; then
 				MISSING_OPTIONAL+=("$bin")
@@ -516,10 +525,12 @@ if ! $INSTALL_MODE; then
 	INSTALL_HINTS["yaml-language-server"]="npm install -g yaml-language-server"
 	INSTALL_HINTS["lua-language-server"]="$(get_install_hint lua-language-server)"
 	INSTALL_HINTS["marksman"]="$(get_install_hint marksman)"
+	INSTALL_HINTS["zig"]="brew install zig  # or: https://ziglang.org/download/"
+	INSTALL_HINTS["zls"]="brew install zls  # or: https://zigtools.org/zls/install/  (must match zig version)"
 	INSTALL_HINTS["glow"]="$(get_install_hint glow)  # or: go install github.com/charmbracelet/glow@latest"
 fi
 
-for group in "C/C++" "Go" "Python" "Rust" "Lua" "Shell" "Vim" "JavaScript/TypeScript" "JSON" "YAML" "Markdown" "Optional tools"; do
+for group in "C/C++" "Go" "Python" "Zig" "Rust" "Lua" "Shell" "Vim" "JavaScript/TypeScript" "JSON" "YAML" "Markdown" "Optional tools"; do
 	echo -e "  ${BOLD}${group}${NC}"
 	for bin in ${DEPS_BY_GROUP[$group]}; do
 		status=0
