@@ -736,7 +736,7 @@ local function tags_check_branch()
   -- Rebuild on a real switch (branch+HEAD both changed) or a detached HEAD
   -- move. Same-branch commit is ignored; rename only refreshes the baseline.
   local rebuild = (base.branch ~= info.branch and base.head ~= info.head)
-    or (info.branch == '' and base.head ~= info.head)
+      or (info.branch == '' and base.head ~= info.head)
   if rebuild then
     tags_do_rebuild()
     tags_save_head(info.head)
@@ -854,11 +854,11 @@ vim.opt.jumpoptions:append('stack')
 -- Over ssh, prefer OSC 52 so yanks reach the local clipboard; the remote
 -- X11/Wayland clipboard is otherwise unreachable from here.
 local is_physical_console = (vim.env.TERM or ''):match('^linux') ~= nil
-  or root_terminal == 'kmscon' or root_terminal == 'tty' or root_terminal == 'physical_console'
+    or root_terminal == 'kmscon' or root_terminal == 'tty' or root_terminal == 'physical_console'
 local is_ssh = vim.fn.empty(vim.fn.getenv('SSH_CONNECTION')) == 0
-  or vim.fn.empty(vim.fn.getenv('SSH_CLIENT')) == 0
-  or vim.fn.empty(vim.fn.getenv('SSH_TTY')) == 0
-  or root_terminal == 'remote_ssh'
+    or vim.fn.empty(vim.fn.getenv('SSH_CLIENT')) == 0
+    or vim.fn.empty(vim.fn.getenv('SSH_TTY')) == 0
+    or root_terminal == 'remote_ssh'
 local has_display = vim.fn.empty(vim.fn.getenv('DISPLAY')) == 0
 local has_wayland = vim.fn.empty(vim.fn.getenv('WAYLAND_DISPLAY')) == 0
 local has_mac = vim.fn.has('mac') == 1
@@ -1048,7 +1048,7 @@ end, { silent = true })
 local filetype_group = vim.api.nvim_create_augroup('FileTypes', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
   group = filetype_group,
-  pattern = { 'rust', 'python', 'markdown' },
+  pattern = { 'zig', 'rust', 'python', 'markdown' },
   callback = function(args)
     vim.bo[args.buf].expandtab = true
     vim.bo[args.buf].tabstop = 4
@@ -1098,8 +1098,8 @@ vim.api.nvim_create_autocmd('BufNewFile', {
 -- markdown
 vim.g.markdown_syntax_conceal = 0
 vim.g.markdown_minlines = 100
-vim.g.markdown_fenced_languages = { 'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash=sh',
-  'zsh', 'vim', 'sql', 'yaml', 'json' }
+vim.g.markdown_fenced_languages = { 'c', 'cpp', 'zig', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua',
+  'bash=sh', 'zsh', 'vim', 'sql', 'yaml', 'json' }
 
 -- Docset
 vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
@@ -1116,7 +1116,7 @@ vim.api.nvim_create_autocmd('FileType', {
 -- LSP-enabled file types prefer :LspHover over the default :Man
 vim.api.nvim_create_autocmd('FileType', {
   group = docset_group,
-  pattern = { 'cpp', 'rust', 'go', 'gomod', 'gowork', 'gosum', 'gotmpl',
+  pattern = { 'cpp', 'zig', 'rust', 'go', 'gomod', 'gowork', 'gosum', 'gotmpl',
     'javascript', 'typescript', 'python', 'lua', 'sh', 'markdown', 'yaml', 'json' },
   callback = function()
     vim.bo.keywordprg = ':LspHover'
@@ -1371,7 +1371,7 @@ require('nvim-treesitter').setup({
   auto_install = true,
 })
 require('nvim-treesitter.install').install({
-  'c', 'cpp', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
+  'c', 'cpp', 'zig', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua', 'bash', 'vim', 'vimdoc', 'markdown',
   'markdown_inline', 'yaml', 'json', 'sql',
 })
 
@@ -1517,6 +1517,18 @@ vim.lsp.config('clangd', {
   },
   filetypes = { 'c', 'cpp' },
   root_markers = { '.git' },
+})
+
+vim.lsp.config('zls', {
+  cmd = { 'zls' },
+  filetypes = { 'zig' },
+  root_markers = { 'build.zig', 'build.zig.zon' },
+  settings = {
+    zls = {
+      enable_inlay_hints = true,
+      enable_snippets = true,
+    },
+  },
 })
 
 vim.lsp.config('rust_analyzer', {
@@ -1667,7 +1679,7 @@ local cmp_nvim_lsp = require('cmp_nvim_lsp')
 vim.lsp.config('*', { capabilities = cmp_nvim_lsp.default_capabilities() })
 
 local enabled = {
-  'clangd', 'rust_analyzer', 'gopls', 'typescript-language-server', 'pylsp', 'lua-language-server',
+  'clangd', 'zls', 'rust_analyzer', 'gopls', 'typescript-language-server', 'pylsp', 'lua-language-server',
   'bash-language-server', 'vim-language-server', 'marksman', 'yaml-language-server', 'vscode-json-language-server',
 }
 for _, name in ipairs(enabled) do
