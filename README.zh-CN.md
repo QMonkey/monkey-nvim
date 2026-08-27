@@ -91,6 +91,7 @@ monkey-nvim 使用 Neovim 内建的 LSP 客户端（`vim.lsp.config`）。请根
 | C/C++ | clangd | `sudo apt-get install clangd`、`sudo zypper install clang`、`sudo dnf install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
 | Go | gopls | `go install golang.org/x/tools/gopls@latest` |
 | Python | python-lsp-server | `pip3 install python-lsp-server` |
+| Zig | zls | `brew install zls`（推荐，保持 zig/zls 版本一致）或从 <https://zigtools.org/zls/install/> 下载 |
 | Rust | rust-analyzer | `rustup component add rust-analyzer` |
 | Lua | lua-language-server | `brew install lua-language-server` 或 `sudo pacman -S lua-language-server` |
 | Shell | bash-language-server | `npm install -g bash-language-server` |
@@ -153,20 +154,37 @@ pip3 install black autopep8 flake8 pylint
 npm install -g typescript-language-server typescript
 ```
 
-#### 2.7 Rust
+#### 2.7 Zig
+
+Zig 的语法高亮、缩进和文件类型检测由 nvim-treesitter 提供，无需安装插件。只需安装 Zig 和 ZLS 语言服务器：
+
+```bash
+# 推荐：Homebrew 会保持 zig 与 zls 版本一致
+brew install zig zls          # macOS / Linuxbrew
+
+# 或下载版本匹配的预编译二进制：
+#   zig: https://ziglang.org/download/
+#   zls: https://zigtools.org/zls/install/
+```
+
+> **重要：** zls 与特定版本的 Zig 绑定，版本不匹配时会拒绝启动。请从同一来源安装 `zig` 和 `zls`（Homebrew 或官方下载工具）以保持一致。发行版软件包往往滞后：Ubuntu/Debian 稳定版没有 `zig` 包，Arch 的 `zls` 落后于 Arch 的 `zig`，通常不匹配。
+
+保存时格式化由 ZLS 完成（与 `zig fmt` 一致），无需单独安装格式化工具。构建时诊断（`enable_build_on_save`）可在 `build.zig` 旁的 `zls.json` 中开启。
+
+#### 2.8 Rust
 
 ```bash
 # 安装 rustup（包含 rustc 和 cargo），然后：
 rustup component add rust-analyzer
 ```
 
-#### 2.8 YAML
+#### 2.9 YAML
 
 ```bash
 npm install -g yaml-language-server
 ```
 
-#### 2.9 Shell
+#### 2.10 Shell
 
 ```bash
 # 安装 LSP 服务器，以及它依赖的 shfmt 格式化工具
@@ -174,7 +192,7 @@ npm install -g bash-language-server
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
 ```
 
-#### 2.10 Markdown
+#### 2.11 Markdown
 
 终端下预览 Markdown：
 
@@ -187,7 +205,7 @@ sudo apt-get install glow  # Debian 13+
 go install github.com/charmbracelet/glow@latest  # Ubuntu / OpenSUSE / CentOS，或其他已安装 Go 的平台
 ```
 
-#### 2.11 字体（可选）
+#### 2.12 字体（可选）
 
 Neovim 使用的 Unicode 字符（⎇, │, ▸, ·, ¬）无需额外字体即可正常显示。如需 Powerline 风格外观，可选择性安装 [Nerd Font](https://github.com/ryanoasis/nerd-fonts)。
 
@@ -847,7 +865,7 @@ g]      跳转到标签并打开 quickfix
 | 文件类型 | 风格 | 宽度 |
 |---|---|---|
 | `c`, `cpp`, `go`, `sh`, `vim`, `sql` | 硬制表符 (`noexpandtab`) | 4 |
-| `rust`, `python`, `markdown` | 空格 (`expandtab`) | 4 |
+| `zig`, `rust`, `python`, `markdown` | 空格 (`expandtab`) | 4 |
 | `javascript`, `typescript`, `lua`, `yaml`, `json` | 空格 (`expandtab`) | 2 |
 
 全局默认使用 4 宽度硬制表符。
