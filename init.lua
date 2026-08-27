@@ -700,6 +700,19 @@ end
 
 local function tags_check_branch()
   if not vim.g.tags_branch_aware then return end
+  -- Require a buffer gutentags has set up for this project. On a bare
+  -- startup (no args) no buffer is set up yet, so skip and let the
+  -- BufEnter that follows the first file open do the real check. This keeps
+  -- gtags and ctags rebuilt together (ctags needs a set-up buffer).
+  local has_buf = false
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.b[buf].gutentags_root == project_root and vim.b[buf].gutentags_files then
+      has_buf = true
+      break
+    end
+  end
+  if not has_buf then return end
+
   local info = tags_branch_identity()
   if not info then return end
 
@@ -747,7 +760,7 @@ end
 vim.api.nvim_create_user_command('TagsRebuild', tags_rebuild, {})
 
 local tags_group = vim.api.nvim_create_augroup('TagsBranchAware', { clear = true })
-vim.api.nvim_create_autocmd({ 'BufEnter', 'VimEnter' }, {
+vim.api.nvim_create_autocmd('BufEnter', {
   group = tags_group,
   callback = function() tags_check_branch() end,
 })
