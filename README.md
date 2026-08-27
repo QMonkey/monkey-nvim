@@ -91,6 +91,7 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 | C/C++ | clangd | `sudo apt-get install clangd`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
 | Go | gopls | `go install golang.org/x/tools/gopls@latest` |
 | Python | python-lsp-server | `pip3 install python-lsp-server` |
+| Zig | zls | `brew install zls` (recommended, keeps zig/zls matched) or download from <https://zigtools.org/zls/install/> |
 | Rust | rust-analyzer | `rustup component add rust-analyzer` |
 | Lua | lua-language-server | `brew install lua-language-server` or `sudo pacman -S lua-language-server` |
 | Shell | bash-language-server | `npm install -g bash-language-server` |
@@ -153,20 +154,37 @@ pip3 install black autopep8 flake8 pylint
 npm install -g typescript-language-server typescript
 ```
 
-#### 2.7 Rust
+#### 2.7 Zig
+
+Zig syntax highlighting, indentation, and filetype detection are built into Neovim via nvim-treesitter — no plugin needed. Install Zig and the ZLS language server:
+
+```bash
+# Recommended: Homebrew keeps zig and zls versions in sync
+brew install zig zls          # macOS / Linuxbrew
+
+# Or download matched prebuilt binaries:
+#   zig: https://ziglang.org/download/
+#   zls: https://zigtools.org/zls/install/
+```
+
+> **Important:** zls is tied to a specific Zig version and refuses to start on a mismatch. Install `zig` and `zls` from the same source (Homebrew or the official download tool) so they stay in sync. Distro packages often lag: Ubuntu/Debian stable ship no `zig`, and Arch's `zls` trails Arch's `zig`, so they usually mismatch.
+
+Format-on-save uses ZLS (matches `zig fmt`); no separate formatter is needed. Build-on-save diagnostics (`enable_build_on_save`) can be enabled in a `zls.json` next to `build.zig`.
+
+#### 2.8 Rust
 
 ```bash
 # Install rustup (includes rustc & cargo), then:
 rustup component add rust-analyzer
 ```
 
-#### 2.8 YAML
+#### 2.9 YAML
 
 ```bash
 npm install -g yaml-language-server
 ```
 
-#### 2.9 Shell
+#### 2.10 Shell
 
 ```bash
 # Install LSP server, then the shfmt formatter it depends on
@@ -174,7 +192,7 @@ npm install -g bash-language-server
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
 ```
 
-#### 2.10 Markdown
+#### 2.11 Markdown
 
 Preview Markdown in terminal via glow:
 
@@ -187,7 +205,7 @@ sudo apt-get install glow  # Debian 13+
 go install github.com/charmbracelet/glow@latest  # Ubuntu / OpenSUSE / CentOS, or any platform with Go
 ```
 
-#### 2.11 Fonts (optional)
+#### 2.12 Fonts (optional)
 
 Neovim uses common Unicode characters (⎇, │, ▸, ·, ¬) and works without extra fonts. A [Nerd Font](https://github.com/ryanoasis/nerd-fonts) is optional if you prefer the Powerline-style look.
 
@@ -852,7 +870,7 @@ g]      Jump to tag and open quickfix
 | Filetype | Style | Width |
 |---|---|---|
 | `c`, `cpp`, `go`, `sh`, `vim`, `sql` | Hard tab (`noexpandtab`) | 4 |
-| `rust`, `python`, `markdown` | Spaces (`expandtab`) | 4 |
+| `zig`, `rust`, `python`, `markdown` | Spaces (`expandtab`) | 4 |
 | `javascript`, `typescript`, `lua`, `yaml`, `json` | Spaces (`expandtab`) | 2 |
 
 The global default is 4-width hard tabs.
