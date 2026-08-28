@@ -16,7 +16,7 @@ The project monkey-nvim, aims to make a powerful and fast terminal-native IDE, b
 | Server TTY     | Bare Linux console (tty1–tty63), built-in unokai 8/16-color fallback (sonokai needs ≥256 colors) |
 | kmscon         | Kernel Mode Setting console — modern TTY replacement with true color and Unicode support         |
 
-Window/split management is delegated to tmux or your terminal emulator's native tabs.
+Top-level workspace management (multiple sessions and terminals) is delegated to tmux or your terminal emulator's tabs; in-editor splits and tabs work as usual.
 
 ## Screenshot
 
@@ -660,7 +660,8 @@ cs+surroundA+surroundB      Change surround A to B
 
 ```text
 Leader+ws       Save session
-Leader+rs       Remove session
+Leader+wl       Browse/switch sessions
+Leader+rs       Remove session (asks for confirmation)
 
 '.              Jump to last changes
 ''              To the position before the latest jump
