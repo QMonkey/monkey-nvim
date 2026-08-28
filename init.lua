@@ -609,16 +609,15 @@ vim.keymap.set('n', 'gs', '<Cmd>Cscope find s<CR>', { silent = true })
 vim.keymap.set('n', 'gD', '<Cmd>Cstag<CR>', { silent = true })
 vim.keymap.set('n', 'gR', '<Cmd>Cscope find c<CR>', { silent = true })
 
-local building = {} -- root -> true while a gtags job runs
-
+local gtags_building = {} -- root -> true while a gtags job runs
 local function gtags_build(root)
-  if building[root] then return false end
-  building[root] = true
+  if gtags_building[root] then return false end
+  gtags_building[root] = true
   local dbpath = gtags_dbpath(root)
   vim.fn.mkdir(dbpath, 'p')
   vim.system({ 'gtags', dbpath }, { cwd = root, text = true }, function(obj)
     vim.schedule(function()
-      building[root] = nil
+      gtags_building[root] = nil
       if obj.code ~= 0 then
         vim.notify('gtags: build failed in ' .. root, vim.log.levels.ERROR)
       end
@@ -628,16 +627,16 @@ local function gtags_build(root)
 end
 
 local function gtags_update(root)
-  if building[root] then return end
+  if gtags_building[root] then return end
   local dbpath = gtags_dbpath(root)
   if vim.fn.glob(dbpath .. '/GTAGS') == '' then
     gtags_build(root)
     return
   end
-  building[root] = true
+  gtags_building[root] = true
   vim.system({ 'gtags', '--incremental', dbpath }, { cwd = root, text = true }, function(obj)
     vim.schedule(function()
-      building[root] = nil
+      gtags_building[root] = nil
       if obj.code ~= 0 then
         vim.notify('gtags: update failed in ' .. root, vim.log.levels.ERROR)
       end
