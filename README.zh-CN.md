@@ -8,12 +8,13 @@ monkey-nvim项目，旨在基于 Neovim 打造一个强大、快速的纯终端�
 
 **定位：** monkey-nvim 面向纯终端环境。适用环境：
 
-| 环境 | 说明 |
-|---|---|
-| Linux 终端 | xterm, kitty, alacritty, wezterm, gnome-terminal 等 |
-| macOS 终端 | Terminal.app, iTerm2, kitty 等 |
-| WSL | Windows Subsystem for Linux（推荐 WSL2） |
+| 环境       | 说明                                                                               |
+| ---------- | ---------------------------------------------------------------------------------- |
+| Linux 终端 | xterm, kitty, alacritty, wezterm, gnome-terminal 等                                |
+| macOS 终端 | Terminal.app, iTerm2, kitty 等                                                     |
+| WSL        | Windows Subsystem for Linux（推荐 WSL2）                                           |
 | 服务器 TTY | 原生 Linux 控制台（tty1–tty63），回退到内置 unokai 8/16 色（sonokai 需要 ≥256 色） |
+| kmscon     | Kernel Mode Setting 控制台 —— 支持真彩色和 Unicode 的现代 TTY 替代方案             |
 
 窗口/分屏管理交给 tmux 或终端模拟器的原生标签页。
 
@@ -37,17 +38,17 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 
 #### 2.1 通用工具
 
-| 工具 | 用途 | 是否必须 |
-|---|---|---|
-| git | 通过 `vim.pack` 管理插件 | 是 |
-| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | fzf-lua live grep 后端 | 是 |
-| [fzf](https://github.com/junegunn/fzf) | fzf-lua 模糊查找后端 | 是 |
-| universal-ctags | gutentags 标签生成 | 是 |
-| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags（GTAGS）生成与导航 | 推荐 |
-| [Pygments](https://pygments.org/) | 非 C/C++ 语言的 gtags 解析器 | 推荐 |
-| C 编译器 (gcc/clang) | 编译 tree-sitter parser 原生模块 | 是（仅编译时） |
-| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | 编译 tree-sitter parser 模块 | 是（仅编译时） |
-| [Homebrew](https://brew.sh/) | 系统仓库缺失时的后备包管理器（lua-language-server、marksman、fzf 等） | 必须 |
+| 工具                                                          | 用途                                                                  | 是否必须       |
+| ------------------------------------------------------------- | --------------------------------------------------------------------- | -------------- |
+| git                                                           | 通过 `vim.pack` 管理插件                                              | 是             |
+| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep)         | fzf-lua live grep 后端                                                | 是             |
+| [fzf](https://github.com/junegunn/fzf)                        | fzf-lua 模糊查找后端                                                  | 是             |
+| universal-ctags                                               | gutentags 标签生成                                                    | 是             |
+| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags（GTAGS）生成与导航                                    | 推荐           |
+| [Pygments](https://pygments.org/)                             | 非 C/C++ 语言的 gtags 解析器                                          | 推荐           |
+| C 编译器 (gcc/clang)                                          | 编译 tree-sitter parser 原生模块                                      | 是（仅编译时） |
+| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | 编译 tree-sitter parser 模块                                          | 是（仅编译时） |
+| [Homebrew](https://brew.sh/)                                  | 系统仓库缺失时的后备包管理器（lua-language-server、marksman、fzf 等） | 必须           |
 
 ```bash
 # 安装 Homebrew（所有 Linux 发行版 — 用于安装系统仓库中缺失的工具）
@@ -86,30 +87,33 @@ npm install -g tree-sitter-cli
 
 monkey-nvim 使用 Neovim 内建的 LSP 客户端（`vim.lsp.config`）。请根据需要安装对应语言的服务器：
 
-| 语言 | LSP 服务器 | 安装方式 |
-|---|---|---|
-| C/C++ | clangd | `sudo apt-get install clangd`、`sudo zypper install clang`、`sudo dnf install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
-| Go | gopls | `go install golang.org/x/tools/gopls@latest` |
-| Python | python-lsp-server | `pip3 install python-lsp-server` |
-| Zig | zls | `brew install zls`（推荐，保持 zig/zls 版本一致）或从 <https://zigtools.org/zls/install/> 下载 |
-| Rust | rust-analyzer | `rustup component add rust-analyzer` |
-| Lua | lua-language-server | `brew install lua-language-server` 或 `sudo pacman -S lua-language-server` |
-| Shell | bash-language-server | `npm install -g bash-language-server` |
-| Vim | vim-language-server | `npm install -g vim-language-server` |
-| JavaScript | typescript-language-server | `npm install -g typescript-language-server typescript` |
-| TypeScript | typescript-language-server | `npm install -g typescript-language-server typescript` |
-| JSON | vscode-json-language-server | `npm install -g vscode-langservers-extracted` |
-| YAML | yaml-language-server | `npm install -g yaml-language-server` |
-| Markdown | marksman | `brew install marksman` 或 `sudo pacman -S marksman` |
+| 语言       | LSP 服务器                  | 安装方式                                                                                                                                        |
+| ---------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| C/C++      | clangd                      | `sudo apt-get install clangd`、`sudo zypper install clang`、`sudo dnf install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
+| Go         | gopls                       | `go install golang.org/x/tools/gopls@latest`                                                                                                    |
+| Python     | python-lsp-server           | `pip3 install python-lsp-server`                                                                                                                |
+| Zig        | zls                         | `brew install zls`（推荐，保持 zig/zls 版本一致）或从 <https://zigtools.org/zls/install/> 下载                                                  |
+| Rust       | rust-analyzer               | `rustup component add rust-analyzer`                                                                                                            |
+| Lua        | lua-language-server         | `brew install lua-language-server` 或 `sudo pacman -S lua-language-server`                                                                      |
+| Shell      | bash-language-server        | `npm install -g bash-language-server`                                                                                                           |
+| Vim        | vim-language-server         | `npm install -g vim-language-server`                                                                                                            |
+| JavaScript | typescript-language-server  | `npm install -g typescript-language-server typescript`                                                                                          |
+| TypeScript | typescript-language-server  | `npm install -g typescript-language-server typescript`                                                                                          |
+| JSON       | vscode-json-language-server | `npm install -g vscode-langservers-extracted`                                                                                                   |
+| YAML       | yaml-language-server        | `npm install -g yaml-language-server`                                                                                                           |
+| Markdown   | marksman                    | `brew install marksman` 或 `sudo pacman -S marksman`                                                                                            |
+| Markdown   | efm-langserver              | `go install github.com/mattn/efm-langserver@latest`                                                                                             |
 
 部分 LSP 服务器会把格式化/检查交给**外部工具**，需单独安装。缺失时功能会静默降级（回退到内置诊断或跳过该工具）：
 
-| 语言 | 工具 | 作用 | 安装方式 |
-|---|---|---|---|
-| C/C++ | clang-tidy | linter（经 `clangd --clang-tidy`） | `sudo apt-get install clang-tidy`、`sudo zypper install clang`、`sudo dnf install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
-| Go | staticcheck | linter（经 `gopls` 的 `staticcheck`） | `go install honnef.co/go/tools/cmd/staticcheck@latest` |
-| Shell | shfmt | formatter（经 `bash-language-server`） | `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
-| Python | black | formatter（经 `pylsp` 的 black 插件） | `pip3 install black` |
+| 语言     | 工具              | 作用                                   | 安装方式                                                                                                                                            |
+| -------- | ----------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C/C++    | clang-tidy        | linter（经 `clangd --clang-tidy`）     | `sudo apt-get install clang-tidy`、`sudo zypper install clang`、`sudo dnf install clang-tools-extra`、`sudo pacman -S clang` 或 `brew install llvm` |
+| Go       | staticcheck       | linter（经 `gopls` 的 `staticcheck`）  | `go install honnef.co/go/tools/cmd/staticcheck@latest`                                                                                              |
+| Shell    | shfmt             | formatter（经 `bash-language-server`） | `go install mvdan.cc/sh/v3/cmd/shfmt@latest`                                                                                                        |
+| Python   | black             | formatter（经 `pylsp` 的 black 插件）  | `pip3 install black`                                                                                                                                |
+| Markdown | prettier          | formatter（经 `efm-langserver`）       | `npm install -g prettier`                                                                                                                           |
+| Markdown | markdownlint-cli2 | linter（经 `efm-langserver`）          | `npm install -g markdownlint-cli2`                                                                                                                  |
 
 #### 2.3 C/C++
 
@@ -205,6 +209,15 @@ sudo apt-get install glow  # Debian 13+
 go install github.com/charmbracelet/glow@latest  # Ubuntu / OpenSUSE / CentOS，或其他已安装 Go 的平台
 ```
 
+格式化与检查由 [efm-langserver](https://github.com/mattn/efm-langserver) 提供（formatter: prettier，linter: markdownlint-cli2）：
+
+```bash
+go install github.com/mattn/efm-langserver@latest
+npm install -g prettier markdownlint-cli2
+# 将 efm 配置（config.yaml + .markdownlint.jsonc）软链到默认路径
+ln -sfn $(pwd)/configs/efm-langserver ~/.config/efm-langserver
+```
+
 #### 2.12 字体（可选）
 
 Neovim 使用的 Unicode 字符（⎇, │, ▸, ·, ¬）无需额外字体即可正常显示。如需 Powerline 风格外观，可选择性安装 [Nerd Font](https://github.com/ryanoasis/nerd-fonts)。
@@ -237,6 +250,7 @@ nvim --headless -c 'checkhealth' -c 'qa'
 cd monkey-nvim
 ln -sf $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # 全局 clang-format 风格（可选）
+ln -sfn $(pwd)/configs/efm-langserver ~/.config/efm-langserver   # efm：markdown 格式化/检查（可选）
 nvim --headless -c 'ZPack sync' -c 'qa'   # 安装所有插件
 nvim
 ```
@@ -329,7 +343,7 @@ sudo systemctl start kmsconvt@tty1.service
 
 重启后，按 `Ctrl+Alt+F1` 即可切换到支持真彩色和 Unicode 的 kmscon 终端。可按需对 tty2–tty6 重复相同操作。
 
-**`start` 与 `enable` 的区别——常见坑。**
+##### `start` 与 `enable` 的区别——常见坑
 
 `systemctl start` 只是运行一次单元，完全不读取 `[Install]` 段，因此不会触碰 `autovt@.service`。`systemctl enable` 会读取 `[Install]` 并创建符号链接，包括 `Alias=autovt@.service`。
 
@@ -351,7 +365,7 @@ Alias=autovt@.service
 
 #### 6.3 真彩色支持
 
-kmscon 支持真彩色（24-bit）。monkey-nvim 通过 `termguicolors` 自动检测并使用 GUI 颜色渲染。
+kmscon 支持真彩色（24-bit）。monkey-nvim 通过 `has('termguicolors')` 自动检测并使用 GUI 颜色渲染。
 
 如果通过包管理器安装的 kmscon 版本较旧（不含 terminfo）或 terminfo 条目缺失，nvim 会报错 `E558: Terminal entry not found in terminfo`。此时在 shell 配置中添加以下内容即可：
 
@@ -365,7 +379,7 @@ export COLORTERM=truecolor
 
 如果在 kmscon 中使用 tmux，tmux 会把 `$TERM` 覆盖为 `tmux` / `tmux-256color`。这是正常且正确的行为——**不要**改回去。tmux 会根据外层终端生成自己的内部 `TERM` 并对外暴露准确的能力，nvim 等 ncurses 程序因此能正确工作。只有**外层**（进入 tmux 之前）的 `$TERM` 才重要：10.0.0+ 保持 `kmscon`，9.x 保持 `xterm-256color`。
 
-Linux 原生控制台（tty1–tty63，`TERM=linux`）只提供 8/16 色，这会触发 sonokai 的守卫条件（`&t_Co < 256 -> finish`），从而保留内置的 8/16 色高亮，保证代码仍可阅读。sonokai 本身并不要求真彩色——在任何 256 色终端上都能通过 `cterm` 调色板正常渲染——但它在可用颜色少于 256 时会拒绝加载。monkey-nvim 因此在裸 tty 上回退到内置的 `unokai` 主题。如需在物理控制台上获得完整的 sonokai 配色，请用 kmscon 替代 tty（见 6.2 节）或改用任意 256 色/真彩色终端。
+Linux 原生控制台（tty1–tty63，`TERM=linux`）只提供 8/16 色（`&t_Co < 256`），这会触发 sonokai 的守卫条件（`&t_Co < 256 -> finish`），从而保留内置的 8/16 色高亮，保证代码仍可阅读。sonokai 本身并不要求真彩色——在任何 256 色终端上都能通过 `cterm` 调色板正常渲染——但它在可用颜色少于 256 时会拒绝加载。monkey-nvim 因此在裸 tty 上回退到内置的 `unokai` 主题。如需在物理控制台上获得完整的 sonokai 配色，请用 kmscon 替代 tty（见 6.2 节）或改用任意 256 色/真彩色终端。
 
 如果在裸 tty（非 kmscon）上运行 tmux，tmux 默认 `default-terminal=tmux-256color`，会向其中的所有程序宣称「256 色 + xterm 风格键序列」——即便底层控制台只有 8/16 色。monkey-nvim 已经能识别这种情况（它向上遍历进程树，看到 tmux 客户端背后的真实 tty），并回退到内置高亮，因此 nvim 自身始终正确。但其他程序没有这层保护，可能输出控制台无法显示的 256 色转义序列。要让它们也正确，把 tmux 的终端类型设为与 8 色控制台匹配：
 
@@ -421,46 +435,46 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 
 ## 插件列表
 
-| 插件 | 用途 |
-|---|---|
-| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim) | 基于内置 `vim.pack` 的懒加载插件管理器 |
-| [sainnhe/sonokai](https://github.com/sainnhe/sonokai) | 配色方案 |
-| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) | 状态栏 |
-| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope) | 缩进参考线 |
-| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai) | 文本对象 |
-| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround) | 围绕字符编辑 |
-| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim) | 注释切换 |
-| [andymass/vim-matchup](https://github.com/andymass/vim-matchup) | 扩展 % 跳转配对 |
-| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs) | 自动配对括号 |
-| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim) | 使用剪贴板替换 |
-| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim) | 可视化书签 |
-| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua) | 模糊文件/缓冲/tag 查找 |
-| [folke/flash.nvim](https://github.com/folke/flash.nvim) | 快速跳转 |
-| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo) | 折叠 |
-| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async) | 异步库（ufo 依赖） |
-| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | 语法高亮与解析 |
-| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp) | 补全引擎 |
-| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp) | LSP 补全源 |
-| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer) | 缓冲区补全源 |
-| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path) | 路径补全源 |
-| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline) | 命令行补全 |
-| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip) | Luasnip 补全源 |
-| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip) | 代码片段引擎 |
-| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets) | 常用代码片段集合 |
-| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | Git 差异标记 |
-| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit) | Git 集成 |
-| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim) | 并排差异对比 |
-| [rmagatti/auto-session](https://github.com/rmagatti/auto-session) | Session 管理 |
-| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim) | 文件管理器（替代 netrw） |
-| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags) | 自动生成 ctags |
-| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成 |
-| [folke/trouble.nvim](https://github.com/folke/trouble.nvim) | 诊断/quickfix 列表 |
-| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim) | 多光标编辑 |
-| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) | 终端切换 |
+| 插件                                                                                    | 用途                                   |
+| --------------------------------------------------------------------------------------- | -------------------------------------- |
+| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | 基于内置 `vim.pack` 的懒加载插件管理器 |
+| [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | 配色方案                               |
+| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | 状态栏                                 |
+| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | 缩进参考线                             |
+| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | 文本对象                               |
+| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | 围绕字符编辑                           |
+| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | 注释切换                               |
+| [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | 扩展 % 跳转配对                        |
+| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | 自动配对括号                           |
+| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | 使用剪贴板替换                         |
+| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim)                         | 可视化书签                             |
+| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua)                                 | 模糊文件/缓冲/tag 查找                 |
+| [folke/flash.nvim](https://github.com/folke/flash.nvim)                                 | 快速跳转                               |
+| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                       | 折叠                                   |
+| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)             | 异步库（ufo 依赖）                     |
+| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)   | 语法高亮与解析                         |
+| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp)                                 | 补全引擎                               |
+| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp)                         | LSP 补全源                             |
+| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer)                             | 缓冲区补全源                           |
+| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path)                                 | 路径补全源                             |
+| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline)                           | 命令行补全                             |
+| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip)                 | Luasnip 补全源                         |
+| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip)                                 | 代码片段引擎                           |
+| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | 常用代码片段集合                       |
+| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git 差异标记                           |
+| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git 集成                               |
+| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim)                 | 并排差异对比                           |
+| [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session 管理                           |
+| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | 文件管理器（替代 netrw）               |
+| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | 自动生成 ctags                         |
+| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成                            |
+| [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | 诊断/quickfix 列表                     |
+| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | 多光标编辑                             |
+| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | 终端切换                               |
 
 ## 快捷键
 
-```
+```text
 以下所有"Leader"键，都代表","键
 ```
 
@@ -468,7 +482,7 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 
 #### 1.1 按键修改
 
-```
+```text
 s       用剪贴板的内容替换文本对象选中的字符串（详见§1.6）
 S       用剪贴板的内容替换当前光标到行尾的文本（详见§1.6）
 Y       复制到行尾，相当于"y$"命令
@@ -488,7 +502,7 @@ F       搜索字符并聚焦到匹配末尾（flash.nvim）
 
 以下按键在插入模式和命令行模式下均适用：
 
-```
+```text
 Ctrl+p  上移        (Up)
 Ctrl+n  下移        (Down)
 Ctrl+b  左移        (Left)
@@ -501,7 +515,7 @@ Ctrl+d  向前删除    (Del)
 
 #### 1.2 F1 ~ F4
 
-```
+```text
 F1      打开 fzf-lua live grep
 F2      切换 fzf-lua 恢复/关闭
 F3      在终端中运行一次性命令
@@ -512,7 +526,7 @@ F4      切换终端窗口（打开/隐藏）
 
 #### 1.3 缓冲
 
-```
+```text
 Leader+o    输入打开文件的路径，并在当前窗口打开一个缓冲
 [+b         切换到上一个缓冲
 ]+b         切换到下一个缓冲
@@ -520,7 +534,7 @@ Leader+o    输入打开文件的路径，并在当前窗口打开一个缓冲
 
 #### 1.4 分屏
 
-```
+```text
 Leader+Leader+s    输入打开文件的路径，并创建一个水平分屏的窗口
 Leader+Leader+v    输入打开文件的路径，并创建一个垂直分屏的窗口
 
@@ -533,7 +547,7 @@ Leader+z    窗口放大/恢复
 
 #### 1.5 Tab
 
-```
+```text
 Leader+Leader+t      输入打开的文件路径，并创建一个新tab窗口
 
 [+t         切换到上一个tab窗口
@@ -545,7 +559,7 @@ Leader+]    切换到最后一个tab窗口
 
 #### 1.6 替换（substitute.nvim）
 
-```
+```text
 s{文本对象}  用剪贴板内容替换一个文本对象（如 siw 替换当前词）
 ss          用剪贴板内容替换当前整行
 S           用剪贴板内容替换从光标到行尾
@@ -553,7 +567,7 @@ S           用剪贴板内容替换从光标到行尾
 
 #### 1.7 LSP（Language Server Protocol）
 
-```
+```text
 K (gh)             查看光标所在符号的文档说明（LSP 文件类型）
 K                   其他文件类型使用 `:Man`，Vim/help 文件使用 `:help`
 
@@ -575,7 +589,7 @@ Leader+d           切换诊断列表（trouble）
 
 #### 1.8 文件/缓冲/Tag 导航（fzf-lua）
 
-```
+```text
 Ctrl+p      搜索文件
 
 Leader+b    搜索缓冲
@@ -588,7 +602,7 @@ Leader+a    当前目录搜索光标所在的词
 
 #### 1.9 折叠（nvim-ufo）
 
-```
+```text
 za      当光标下的折叠打开时，关闭它。当折叠关闭时，打开它
 zc      关闭光标下的折叠
 zo      打开光标下的折叠
@@ -598,7 +612,7 @@ zM      关闭所有折叠
 
 #### 1.10 Marks（marks.nvim）
 
-```
+```text
 m[a-zA-Z]   添加/删除标记
 m,          添加下一个可用的标记
 m.          如果当前行没有标记，添加下一个可用标记。否则，删除第一个标记
@@ -608,16 +622,14 @@ m-          删除当前行的所有标记
 m<Space>    删除当前buffer的所有标记
 
 '[a-zA-Z]   跳转到标记[a-zA-Z]
-]`          跳转到下一个标记
-[`          跳转到上一个标记
-`]          根据字母序列跳转到下一个标记
-`[          根据字母序列跳转到上一个标记
+]` / [`     跳转到下一个 / 上一个标记
+`] / `[     根据字母顺序跳转到下一个 / 上一个标记
 m/          在Location List里，查看当前buffer的所有标记
 ```
 
 #### 1.11 Oil（文件管理器，替代netrw）
 
-```
+```text
 -           在当前窗口打开文件所在的文件夹
 ~           在当前窗口打开项目根路径或用户主目录
 
@@ -627,7 +639,7 @@ m/          在Location List里，查看当前buffer的所有标记
 
 #### 1.12 终端
 
-```
+```text
 F3      在终端中运行一次性命令
 F4      切换终端窗口（打开/隐藏）
 ```
@@ -636,7 +648,7 @@ F4      切换终端窗口（打开/隐藏）
 
 #### 1.13 围绕字符编辑（mini.surround）
 
-```
+```text
 ys+textobj+surroundA        在textobj指定的范围增A围绕字符
 yss+surroundA               在当前行增加A围绕字符
 ds+surroundA                删除A围绕字符
@@ -645,7 +657,7 @@ cs+surroundA+surroundB      将A围绕字符改成B围绕字符
 
 #### 1.14 其他
 
-```
+```text
 Leader+ws       保存session
 Leader+rs       删除session
 
@@ -686,6 +698,7 @@ SudoWrite           使用 root 权限保存文件
 ```
 
 在 quickfix/location 窗口中：
+
 - `o`/`Enter` — 打开条目（文件+行号）
 - `q` — 关闭窗口
 
@@ -694,6 +707,7 @@ SudoWrite           使用 root 权限保存文件
 #### 1.15 自动插入文件头
 
 新建 `.sh` 和 `.py` 文件会自动插入 shebang 行：
+
 - `.sh` → `#!/usr/bin/env bash`
 - `.py` → `#!/usr/bin/env python3`
 
@@ -701,7 +715,7 @@ SudoWrite           使用 root 权限保存文件
 
 #### 2.1 代码片段（LuaSnip）
 
-```
+```text
 Ctrl+l      展开/确认补全
 Tab         跳转到下一个占位符
 Shift+Tab   跳转到上一个占位符
@@ -709,7 +723,7 @@ Shift+Tab   跳转到上一个占位符
 
 补全快捷键：
 
-```
+```text
 Ctrl+l      确认补全或展开/跳转代码片段
 Ctrl+j      选择下一个补全项
 Ctrl+k      选择上一个补全项
@@ -720,7 +734,7 @@ CR          确认补全（选择当前选中项）
 
 #### 3.1 按键修改
 
-```
+```text
 s       用剪贴板的内容替换选中文本
 ;       进入命令行模式，相当于":"键
 <       减少缩进，保持选中
@@ -729,13 +743,13 @@ s       用剪贴板的内容替换选中文本
 
 #### 3.2 查找
 
-```
+```text
 Leader+a        当前目录搜索选中字符串（fzf-lua）
 ```
 
 #### 3.3 替换
 
-```
+```text
 s{文本对象}  用剪贴板内容替换文本对象（如 siw）
 ss          用剪贴板内容替换当前整行
 S           用剪贴板内容替换光标到行尾
@@ -743,20 +757,20 @@ S           用剪贴板内容替换光标到行尾
 
 #### 3.4 快速跳转（flash.nvim）
 
-```
+```text
 f           搜索1个字符并跳转（flash.nvim）
 F           基于 treesitter 的跳转
 ```
 
 #### 3.5 围绕字符编辑（mini.surround）
 
-```
+```text
 S+surroundA     选中字符串增加A围绕字符
 ```
 
 ### 4. 命令行模式
 
-```
+```text
 Ctrl+p  上一条命令
 Ctrl+n  下一条命令
 Ctrl+a  跳到命令行最前
@@ -818,7 +832,7 @@ Ctrl+e  跳到命令行最后
 
 Cscope 快捷键（通过 cscope_maps.nvim）：
 
-```
+```text
 gs      查找光标下的符号（Cscope find s）
 gD      跳转到定义（Cstag）
 gR      查找调用者（Cscope find c）
@@ -862,11 +876,11 @@ g]      跳转到标签并打开 quickfix
 
 - **缩进规则** — monkey-nvim 按文件类型应用缩进设置：
 
-| 文件类型 | 风格 | 宽度 |
-|---|---|---|
-| `c`, `cpp`, `go`, `sh`, `vim`, `sql` | 硬制表符 (`noexpandtab`) | 4 |
-| `zig`, `rust`, `python`, `markdown` | 空格 (`expandtab`) | 4 |
-| `javascript`, `typescript`, `lua`, `yaml`, `json` | 空格 (`expandtab`) | 2 |
+| 文件类型                                          | 风格                     | 宽度 |
+| ------------------------------------------------- | ------------------------ | ---- |
+| `c`, `cpp`, `go`, `sh`, `vim`, `sql`              | 硬制表符 (`noexpandtab`) | 4    |
+| `zig`, `rust`, `python`, `markdown`               | 空格 (`expandtab`)       | 4    |
+| `javascript`, `typescript`, `lua`, `yaml`, `json` | 空格 (`expandtab`)       | 2    |
 
 全局默认使用 4 宽度硬制表符。
 
@@ -876,11 +890,11 @@ monkey-nvim 在检测到显示服务器时设置 `clipboard=unnamed,unnamedplus`
 
 如需独立的剪贴板管理工具（可选）：
 
-| 工具 | 平台 | 用途 |
-|---|---|---|
-| [parcellite](https://parcellite.sourceforge.net/) | X11 | 轻量级剪贴板管理器，支持持久化历史 |
-| [cliphist](https://github.com/sentriz/cliphist) | Wayland | wlroots 剪贴板历史管理 |
-| 系统自带 | macOS/WSL | 系统剪贴板默认持久化，无需额外工具 |
+| 工具                                              | 平台      | 用途                               |
+| ------------------------------------------------- | --------- | ---------------------------------- |
+| [parcellite](https://parcellite.sourceforge.net/) | X11       | 轻量级剪贴板管理器，支持持久化历史 |
+| [cliphist](https://github.com/sentriz/cliphist)   | Wayland   | wlroots 剪贴板历史管理             |
+| 系统自带                                          | macOS/WSL | 系统剪贴板默认持久化，无需额外工具 |
 
 > 可选 CLI 工具：`wl-clipboard`（Wayland，提供 `wl-copy`/`wl-paste`）、`xclip` 或 `xsel`（X11）。Neovim 内建剪贴板支持，这些工具仅在 Neovim 外部需要命令行剪贴板访问时使用。
 
