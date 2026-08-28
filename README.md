@@ -8,12 +8,13 @@ The project monkey-nvim, aims to make a powerful and fast terminal-native IDE, b
 
 **Positioning:** monkey-nvim targets pure terminal environments. Use it in:
 
-| Environment | Description |
-|---|---|
-| Linux Terminal | xterm, kitty, alacritty, wezterm, gnome-terminal, etc. |
-| macOS Terminal | Terminal.app, iTerm2, kitty, etc. |
-| WSL | Windows Subsystem for Linux (WSL2 recommended) |
-| Server TTY | Bare Linux console (tty1–tty63), built-in unokai 8/16-color fallback (sonokai needs ≥256 colors) |
+| Environment    | Description                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| Linux Terminal | xterm, kitty, alacritty, wezterm, gnome-terminal, etc.                                           |
+| macOS Terminal | Terminal.app, iTerm2, kitty, etc.                                                                |
+| WSL            | Windows Subsystem for Linux (WSL2 recommended)                                                   |
+| Server TTY     | Bare Linux console (tty1–tty63), built-in unokai 8/16-color fallback (sonokai needs ≥256 colors) |
+| kmscon         | Kernel Mode Setting console — modern TTY replacement with true color and Unicode support         |
 
 Window/split management is delegated to tmux or your terminal emulator's native tabs.
 
@@ -37,17 +38,17 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 
 #### 2.1 Common tools
 
-| Tool | Purpose | Required |
-|---|---|---|
-| git | Plugin management via `vim.pack` | Yes |
-| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep) | fzf-lua live grep backend | Yes |
-| [fzf](https://github.com/junegunn/fzf) | fzf-lua fuzzy finder backend | Yes |
-| universal-ctags | gutentags tag generation | Yes |
-| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags (GTAGS) generation & navigation | Recommended |
-| [Pygments](https://pygments.org/) | gtags parser for non-C/C++ languages | Recommended |
-| C compiler (gcc/clang) | Build tree-sitter parser native modules | Yes (compile-time only) |
-| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | Build tree-sitter parser modules | Yes (compile-time only) |
-| [Homebrew](https://brew.sh/) | Fallback package manager for tools not in system repos (lua-language-server, marksman, fzf) | Required |
+| Tool                                                          | Purpose                                                                                     | Required                |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------- |
+| git                                                           | Plugin management via `vim.pack`                                                            | Yes                     |
+| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep)         | fzf-lua live grep backend                                                                   | Yes                     |
+| [fzf](https://github.com/junegunn/fzf)                        | fzf-lua fuzzy finder backend                                                                | Yes                     |
+| universal-ctags                                               | gutentags tag generation                                                                    | Yes                     |
+| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags (GTAGS) generation & navigation                                             | Recommended             |
+| [Pygments](https://pygments.org/)                             | gtags parser for non-C/C++ languages                                                        | Recommended             |
+| C compiler (gcc/clang)                                        | Build tree-sitter parser native modules                                                     | Yes (compile-time only) |
+| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | Build tree-sitter parser modules                                                            | Yes (compile-time only) |
+| [Homebrew](https://brew.sh/)                                  | Fallback package manager for tools not in system repos (lua-language-server, marksman, fzf) | Required                |
 
 ```bash
 # Install Homebrew (all Linux distros — required for tools not in system repos)
@@ -86,30 +87,33 @@ npm install -g tree-sitter-cli
 
 monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the servers for languages you use:
 
-| Language | LSP Server | Install |
-|---|---|---|
-| C/C++ | clangd | `sudo apt-get install clangd`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
-| Go | gopls | `go install golang.org/x/tools/gopls@latest` |
-| Python | python-lsp-server | `pip3 install python-lsp-server` |
-| Zig | zls | `brew install zls` (recommended, keeps zig/zls matched) or download from <https://zigtools.org/zls/install/> |
-| Rust | rust-analyzer | `rustup component add rust-analyzer` |
-| Lua | lua-language-server | `brew install lua-language-server` or `sudo pacman -S lua-language-server` |
-| Shell | bash-language-server | `npm install -g bash-language-server` |
-| Vim | vim-language-server | `npm install -g vim-language-server` |
-| JavaScript | typescript-language-server | `npm install -g typescript-language-server typescript` |
-| TypeScript | typescript-language-server | `npm install -g typescript-language-server typescript` |
-| JSON | vscode-json-language-server | `npm install -g vscode-langservers-extracted` |
-| YAML | yaml-language-server | `npm install -g yaml-language-server` |
-| Markdown | marksman | `brew install marksman` or `sudo pacman -S marksman` |
+| Language   | LSP Server                  | Install                                                                                                                                          |
+| ---------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| C/C++      | clangd                      | `sudo apt-get install clangd`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
+| Go         | gopls                       | `go install golang.org/x/tools/gopls@latest`                                                                                                     |
+| Python     | python-lsp-server           | `pip3 install python-lsp-server`                                                                                                                 |
+| Zig        | zls                         | `brew install zls` (recommended, keeps zig/zls matched) or download from <https://zigtools.org/zls/install/>                                     |
+| Rust       | rust-analyzer               | `rustup component add rust-analyzer`                                                                                                             |
+| Lua        | lua-language-server         | `brew install lua-language-server` or `sudo pacman -S lua-language-server`                                                                       |
+| Shell      | bash-language-server        | `npm install -g bash-language-server`                                                                                                            |
+| Vim        | vim-language-server         | `npm install -g vim-language-server`                                                                                                             |
+| JavaScript | typescript-language-server  | `npm install -g typescript-language-server typescript`                                                                                           |
+| TypeScript | typescript-language-server  | `npm install -g typescript-language-server typescript`                                                                                           |
+| JSON       | vscode-json-language-server | `npm install -g vscode-langservers-extracted`                                                                                                    |
+| YAML       | yaml-language-server        | `npm install -g yaml-language-server`                                                                                                            |
+| Markdown   | marksman                    | `brew install marksman` or `sudo pacman -S marksman`                                                                                             |
+| Markdown   | efm-langserver              | `go install github.com/mattn/efm-langserver@latest`                                                                                              |
 
 Some LSP servers offload formatting/linting to **external tools** that must be installed separately. Without them the feature silently degrades (falls back to built-in diagnostics or skips the tool):
 
-| Language | Tool | Role | Install |
-|---|---|---|---|
-| C/C++ | clang-tidy | linter (via `clangd --clang-tidy`) | `sudo apt-get install clang-tidy`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
-| Go | staticcheck | linter (via `gopls` `staticcheck`) | `go install honnef.co/go/tools/cmd/staticcheck@latest` |
-| Shell | shfmt | formatter (via `bash-language-server`) | `go install mvdan.cc/sh/v3/cmd/shfmt@latest` |
-| Python | black | formatter (via `pylsp` black plugin) | `pip3 install black` |
+| Language | Tool              | Role                                   | Install                                                                                                                                              |
+| -------- | ----------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C/C++    | clang-tidy        | linter (via `clangd --clang-tidy`)     | `sudo apt-get install clang-tidy`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
+| Go       | staticcheck       | linter (via `gopls` `staticcheck`)     | `go install honnef.co/go/tools/cmd/staticcheck@latest`                                                                                               |
+| Shell    | shfmt             | formatter (via `bash-language-server`) | `go install mvdan.cc/sh/v3/cmd/shfmt@latest`                                                                                                         |
+| Python   | black             | formatter (via `pylsp` black plugin)   | `pip3 install black`                                                                                                                                 |
+| Markdown | prettier          | formatter (via `efm-langserver`)       | `npm install -g prettier`                                                                                                                            |
+| Markdown | markdownlint-cli2 | linter (via `efm-langserver`)          | `npm install -g markdownlint-cli2`                                                                                                                   |
 
 #### 2.3 C/C++
 
@@ -205,6 +209,15 @@ sudo apt-get install glow  # Debian 13+
 go install github.com/charmbracelet/glow@latest  # Ubuntu / OpenSUSE / CentOS, or any platform with Go
 ```
 
+Format & lint are provided by [efm-langserver](https://github.com/mattn/efm-langserver) (formatter: prettier, linter: markdownlint-cli2):
+
+```bash
+go install github.com/mattn/efm-langserver@latest
+npm install -g prettier markdownlint-cli2
+# Link the efm config (config.yaml + .markdownlint.jsonc) to efm's default path
+ln -sfn $(pwd)/configs/efm-langserver ~/.config/efm-langserver
+```
+
 #### 2.12 Fonts (optional)
 
 Neovim uses common Unicode characters (⎇, │, ▸, ·, ¬) and works without extra fonts. A [Nerd Font](https://github.com/ryanoasis/nerd-fonts) is optional if you prefer the Powerline-style look.
@@ -237,6 +250,7 @@ nvim --headless -c 'checkhealth' -c 'qa'
 cd monkey-nvim
 ln -sf $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # global clang-format style (optional)
+ln -sfn $(pwd)/configs/efm-langserver ~/.config/efm-langserver   # efm: markdown format/lint (optional)
 nvim --headless -c 'ZPack sync' -c 'qa'   # Install all plugins
 nvim
 ```
@@ -329,7 +343,7 @@ sudo systemctl start kmsconvt@tty1.service
 
 After reboot, press `Ctrl+Alt+F1` to switch to the kmscon-enhanced tty1. You can repeat this for tty2–tty6 as needed.
 
-**`start` vs `enable` — a common pitfall.**
+##### `start` vs `enable` — a common pitfall
 
 `systemctl start` runs a unit once and ignores the `[Install]` section entirely, so it never touches `autovt@.service`. `systemctl enable` reads `[Install]` and creates symlinks, including the `Alias=autovt@.service`.
 
@@ -351,7 +365,7 @@ The `ln -s ... kmsconvt@tty1.service` + `start` flow above therefore affects onl
 
 #### 6.3 True color support
 
-kmscon supports true color (24-bit). monkey-nvim detects this automatically via `termguicolors` and renders GUI colors directly.
+kmscon supports true color (24-bit). monkey-nvim detects this automatically via `has('termguicolors')` and renders GUI colors directly.
 
 If kmscon was installed via package manager (older versions without terminfo) or the terminfo entry is missing, nvim may fail with `E558: Terminal entry not found in terminfo`. In that case, add the following to your shell profile:
 
@@ -365,7 +379,7 @@ The `COLORTERM=truecolor` is required so nvim still detects true color support w
 
 If you run tmux inside kmscon, tmux overrides `$TERM` with `tmux` / `tmux-256color`. This is expected and correct — do **not** change it back. tmux derives its internal `TERM` from the outer terminal and exposes its own accurate capabilities, so nvim and other ncurses programs work correctly. Only the **outer** `$TERM` (before entering tmux) matters: keep it as `kmscon` on 10.0.0+ or `xterm-256color` on 9.x.
 
-The Linux framebuffer console (tty1–tty63, `TERM=linux`) only exposes 8/16 colors, which triggers sonokai's guard (`&t_Co < 256 -> finish`) and leaves the built-in 8/16-color highlighting, so code stays readable. sonokai itself does not require true color — it renders fine with the `cterm` palette on any 256-color terminal — but it does refuse to load when fewer than 256 colors are available. monkey-nvim therefore falls back to the built-in `unokai` theme on a bare tty. For the full sonokai scheme on a physical console, replace tty with kmscon (section 6.2) or use any 256-color/true-color terminal.
+The Linux framebuffer console (tty1–tty63, `TERM=linux`) only exposes 8/16 colors (`&t_Co < 256`), which triggers sonokai's guard (`&t_Co < 256 -> finish`) and leaves Neovim's built-in 8/16-color highlighting, so code stays readable. sonokai itself does not require true color — it renders fine with the `cterm` palette on any 256-color terminal — but it does refuse to load when fewer than 256 colors are available. monkey-nvim therefore falls back to the built-in `unokai` theme on a bare tty. For the full sonokai scheme on a physical console, replace tty with kmscon (section 6.2) or use any 256-color/true-color terminal.
 
 If you run tmux on a bare tty (not kmscon), tmux defaults to `default-terminal=tmux-256color`, which advertises 256 colors and xterm-style key sequences to every program inside it — even though the underlying console only has 8/16 colors. monkey-nvim already detects this (it walks the process tree to see the real tty behind the tmux client) and falls back to the built-in highlighting, so nvim itself stays correct regardless. Other programs, however, do not get that protection and may render 256-color escapes the console cannot show. To keep them correct, set tmux's terminal type to match the 8-color console:
 
@@ -421,46 +435,46 @@ It should resolve to `getty@.service`.
 
 ## Plugin list
 
-| Plugin | Purpose |
-|---|---|
-| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim) | Lazy-loading plugin manager on top of built-in `vim.pack` |
-| [sainnhe/sonokai](https://github.com/sainnhe/sonokai) | Colorscheme |
-| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) | Status line |
-| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope) | Indent guide |
-| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai) | Text objects |
-| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround) | Surround text with parens/quotes/etc |
-| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim) | Comment toggling |
-| [andymass/vim-matchup](https://github.com/andymass/vim-matchup) | Extended % matching |
-| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs) | Auto-close brackets/parens |
-| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim) | Substitute with clipboard |
-| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim) | Visual marks |
-| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua) | Fuzzy file/buffer/tag finder |
-| [folke/flash.nvim](https://github.com/folke/flash.nvim) | Easy motion |
-| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo) | Folding |
-| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async) | Async library (ufo dependency) |
-| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | Syntax highlighting & parsing |
-| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp) | Completion engine |
-| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp) | LSP completion source |
-| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer) | Buffer word completion source |
-| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path) | Path completion source |
-| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline) | Cmdline completion |
-| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip) | Luasnip completion source |
-| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip) | Snippet engine |
-| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets) | Snippet collection |
-| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | Git diff in sign column |
-| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit) | Git wrapper |
-| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim) | Side-by-side diff |
-| [rmagatti/auto-session](https://github.com/rmagatti/auto-session) | Session management |
-| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim) | File explorer (replaces netrw) |
-| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags) | Automatic ctags generation |
-| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope integration |
-| [folke/trouble.nvim](https://github.com/folke/trouble.nvim) | Diagnostics/quickfix list |
-| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim) | Multiple cursors |
-| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) | Terminal toggling |
+| Plugin                                                                                  | Purpose                                                   |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | Lazy-loading plugin manager on top of built-in `vim.pack` |
+| [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | Colorscheme                                               |
+| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | Status line                                               |
+| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | Indent guide                                              |
+| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | Text objects                                              |
+| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | Surround text with parens/quotes/etc                      |
+| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | Comment toggling                                          |
+| [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | Extended % matching                                       |
+| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | Auto-close brackets/parens                                |
+| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | Substitute with clipboard                                 |
+| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim)                         | Visual marks                                              |
+| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua)                                 | Fuzzy file/buffer/tag finder                              |
+| [folke/flash.nvim](https://github.com/folke/flash.nvim)                                 | Easy motion                                               |
+| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                       | Folding                                                   |
+| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)             | Async library (ufo dependency)                            |
+| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)   | Syntax highlighting & parsing                             |
+| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp)                                 | Completion engine                                         |
+| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp)                         | LSP completion source                                     |
+| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer)                             | Buffer word completion source                             |
+| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path)                                 | Path completion source                                    |
+| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline)                           | Cmdline completion                                        |
+| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip)                 | Luasnip completion source                                 |
+| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip)                                 | Snippet engine                                            |
+| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | Snippet collection                                        |
+| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git diff in sign column                                   |
+| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git wrapper                                               |
+| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim)                 | Side-by-side diff                                         |
+| [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session management                                        |
+| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | File explorer (replaces netrw)                            |
+| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | Automatic ctags generation                                |
+| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope integration                                        |
+| [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | Diagnostics/quickfix list                                 |
+| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | Multiple cursors                                          |
+| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | Terminal toggling                                         |
 
 ## Keyboard shortcut
 
-```
+```text
 The "Leader" key below means comma key.
 ```
 
@@ -468,7 +482,7 @@ The "Leader" key below means comma key.
 
 #### 1.1 Remap
 
-```
+```text
 s       Replace a motion/text object with clipboard content (see §1.7)
 S       Replace from cursor to end of line with clipboard content (see §1.7)
 Y       Copy from the cursor position to the end of the line, same as y$
@@ -488,7 +502,7 @@ F       Search char with hint positioned at end of match (flash.nvim)
 
 The following remaps work in both Insert mode and Command-line mode:
 
-```
+```text
 Ctrl+p  Move up        (Up)
 Ctrl+n  Move down      (Down)
 Ctrl+b  Move left      (Left)
@@ -501,7 +515,7 @@ Ctrl+d  Delete forward (Del)
 
 #### 1.2 F1 ~ F4
 
-```
+```text
 F1      Open fzf-lua live grep
 F2      Toggle fzf-lua resume/close
 F3      Run a one-off command in terminal
@@ -510,7 +524,7 @@ F4      Toggle terminal buffer (open/hide)
 
 #### 1.3 Buffer
 
-```
+```text
 Leader+o    Open a new buffer with given file path in current window
 [+b         Jump to previous buffer
 ]+b         Jump to next buffer
@@ -518,7 +532,7 @@ Leader+o    Open a new buffer with given file path in current window
 
 #### 1.4 Split
 
-```
+```text
 Leader+Leader+s    Open a horizontal split with given file path in current window
 Leader+Leader+v    Open a vertical split with given file path in current window
 
@@ -531,7 +545,7 @@ Leader+z    Toggle zoom
 
 #### 1.5 Tab
 
-```
+```text
 Leader+Leader+t  Open a tab with given file path in current window
 
 [+t         Jump to previous tab
@@ -543,7 +557,7 @@ Leader+]    Jump to last tab
 
 #### 1.6 Replace (substitute.nvim)
 
-```
+```text
 s{textobj}  Replace a text object with clipboard content (e.g. siw to replace current word)
 ss          Replace entire current line with clipboard content
 S           Replace from cursor to end of line with clipboard content
@@ -551,7 +565,7 @@ S           Replace from cursor to end of line with clipboard content
 
 #### 1.7 LSP (Language Server Protocol)
 
-```
+```text
 K (gh)              Hover documentation for symbol under cursor (LSP filetypes)
 K                   `:Man` for other filetypes, `:help` in Vim/help files
 
@@ -573,7 +587,7 @@ Files are auto-formatted on save via LSP. Completion is enabled by default — L
 
 #### 1.8 File/Buffer/Tag navigation (fzf-lua)
 
-```
+```text
 Ctrl+p      Search files
 
 Leader+b    Search buffers
@@ -586,7 +600,7 @@ Leader+a    Search current word in current directory
 
 #### 1.9 Fold (nvim-ufo)
 
-```
+```text
 za      When on a closed fold, open it. When on an open fold, close it and set 'foldenable'
 zc      Close one fold under the cursor
 zo      Open one fold under the cursor
@@ -596,7 +610,7 @@ zM      Close all folds
 
 #### 1.10 Marks (marks.nvim)
 
-```
+```text
 m[a-zA-Z]   Toggle mark
 m,          Place the next available mark
 m.          If no mark on line, place the next available mark. Otherwise, remove (first) existing mark
@@ -606,19 +620,17 @@ m-          Delete all marks in current line
 m<Space>    Delete all marks in current buffer
 
 '[a-zA-Z]   Jump to the mark
-]`          Jump to next mark
-[`          Jump to prev mark
-`]          Jump by alphabetical order to next mark
-`[          Jump by alphabetical order to prev mark
+]` / [`     Jump to next / previous mark
+`] / `[     Jump by alphabetical order to next / previous mark
 m/          View all marks in Location List
 ```
 
-`:SignatureToggle`  Show/hide marks without deleting them
-`:SignatureRefresh`  Re-sync marks and signs if they go out of sync
+`:SignatureToggle` Show/hide marks without deleting them
+`:SignatureRefresh` Re-sync marks and signs if they go out of sync
 
 #### 1.11 Oil (File explorer, replaces netrw)
 
-```
+```text
 -           Open file directory in current window
 ~           Open project root or home directory in current window
 
@@ -628,7 +640,7 @@ m/          View all marks in Location List
 
 #### 1.12 Terminal
 
-```
+```text
 F3      Open a terminal with one-off command
 F4      Toggle terminal buffer (open/hide)
 ```
@@ -637,7 +649,7 @@ Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mo
 
 #### 1.13 Surround (mini.surround)
 
-```
+```text
 ys+textobj+surroundA        Add surround A for the region of textobj
 yss+surroundA               Add surround A for current line
 ds+surroundA                Delete surround A
@@ -646,7 +658,7 @@ cs+surroundA+surroundB      Change surround A to B
 
 #### 1.14 Others
 
-```
+```text
 Leader+ws       Save session
 Leader+rs       Remove session
 
@@ -687,6 +699,7 @@ SudoWrite           Save file with sudo
 ```
 
 In quickfix/location windows:
+
 - `o`/`Enter` — Open entry (file + line)
 - `q` — Close window
 
@@ -695,6 +708,7 @@ In quickfix/location windows:
 #### 1.15 Auto-insert file headers
 
 New `.sh` and `.py` files get a shebang line automatically inserted:
+
 - `.sh` → `#!/usr/bin/env bash`
 - `.py` → `#!/usr/bin/env python3`
 
@@ -702,7 +716,7 @@ New `.sh` and `.py` files get a shebang line automatically inserted:
 
 #### 2.1 Snippets (LuaSnip)
 
-```
+```text
 Ctrl+l      Expand snippet / confirm completion
 Tab         Jump to next placeholder
 Shift+Tab   Jump to previous placeholder
@@ -710,7 +724,7 @@ Shift+Tab   Jump to previous placeholder
 
 Completion keymaps:
 
-```
+```text
 Ctrl+l      Confirm completion (when menu visible) or expand/jump snippet
 Ctrl+j      Select next completion item
 Ctrl+k      Select previous completion item
@@ -721,7 +735,7 @@ CR          Confirm completion (select selected item)
 
 #### 3.1 Remap
 
-```
+```text
 s       Replace selected text with clipboard content
 ;       Enter command line mode, same as :
 <       Decrease indent, keep selection
@@ -730,13 +744,13 @@ s       Replace selected text with clipboard content
 
 #### 3.2 Search
 
-```
+```text
 Leader+a        Search selected text in current directory (fzf-lua)
 ```
 
 #### 3.3 Replace
 
-```
+```text
 s{textobj}  Replace a text object with clipboard content (e.g. siw)
 ss          Replace entire current line with clipboard content
 S           Replace from cursor to end of line with clipboard content
@@ -744,20 +758,20 @@ S           Replace from cursor to end of line with clipboard content
 
 #### 3.4 Easy motion (flash.nvim)
 
-```
+```text
 f       Search 1 character to jump with hints (flash.nvim)
 F       Treesitter-based jump
 ```
 
 #### 3.5 Surround (mini.surround)
 
-```
+```text
 S+surroundA     Add surround A for selected text (mini.surround)
 ```
 
 ### 4. Command line mode
 
-```
+```text
 Ctrl+p  Previous command
 Ctrl+n  Next command
 Ctrl+a  Jump to the begin of the command line
@@ -819,7 +833,7 @@ If GNU Global (`gtags`/`global`) and Pygments (`pygmentize`) are installed, gute
 
 Cscope keybindings (via cscope_maps.nvim):
 
-```
+```text
 gs      Find symbol under cursor (Cscope find s)
 gD      Jump to definition (Cstag)
 gR      Find callers (Cscope find c)
@@ -867,11 +881,11 @@ g]      Jump to tag and open quickfix
 
 - **Indentation convention** — monkey-nvim applies indent settings per filetype:
 
-| Filetype | Style | Width |
-|---|---|---|
-| `c`, `cpp`, `go`, `sh`, `vim`, `sql` | Hard tab (`noexpandtab`) | 4 |
-| `zig`, `rust`, `python`, `markdown` | Spaces (`expandtab`) | 4 |
-| `javascript`, `typescript`, `lua`, `yaml`, `json` | Spaces (`expandtab`) | 2 |
+| Filetype                                          | Style                    | Width |
+| ------------------------------------------------- | ------------------------ | ----- |
+| `c`, `cpp`, `go`, `sh`, `vim`, `sql`              | Hard tab (`noexpandtab`) | 4     |
+| `zig`, `rust`, `python`, `markdown`               | Spaces (`expandtab`)     | 4     |
+| `javascript`, `typescript`, `lua`, `yaml`, `json` | Spaces (`expandtab`)     | 2     |
 
 The global default is 4-width hard tabs.
 
@@ -881,11 +895,11 @@ monkey-nvim sets `clipboard=unnamed,unnamedplus` when a display server is detect
 
 If you use a standalone clipboard manager (optional):
 
-| Tool | Platform | Purpose |
-|---|---|---|
-| [parcellite](https://parcellite.sourceforge.net/) | X11 | Lightweight clipboard manager with persistent history |
-| [cliphist](https://github.com/sentriz/cliphist) | Wayland | Clipboard history for wlroots-based compositors |
-| Built-in | macOS/WSL | System clipboard persists by default — no extra tool needed |
+| Tool                                              | Platform  | Purpose                                                     |
+| ------------------------------------------------- | --------- | ----------------------------------------------------------- |
+| [parcellite](https://parcellite.sourceforge.net/) | X11       | Lightweight clipboard manager with persistent history       |
+| [cliphist](https://github.com/sentriz/cliphist)   | Wayland   | Clipboard history for wlroots-based compositors             |
+| Built-in                                          | macOS/WSL | System clipboard persists by default — no extra tool needed |
 
 > Optional CLI tools: `wl-clipboard` (Wayland, provides `wl-copy`/`wl-paste`), `xclip` or `xsel` (X11). Neovim has built-in clipboard support, so these are only needed for command-line clipboard access outside Neovim.
 
