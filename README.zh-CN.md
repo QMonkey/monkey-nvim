@@ -16,7 +16,7 @@ monkey-nvim项目，旨在基于 Neovim 打造一个强大、快速的纯终端�
 | 服务器 TTY | 原生 Linux 控制台（tty1–tty63），回退到内置 unokai 8/16 色（sonokai 需要 ≥256 色） |
 | kmscon     | Kernel Mode Setting 控制台 —— 支持真彩色和 Unicode 的现代 TTY 替代方案             |
 
-窗口/分屏管理交给 tmux 或终端模拟器的原生标签页。
+多会话/多终端这类顶层工作区管理交给 tmux 或终端模拟器的标签页；编辑器内的分屏和标签页照常使用。
 
 ## 截图
 
@@ -659,7 +659,8 @@ cs+surroundA+surroundB      将A围绕字符改成B围绕字符
 
 ```text
 Leader+ws       保存session
-Leader+rs       删除session
+Leader+wl       浏览/切换session
+Leader+rs       删除session（需确认）
 
 '.              最后一次变更的地方
 ''              跳回来的地方（最近两个位置跳转）
