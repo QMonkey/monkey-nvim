@@ -1059,7 +1059,7 @@ vim.api.nvim_create_autocmd('FileType', {
 
 vim.api.nvim_create_autocmd('FileType', {
   group = filetype_group,
-  pattern = { 'javascript', 'typescript', 'lua', 'yaml', 'json' },
+  pattern = { 'javascript', 'typescript', 'lua', 'yaml', 'json', 'jsonc' },
   callback = function(args)
     vim.bo[args.buf].expandtab = true
     vim.bo[args.buf].tabstop = 2
@@ -1099,7 +1099,7 @@ vim.api.nvim_create_autocmd('BufNewFile', {
 vim.g.markdown_syntax_conceal = 0
 vim.g.markdown_minlines = 100
 vim.g.markdown_fenced_languages = { 'c', 'cpp', 'zig', 'rust', 'go', 'javascript', 'typescript', 'python', 'lua',
-  'bash=sh', 'zsh', 'vim', 'sql', 'yaml', 'json' }
+  'bash=sh', 'zsh', 'vim', 'sql', 'yaml', 'json', 'jsonc' }
 
 -- Docset
 vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
@@ -1117,7 +1117,7 @@ vim.api.nvim_create_autocmd('FileType', {
 vim.api.nvim_create_autocmd('FileType', {
   group = docset_group,
   pattern = { 'cpp', 'zig', 'rust', 'go', 'gomod', 'gowork', 'gosum', 'gotmpl',
-    'javascript', 'typescript', 'python', 'lua', 'sh', 'markdown', 'yaml', 'json' },
+    'javascript', 'typescript', 'python', 'lua', 'sh', 'markdown', 'yaml', 'json', 'jsonc' },
   callback = function()
     vim.bo.keywordprg = ':LspHover'
   end,
@@ -1651,6 +1651,18 @@ vim.lsp.config('marksman', {
   root_markers = { '.marksman.toml', '.git' },
 })
 
+vim.lsp.config('efm-langserver', {
+  cmd = { 'efm-langserver' },
+  filetypes = { 'markdown' },
+  root_markers = { '.git' },
+  init_options = {
+    documentFormatting = true,
+    documentRangeFormatting = false,
+    documentDiagnostics = true,
+    codeAction = false,
+  },
+})
+
 vim.lsp.config('yaml-language-server', {
   cmd = { 'yaml-language-server', '--stdio' },
   filetypes = { 'yaml' },
@@ -1670,9 +1682,14 @@ vim.lsp.config('yaml-language-server', {
 
 vim.lsp.config('vscode-json-language-server', {
   cmd = { 'vscode-json-language-server', '--stdio' },
-  filetypes = { 'json' },
+  filetypes = { 'json', 'jsonc' },
   root_markers = { '.git' },
   init_options = { provideFormatter = true },
+  settings = {
+    json = {
+      validate = { enable = true },
+    },
+  },
 })
 
 local cmp_nvim_lsp = require('cmp_nvim_lsp')
@@ -1680,7 +1697,8 @@ vim.lsp.config('*', { capabilities = cmp_nvim_lsp.default_capabilities() })
 
 local enabled = {
   'clangd', 'zls', 'rust_analyzer', 'gopls', 'typescript-language-server', 'pylsp', 'lua-language-server',
-  'bash-language-server', 'vim-language-server', 'marksman', 'yaml-language-server', 'vscode-json-language-server',
+  'bash-language-server', 'vim-language-server', 'marksman', 'efm-langserver', 'yaml-language-server',
+  'vscode-json-language-server',
 }
 for _, name in ipairs(enabled) do
   vim.lsp.enable(name)
