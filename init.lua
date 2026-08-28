@@ -222,8 +222,6 @@ local project_specs = {
       end
     end,
     config = function()
-      local project_root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
-      local gtags_dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_root, ''))
       require("cscope_maps").setup({
         disable_maps = true,
         cscope = {
@@ -233,7 +231,12 @@ local project_specs = {
           tag = { keymap = false },
         },
       })
-      vim.g.cscope_maps_db_file = gtags_dbpath .. '/GTAGS::' .. project_root
+      -- setup() resets vim.g.cscope_maps_db_file, so set it after setup for
+      -- the current buffer's project; the GTags BufEnter autocmd keeps it in
+      -- sync on project changes.
+      local root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
+      local dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](root, ''))
+      vim.g.cscope_maps_db_file = dbpath .. '/GTAGS::' .. root
     end,
   },
 }
@@ -530,7 +533,14 @@ require('auto-session').setup({
 })
 
 vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
-vim.keymap.set('n', '<leader>rs', '<cmd>AutoSession delete<CR>', { silent = true })
+-- Browse/switch sessions
+vim.keymap.set('n', '<leader>wl', '<cmd>AutoSession search<CR>', { silent = true })
+-- Delete with confirmation
+vim.keymap.set('n', '<leader>rs', function()
+  if vim.fn.confirm('Delete session for ' .. vim.fn.getcwd() .. '?', '&Yes\n&No', 2) == 1 then
+    vim.cmd('AutoSession delete')
+  end
+end)
 
 -- RestoreCursorPosition
 vim.api.nvim_create_autocmd('BufReadPost', {
@@ -573,40 +583,63 @@ for _, conf in ipairs(candidates) do
   end
 end
 
--- Determine project root and gtags cache path once at startup
-local project_root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
-local gtags_dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](project_root, ''))
-vim.env.GTAGSROOT = project_root
-vim.env.GTAGSDBPATH = gtags_dbpath
+-- Resolve the project root per buffer so files from other projects get
+-- their own gtags DB, branch tracking and cscope connection.
+local function project_root()
+  return vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
+end
+
+local function gtags_dbpath(root)
+  return vim.fs.normalize(vim.fn['gutentags#get_cachefile'](root, ''))
+end
+
+local function switch_cscope_conn(root)
+  local dbpath = gtags_dbpath(root)
+  -- gtags-cscope resolves the DB via env vars and ignores cscope_maps' -f/-P
+  -- args, so the env must point at the current buffer's project.
+  vim.env.GTAGSROOT = root
+  vim.env.GTAGSDBPATH = dbpath
+  -- cscope_maps re-reads vim.g.cscope_maps_db_file on every query and honors
+  -- it over its internal connections ("db_file::pre_path" format), so this
+  -- works regardless of when the lazy-loaded plugin actually loads.
+  vim.g.cscope_maps_db_file = dbpath .. '/GTAGS::' .. root
+end
 
 vim.keymap.set('n', 'gs', '<Cmd>Cscope find s<CR>', { silent = true })
 vim.keymap.set('n', 'gD', '<Cmd>Cstag<CR>', { silent = true })
 vim.keymap.set('n', 'gR', '<Cmd>Cscope find c<CR>', { silent = true })
 
--- Auto-build GTAGS
-local function gtags_build()
-  if vim.g.gtags_building then return end
-  vim.fn.mkdir(gtags_dbpath, 'p')
-  vim.g.gtags_building = true
-  vim.system({ 'gtags', gtags_dbpath }, { cwd = project_root, text = true }, function(obj)
+local building = {} -- root -> true while a gtags job runs
+
+local function gtags_build(root)
+  if building[root] then return false end
+  building[root] = true
+  local dbpath = gtags_dbpath(root)
+  vim.fn.mkdir(dbpath, 'p')
+  vim.system({ 'gtags', dbpath }, { cwd = root, text = true }, function(obj)
     vim.schedule(function()
-      vim.g.gtags_building = nil
+      building[root] = nil
       if obj.code ~= 0 then
-        vim.notify('gtags: build failed', vim.log.levels.ERROR)
+        vim.notify('gtags: build failed in ' .. root, vim.log.levels.ERROR)
       end
     end)
   end)
+  return true
 end
 
-local function gtags_update()
-  if vim.fn.glob(gtags_dbpath .. '/GTAGS') == '' then return end
-  if vim.g.gtags_building then return end
-  vim.g.gtags_building = true
-  vim.system({ 'global', '--update' }, { cwd = project_root, text = true }, function(obj)
+local function gtags_update(root)
+  if building[root] then return end
+  local dbpath = gtags_dbpath(root)
+  if vim.fn.glob(dbpath .. '/GTAGS') == '' then
+    gtags_build(root)
+    return
+  end
+  building[root] = true
+  vim.system({ 'gtags', '--incremental', dbpath }, { cwd = root, text = true }, function(obj)
     vim.schedule(function()
-      vim.g.gtags_building = nil
+      building[root] = nil
       if obj.code ~= 0 then
-        vim.notify('gtags: update failed', vim.log.levels.ERROR)
+        vim.notify('gtags: update failed in ' .. root, vim.log.levels.ERROR)
       end
     end)
   end)
@@ -614,16 +647,20 @@ end
 
 local gtags_group = vim.api.nvim_create_augroup('GTags', { clear = true })
 
--- Build GTAGS on BufEnter when missing
+-- Switch the cscope DB to the entered buffer's project and build GTAGS
+-- when missing
 vim.api.nvim_create_autocmd({ 'BufEnter' }, {
   group = gtags_group,
   callback = function(e)
     if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
     if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
-    if vim.fn.glob(gtags_dbpath .. '/GTAGS') ~= '' then return end
-    gtags_build()
+    local root = project_root()
+    switch_cscope_conn(root)
+    if vim.fn.glob(gtags_dbpath(root) .. '/GTAGS') == '' then
+      gtags_build(root)
+    end
   end,
-  desc = 'build GTAGS on BufEnter when missing',
+  desc = 'switch cscope DB and build GTAGS on BufEnter when missing',
 })
 
 -- Incremental update on BufWritePost
@@ -632,11 +669,7 @@ vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
   callback = function(e)
     if vim.bo[e.buf].buftype ~= '' or not vim.bo[e.buf].modifiable then return end
     if vim.fn.expand('#' .. e.buf .. ':p') == '' then return end
-    if vim.fn.glob(gtags_dbpath .. '/GTAGS') == '' then
-      gtags_build()
-    else
-      gtags_update()
-    end
+    gtags_update(project_root())
   end,
   desc = 'incremental GTAGS update on save',
 })
@@ -648,38 +681,39 @@ vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
 if vim.g.tags_branch_aware == nil then
   vim.g.tags_branch_aware = 1
 end
-local tags_branch_baseline = nil
+local tags_branch_baseline = {} -- root -> { branch, head }
 
-local function tags_head_file()
-  return gtags_dbpath .. '/.tags-head'
+local function tags_head_file(root)
+  return gtags_dbpath(root) .. '/.tags-head'
 end
 
-local function tags_load_head()
-  local f = io.open(tags_head_file(), 'r')
+local function tags_load_head(root)
+  local f = io.open(tags_head_file(root), 'r')
   if not f then return '' end
   local head = f:read('*a')
   f:close()
   return vim.trim(head)
 end
 
-local function tags_save_head(head)
-  local f = io.open(tags_head_file(), 'w')
+local function tags_save_head(root, head)
+  vim.fn.mkdir(gtags_dbpath(root), 'p')
+  local f = io.open(tags_head_file(root), 'w')
   if f then
     f:write(head)
     f:close()
   end
 end
 
-local function tags_branch_identity()
-  local branch = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(project_root) .. ' branch --show-current'))
-  local head = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(project_root) .. ' rev-parse HEAD'))
+local function tags_branch_identity(root)
+  local branch = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(root) .. ' branch --show-current'))
+  local head = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(root) .. ' rev-parse HEAD'))
   if head == '' then return nil end
   return { branch = branch, head = head }
 end
 
-local function tags_update_ctags()
+local function tags_update_ctags(root)
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.b[buf].gutentags_root == project_root and vim.b[buf].gutentags_files then
+    if vim.b[buf].gutentags_root == root and vim.b[buf].gutentags_files then
       -- Run in the project buffer without touching the visible buffer/window.
       -- GutentagsUpdate is buffer-local, so it must execute with that buffer
       -- current; nvim_buf_call restores the current buffer automatically.
@@ -693,9 +727,13 @@ local function tags_update_ctags()
   end
 end
 
-local function tags_do_rebuild()
-  gtags_build()
-  tags_update_ctags()
+-- Full rebuild for one project. Returns false when a gtags job for that
+-- project is already running, so callers keep their stale baseline and
+-- retry on the next check instead of losing the rebuild.
+local function tags_do_rebuild(root)
+  if not gtags_build(root) then return false end
+  tags_update_ctags(root)
+  return true
 end
 
 local function tags_check_branch()
@@ -704,33 +742,40 @@ local function tags_check_branch()
   -- startup (no args) no buffer is set up yet, so skip and let the
   -- BufEnter that follows the first file open do the real check. This keeps
   -- gtags and ctags rebuilt together (ctags needs a set-up buffer).
+  local root = project_root()
   local has_buf = false
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.b[buf].gutentags_root == project_root and vim.b[buf].gutentags_files then
+    if vim.b[buf].gutentags_root == root and vim.b[buf].gutentags_files then
       has_buf = true
       break
     end
   end
   if not has_buf then return end
 
-  local info = tags_branch_identity()
+  local info = tags_branch_identity(root)
   if not info then return end
 
-  if tags_branch_baseline == nil then
+  local base = tags_branch_baseline[root]
+  if base == nil then
     -- No in-memory baseline yet (fresh nvim). Rebuild only if the DB was
     -- generated for a different HEAD; trust the existing DB otherwise.
-    local saved = tags_load_head()
+    local saved = tags_load_head(root)
     if saved == '' then
-      tags_save_head(info.head)
+      tags_save_head(root, info.head)
+      tags_branch_baseline[root] = info
     elseif saved ~= info.head then
-      tags_do_rebuild()
-      tags_save_head(info.head)
+      if tags_do_rebuild(root) then
+        tags_save_head(root, info.head)
+        tags_branch_baseline[root] = info
+      end
+      -- else: a gtags job is in flight; the stale baseline makes the next
+      -- check retry the rebuild.
+    else
+      tags_branch_baseline[root] = info
     end
-    tags_branch_baseline = info
     return
   end
 
-  local base = tags_branch_baseline
   if base.branch == info.branch and base.head == info.head then return end
 
   -- Rebuild on a real switch (branch+HEAD both changed) or a detached HEAD
@@ -738,23 +783,27 @@ local function tags_check_branch()
   local rebuild = (base.branch ~= info.branch and base.head ~= info.head)
       or (info.branch == '' and base.head ~= info.head)
   if rebuild then
-    tags_do_rebuild()
-    tags_save_head(info.head)
-    tags_branch_baseline = info
+    if not tags_do_rebuild(root) then return end -- retry on next check
+    tags_save_head(root, info.head)
+    tags_branch_baseline[root] = info
   elseif base.branch ~= info.branch then
-    tags_branch_baseline.branch = info.branch
+    tags_branch_baseline[root].branch = info.branch
   end
 end
 
 local function tags_rebuild()
-  local info = tags_branch_identity()
+  local root = project_root()
+  local info = tags_branch_identity(root)
   if not info then
     vim.notify('TagsRebuild: cannot determine project root', vim.log.levels.ERROR)
     return
   end
-  tags_do_rebuild()
-  tags_save_head(info.head)
-  tags_branch_baseline = info
+  if not tags_do_rebuild(root) then
+    vim.notify('TagsRebuild: gtags job already running for ' .. root, vim.log.levels.WARN)
+    return
+  end
+  tags_save_head(root, info.head)
+  tags_branch_baseline[root] = info
 end
 
 vim.api.nvim_create_user_command('TagsRebuild', tags_rebuild, {})
@@ -1197,7 +1246,9 @@ local function close_gitsigns_diff()
   if not vim.wo.diff then return false end
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     if vim.fn.bufname(vim.api.nvim_win_get_buf(win)):match('^gitsigns:') then
-      vim.api.nvim_win_close(win, false)
+      -- The buffer is acwrite and may be marked modified (e.g. stray edits);
+      -- it is an ephemeral view regenerated from git, so discard and close.
+      vim.api.nvim_win_close(win, true)
       return true
     end
   end
