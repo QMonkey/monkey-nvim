@@ -25,6 +25,7 @@ local theme_specs = {
 
 local editor_specs = {
   { src = 'https://github.com/echasnovski/mini.indentscope' },
+  { src = 'https://github.com/echasnovski/mini.extra' },
   { src = 'https://github.com/echasnovski/mini.ai' },
   { src = 'https://github.com/echasnovski/mini.surround' },
   { src = 'https://github.com/numToStr/Comment.nvim' },
@@ -299,9 +300,27 @@ local tools_specs = {
         mode = { 'n', 't' },
         desc = 'Toggle horizontal terminal'
       },
+      {
+        '<F5>',
+        function()
+          local term = require('toggleterm.terminal').get(1)
+          local was_open = term and term:is_open()
+          vim.cmd('1ToggleTerm direction=vertical')
+          if not was_open and require('toggleterm.terminal').get(1):is_open() then
+            vim.cmd('vertical resize ' .. math.floor(vim.o.columns / 2))
+          end
+        end,
+        mode = { 'n', 't' },
+        desc = 'Toggle vertical terminal'
+      },
     },
     config = function()
-      require('toggleterm').setup({ size = 20, direction = 'horizontal', start_in_insert = true })
+      require('toggleterm').setup({
+        size = 20,
+        direction = 'horizontal',
+        start_in_insert = true,
+        persist_mode = false,
+      })
     end,
   },
 }
@@ -413,16 +432,6 @@ else
   vim.cmd('colorscheme unokai')
 end
 
--- CheckFileChanges
-vim.api.nvim_create_autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorHold' }, {
-  group = vim.api.nvim_create_augroup('CheckFileChanges', { clear = true }),
-  callback = function()
-    if vim.fn.getcmdtype() == '' then
-      vim.cmd('checktime')
-    end
-  end,
-})
-
 -- lualine.nvim
 local function mc()
   return package.loaded['multicursor-nvim']
@@ -522,19 +531,60 @@ require('lualine').setup({
   },
 })
 
+-- CheckFileChanges
+vim.api.nvim_create_autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorHold' }, {
+  group = vim.api.nvim_create_augroup('CheckFileChanges', { clear = true }),
+  callback = function()
+    if vim.fn.getcmdtype() == '' then
+      vim.cmd('checktime')
+    end
+  end,
+})
+
+-- Rooter
+local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
+
+local function cd_root()
+  local root = vim.fs.root(0, patterns)
+  if root then
+    vim.cmd('cd ' .. vim.fn.fnameescape(root))
+  end
+end
+
+vim.keymap.set('n', '<leader>cr', cd_root, { silent = true })
+
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = vim.api.nvim_create_augroup('ChangeRoot', { clear = true }),
+  once = true,
+  callback = cd_root,
+})
+
+-- Shada
+-- Isolate command/search history, registers and file marks per project by
+-- pointing 'shadafile' at the project root (falls back to ~ outside a
+-- project). Neovim reads shada after init.lua, so this also affects the startup load.
+local function shada_path()
+  local root = vim.fs.root(vim.uv.cwd(), patterns) or vim.env.HOME
+  return vim.fn.stdpath('state') .. '/shada/' .. (root:gsub('^/', ''):gsub('/', '-')) .. '.shada'
+end
+
+vim.o.shadafile = shada_path()
+
 -- Session / Restore
 vim.opt.sessionoptions:remove({ 'blank', 'options', 'folds', 'terminal' })
 
 -- auto-session
+-- oil buffers are unlisted "oil://" nofile buffers, which mksession cannot
+-- represent: quitting while an oil window has focus makes the saved session
+-- fail to load on restore. this option deletes oil buffers right before every save.
 require('auto-session').setup({
   log_level = 'error',
   auto_save_enabled = true,
   auto_restore_enabled = true,
+  close_filetypes_on_save = { 'oil' },
 })
 
 vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
--- Browse/switch sessions
-vim.keymap.set('n', '<leader>wl', '<cmd>AutoSession search<CR>', { silent = true })
 -- Delete with confirmation
 vim.keymap.set('n', '<leader>rs', function()
   if vim.fn.confirm('Delete session for ' .. vim.fn.getcwd() .. '?', '&Yes\n&No', 2) == 1 then
@@ -1277,7 +1327,7 @@ vim.keymap.set('n', 'q', function()
   end
 
   if not has_other_window or total_valid == 0 then
-    vim.cmd('silent! confirm quitall!')
+    vim.cmd('confirm quitall')
   elseif tab_valid == 0 then
     vim.cmd('tabclose')
     focus_to_valid_window()
@@ -1287,26 +1337,8 @@ vim.keymap.set('n', 'q', function()
   end
 end, { silent = true })
 
-vim.keymap.set('n', '<S-q>', '<cmd>silent! confirm quitall!<CR>', { silent = true })
+vim.keymap.set('n', '<S-q>', '<cmd>confirm quitall<CR>', { silent = true })
 vim.keymap.set({ 'n', 'v' }, 't', 'q')
-
--- Rooter
-local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
-
-local function cd_root()
-  local root = vim.fs.root(0, patterns)
-  if root then
-    vim.cmd('cd ' .. vim.fn.fnameescape(root))
-  end
-end
-
-vim.keymap.set('n', '<leader>cr', cd_root, { silent = true })
-
-vim.api.nvim_create_autocmd('VimEnter', {
-  group = vim.api.nvim_create_augroup('ChangeRoot', { clear = true }),
-  once = true,
-  callback = cd_root,
-})
 
 -- Ctags
 -- Resolve a tag's real line number by searching its pattern in the target buffer.
@@ -1370,28 +1402,29 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
 require('mini.indentscope').setup({ draw = { delay = 0 } })
 
 -- mini.ai
+local gen_ai_spec = require('mini.extra').gen_ai_spec
 require('mini.ai').setup({
+  custom_textobjects = {
+    i = gen_ai_spec.indent(),
+    L = gen_ai_spec.line(),
+    B = gen_ai_spec.buffer(),
+  },
   mappings = {
     goto_left = '',
     goto_right = '',
   },
 })
 
--- mini.surround (vim-surround compatible mappings)
+-- mini.surround
 require('mini.surround').setup({
-  mappings = {
-    add = 'ys',
-    delete = 'ds',
-    find = '',
-    find_left = '',
-    highlight = '',
-    replace = 'cs',
-  },
   search_method = 'cover_or_next',
 })
-vim.keymap.set('n', 'yss', 'ys_', { remap = true })
-vim.keymap.del('x', 'ys')
-vim.keymap.set('x', 'S', [[:<C-u>lua MiniSurround.add('visual')<CR>]], { silent = true })
+
+-- Bare `s` has no surround action. Without this, a timed-out `s` falls
+-- through to native substitute (cl) and deletes the char under cursor.
+-- <Nop> makes that fallback harmless.
+vim.keymap.set('n', 's', '<Nop>')
+vim.keymap.set('x', 's', '<Nop>')
 
 -- Comment.nvim
 require('Comment').setup()
@@ -1406,10 +1439,10 @@ npairs.add_rule(rule('"', '"', 'vim'):with_pair(function() return false end))
 -- substitute.nvim
 require('substitute').setup()
 
-vim.keymap.set('n', 's', require('substitute').operator, { silent = true })
-vim.keymap.set('x', 's', require('substitute').visual, { silent = true })
-vim.keymap.set('n', 'ss', require('substitute').line, { silent = true })
-vim.keymap.set('n', 'S', require('substitute').eol, { silent = true })
+vim.keymap.set('n', 'x', require('substitute').operator, { silent = true })
+vim.keymap.set('x', 'x', require('substitute').visual, { silent = true })
+vim.keymap.set('n', 'xx', require('substitute').line, { silent = true })
+vim.keymap.set('n', 'X', require('substitute').eol, { silent = true })
 
 -- marks.nvim
 require('marks').setup()
@@ -1464,8 +1497,43 @@ vim.keymap.set('n', '~', function()
 end, { silent = true })
 
 -- sudo write
+-- Buffer content is staged into a temp file via :write, then written as root
+-- with dd: non-interactive first (only works with cached credentials), on
+-- failure retry with the password from inputsecret. stdin holds only the
+-- password line, so a wrong password costs exactly one attempt and nothing
+-- can leak. Failures notify and keep the buffer modified.
 vim.api.nvim_create_user_command('SudoWrite', function()
-  vim.cmd('write !sudo tee % >/dev/null && edit!')
+  local tmp = vim.fn.tempname()
+  vim.cmd('silent write ' .. vim.fn.fnameescape(tmp))
+  local dd = vim.fn.shellescape('if=' .. tmp) .. ' ' .. vim.fn.shellescape('of=' .. vim.fn.expand('%:p'))
+  local errfile = vim.fn.tempname()
+  vim.fn.system('sudo -p "" -n -- dd ' .. dd .. ' 2>' .. errfile)
+  if vim.v.shell_error ~= 0 then
+    vim.fn.inputsave()
+    local ok, pass = pcall(vim.fn.inputsecret, 'sudo password: ')
+    vim.fn.inputrestore()
+    if not ok or pass == '' then
+      vim.api.nvim_echo({ { '\nSudoWrite cancelled', 'WarningMsg' } }, false, {})
+      vim.fn.delete(tmp)
+      vim.fn.delete(errfile)
+      return
+    end
+    vim.fn.system('sudo -p "" -S -- dd ' .. dd .. ' 2>' .. errfile, pass .. '\n')
+  end
+  vim.fn.delete(tmp)
+  local error = ''
+  if vim.fn.filereadable(errfile) == 1 then
+    error = table.concat(vim.tbl_filter(function(l) return vim.trim(l) ~= '' end, vim.fn.readfile(errfile)), ' | ')
+  end
+  vim.fn.delete(errfile)
+  if vim.v.shell_error ~= 0 then
+    vim.api.nvim_echo(
+      { { '\nSudoWrite failed: ' .. (error ~= '' and error or ('exit ' .. vim.v.shell_error)) .. '\n', 'ErrorMsg' } },
+      false, {})
+    return
+  end
+  vim.bo.modified = false
+  vim.bo.readonly = false
 end, {})
 
 -- trouble.nvim
