@@ -55,6 +55,7 @@ check_bin() {
 }
 
 check_cmd() {
+	# Usage: check_cmd "description" -- command args...
 	local desc="$1"
 	shift
 	if "$@" &>/dev/null; then
@@ -69,7 +70,7 @@ check_cmd() {
 
 check_nvim_version() {
 	local ver
-	ver=$(nvim --version 2>/dev/null | head -1 | grep -oP '\d+\.\d+' || true)
+	ver=$(nvim --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' || true)
 	if [[ -z "$ver" ]]; then
 		echo -e "  ${FAIL} neovim (not found)"
 		ALL_PASSED=false
@@ -145,27 +146,102 @@ sudo_cmd() {
 	fi
 }
 
+# Package names that should prefer Homebrew over the system package
+# manager: system repos ship versions that lag far behind (fzf: 0.44 on
+# Ubuntu noble vs current 0.7x). Append more names here as needed.
+BREW_FIRST=(fzf)
+
 install_pkg() {
 	if ! $INSTALL_MODE; then return 1; fi
-	case "$OS" in
-	debian) sudo_cmd apt-get install -y "$@" || brew install "$@" ;;
-	opensuse) sudo_cmd zypper --non-interactive install -y "$@" || brew install "$@" ;;
-	centos)
-		sudo_cmd dnf install -y epel-release || true
-		# Some tools (universal-ctags, global, global-ctags, pygments) come from EPEL
-		_args=("$@")
-		[[ " ${_args[*]} " =~ " global " ]] && _args+=(global-ctags)
-		sudo_cmd dnf install -y "${_args[@]}" || brew install "$@"
-		;;
-	arch) sudo_cmd pacman -S --noconfirm "$@" || brew install "$@" ;;
-	macos) brew install "$@" ;;
-	*) brew install "$@" 2>/dev/null || return 1 ;;
-	esac
+	# Split the request: names in BREW_FIRST go through Homebrew (when it
+	# exists, falling back to the system manager on failure), everything
+	# else through the OS package manager as before.
+	local -a brew_pkgs=() rest=()
+	local p
+	for p in "$@"; do
+		if [[ " ${BREW_FIRST[*]} " == *" $p "* ]] && command -v brew &>/dev/null; then
+			brew_pkgs+=("$p")
+		else
+			rest+=("$p")
+		fi
+	done
+	if ((${#brew_pkgs[@]} > 0)); then
+		if ! brew install "${brew_pkgs[@]}"; then
+			rest+=("${brew_pkgs[@]}") # brew failed — fall back to the system manager
+		fi
+	fi
+	if ((${#rest[@]} > 0)); then
+		case "$OS" in
+		debian) sudo_cmd apt-get install -y "${rest[@]}" || brew install "${rest[@]}" ;;
+		arch) sudo_cmd pacman -S --noconfirm "${rest[@]}" || brew install "${rest[@]}" ;;
+		opensuse) sudo_cmd zypper --non-interactive install -y "${rest[@]}" || brew install "${rest[@]}" ;;
+		centos)
+			# Some tools (universal-ctags, global, global-ctags, fzf, bat, pygments) come from EPEL
+			sudo_cmd dnf install -y epel-release || true
+			local -a _args=("${rest[@]}")
+			[[ " ${_args[*]} " =~ " global " ]] && _args+=(global-ctags)
+			sudo_cmd dnf install -y "${_args[@]}" || brew install "${rest[@]}"
+			;;
+		macos) brew install "${rest[@]}" ;;
+		*) brew install "${rest[@]}" 2>/dev/null || return 1 ;;
+		esac
+	fi
+}
+
+ensure_rust() {
+	# Install Rust via rustup if not present
+	if ! command -v rustup &>/dev/null; then
+		echo -e "  ${YELLOW}→ installing rustup...${NC}"
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
+			sh -s -- -y 2>/dev/null || {
+			echo -e "  ${RED}→ rustup install failed${NC}"
+			return 1
+		}
+	fi
+	if [ -f "$HOME/.cargo/env" ]; then
+		# shellcheck disable=SC1091
+		. "$HOME/.cargo/env"
+	fi
+	command -v cargo &>/dev/null
+}
+
+ensure_go_env() {
+	# 'go install' drops binaries in $(go env GOPATH)/bin (default ~/go/bin),
+	# which is usually not on PATH — make them visible for this run.
+	if command -v go &>/dev/null; then
+		local gopath
+		gopath=$(go env GOPATH 2>/dev/null || echo "$HOME/go")
+		export PATH="$gopath/bin:$PATH"
+	fi
+}
+
+ensure_npm() {
+	# Debian/Ubuntu: `apt install nodejs` does NOT bring npm (it is only a
+	# Suggests), so npm must be installed explicitly.
+	command -v npm &>/dev/null && return 0
+	echo -e "  ${YELLOW}→ installing npm...${NC}"
+	install_pkg "$(pkg_name npm)"
+}
+
+# Global npm install that works everywhere:
+#   - user-writable prefix (e.g. Homebrew): no sudo — also avoids the sudo
+#     secure_path problem, where root cannot see brew's npm at all;
+#   - system prefix (e.g. /usr from apt): retry with sudo.
+npm_install_g() {
+	ensure_npm || return 1
+	local prefix
+	prefix=$(npm config get prefix 2>/dev/null)
+	if [ -n "$prefix" ] && { [ -w "$prefix" ] || [ -w "$prefix/lib" ]; }; then
+		npm install -g "$@"
+	else
+		sudo_cmd npm install -g "$@"
+	fi
 }
 
 install_optional_bin() {
 	local bin="$1"
 	local ok=true
+	ensure_go_env
 	case "$bin" in
 	rg)
 		install_pkg "$(pkg_name "$bin")" || cargo install ripgrep 2>/dev/null || ok=false
@@ -174,13 +250,23 @@ install_optional_bin() {
 		go install golang.org/x/tools/gopls@latest
 		;;
 	pylsp)
-		sudo pip3 install python-lsp-server
+		install_pkg "$(pkg_name "$bin")" 2>/dev/null ||
+			sudo pip3 install python-lsp-server 2>/dev/null ||
+			pip3 install python-lsp-server 2>/dev/null ||
+			ok=false
+		;;
+	cargo)
+		ensure_rust || ok=false
 		;;
 	rust-analyzer)
-		rustup component add rust-analyzer
+		if ensure_rust; then
+			rustup component add rust-analyzer
+		else
+			ok=false
+		fi
 		;;
 	bash-language-server)
-		sudo npm install -g bash-language-server
+		npm_install_g bash-language-server
 		;;
 	shfmt)
 		go install mvdan.cc/sh/v3/cmd/shfmt@latest 2>/dev/null || install_pkg shfmt || ok=false
@@ -189,25 +275,28 @@ install_optional_bin() {
 		go install honnef.co/go/tools/cmd/staticcheck@latest 2>/dev/null || ok=false
 		;;
 	black)
-		sudo pip3 install black 2>/dev/null || pip3 install black 2>/dev/null || ok=false
+		install_pkg "$(pkg_name "$bin")" 2>/dev/null ||
+			sudo pip3 install black 2>/dev/null ||
+			pip3 install black 2>/dev/null ||
+			ok=false
 		;;
 	clang-tidy)
 		install_pkg "$(pkg_name "$bin")" || ok=false
 		;;
 	vim-language-server)
-		sudo npm install -g vim-language-server
+		npm_install_g vim-language-server
 		;;
 	typescript-language-server)
-		sudo npm install -g typescript-language-server typescript
+		npm_install_g typescript-language-server typescript
 		;;
 	tsc)
-		sudo npm install -g typescript
+		npm_install_g typescript
 		;;
 	vscode-json-language-server)
-		sudo npm install -g vscode-langservers-extracted
+		npm_install_g vscode-langservers-extracted
 		;;
 	yaml-language-server)
-		sudo npm install -g yaml-language-server
+		npm_install_g yaml-language-server
 		;;
 	lua-language-server)
 		install_pkg "$(pkg_name "$bin")" || brew install lua-language-server 2>/dev/null || ok=false
@@ -215,17 +304,17 @@ install_optional_bin() {
 	glow)
 		install_pkg "$(pkg_name "$bin")" || brew install glow 2>/dev/null || go install github.com/charmbracelet/glow@latest 2>/dev/null || ok=false
 		;;
+	marksman)
+		install_pkg "$(pkg_name "$bin")" || brew install marksman 2>/dev/null || ok=false
+		;;
 	efm-langserver)
 		go install github.com/mattn/efm-langserver@latest 2>/dev/null || ok=false
 		;;
 	prettier)
-		sudo npm install -g prettier
+		npm_install_g prettier
 		;;
 	markdownlint-cli2)
-		sudo npm install -g markdownlint-cli2
-		;;
-	marksman)
-		install_pkg "$(pkg_name "$bin")" || brew install marksman 2>/dev/null || ok=false
+		npm_install_g markdownlint-cli2
 		;;
 	zig)
 		brew install zig 2>/dev/null || install_pkg "$(pkg_name "$bin")" || ok=false
@@ -253,132 +342,103 @@ get_install_hint() {
 }
 
 # ────────────────── dependency definitions ──────────────────
+# NOTE: no `declare -A` anywhere — macOS still ships bash 3.2, which does
+# not support associative arrays. Bin→name and bin→package lookups are
+# done with case functions instead, and all collections are plain indexed
+# arrays (supported since bash 2.0).
 
-declare -A REQUIRED=()
-REQUIRED["git"]="git"
-REQUIRED["rg"]="ripgrep"
-REQUIRED["ctags"]="universal-ctags"
-REQUIRED["cc"]="C compiler (gcc/clang)"
-REQUIRED["ts"]="tree-sitter-cli"
-REQUIRED["fzf"]="fzf"
+REQUIRED_BINS=(git rg ctags fzf)
+RECOMMENDED_BINS=(global pygmentize)
 
-declare -A RECOMMENDED=()
-RECOMMENDED["global"]="global (GNU Global, for gtags)"
-RECOMMENDED["pygmentize"]="pygments (gtags parser for non-C/C++ languages)"
+# Human-readable name for a dependency binary.
+dep_name() {
+	case "$1" in
+	rg) echo "ripgrep" ;;
+	ctags) echo "universal-ctags" ;;
+	global) echo "global (GNU Global, for gtags)" ;;
+	pygmentize) echo "pygments (gtags parser for non-C/C++ languages)" ;;
+	*) echo "$1" ;;
+	esac
+}
 
-# packages for each OS (maps binary -> package name)
-declare -A APT_NAMES=(
-	["rg"]="ripgrep"
-	["ctags"]="universal-ctags"
-	["clangd"]="clangd"
-	["clang-tidy"]="clang-tidy"
-	["gcc"]="gcc"
-	["g++"]="g++"
-	["go"]="golang-go"
-	["python3"]="python3"
-	["node"]="nodejs"
-	["fzf"]="fzf"
-	["global"]="global"
-	["pygmentize"]="python3-pygments"
-)
-declare -A PACMAN_NAMES=(
-	["rg"]="ripgrep"
-	["ctags"]="ctags"
-	["clangd"]="clang"
-	["clang-tidy"]="clang"
-	["gcc"]="gcc"
-	["g++"]="gcc"
-	["go"]="go"
-	["python3"]="python"
-	["node"]="nodejs"
-	["lua-language-server"]="lua-language-server"
-	["marksman"]="marksman"
-	["glow"]="glow"
-	["fzf"]="fzf"
-	["global"]="global"
-	["pygmentize"]="python-pygments"
-)
-declare -A BREW_NAMES=(
-	["ctags"]="universal-ctags"
-	["clangd"]="llvm"
-	["clang-tidy"]="llvm"
-	["gcc"]="gcc"
-	["g++"]="gcc"
-	["go"]="go"
-	["python3"]="python"
-	["node"]="node"
-	["lua-language-server"]="lua-language-server"
-	["marksman"]="marksman"
-	["glow"]="glow"
-	["fzf"]="fzf"
-	["global"]="global"
-	["pygmentize"]="pygments"
-	["zig"]="zig"
-	["zls"]="zls"
-)
-declare -A ZYPPER_NAMES=(
-	["rg"]="ripgrep"
-	["ctags"]="universal-ctags"
-	["clangd"]="clang"
-	["clang-tidy"]="clang"
-	["gcc"]="gcc"
-	["g++"]="gcc-c++"
-	["go"]="go"
-	["python3"]="python3"
-	["node"]="nodejs"
-	["lua-language-server"]="lua-language-server"
-	["marksman"]="marksman"
-	["glow"]="glow"
-	["fzf"]="fzf"
-	["global"]="global"
-	["pygmentize"]="python3-Pygments"
-)
-declare -A YUM_NAMES=(
-	["rg"]="ripgrep"
-	["ctags"]="universal-ctags"
-	["clangd"]="clang-tools-extra"
-	["clang-tidy"]="clang-tools-extra"
-	["gcc"]="gcc"
-	["g++"]="gcc-c++"
-	["go"]="golang"
-	["python3"]="python3"
-	["node"]="nodejs"
-	["lua-language-server"]="lua-language-server"
-	["marksman"]="marksman"
-	["glow"]="glow"
-	["fzf"]="fzf"
-	["global"]="global"
-	["pygmentize"]="python3-pygments"
-)
-
+# Package name for a binary on the detected OS. Only entries that differ
+# from the binary name need a case arm; everything else falls through.
 pkg_name() {
 	local bin="$1"
-	case "$OS" in
-	debian) echo "${APT_NAMES[$bin]:-$bin}" ;;
-	opensuse) echo "${ZYPPER_NAMES[$bin]:-$bin}" ;;
-	centos) echo "${YUM_NAMES[$bin]:-$bin}" ;;
-	arch) echo "${PACMAN_NAMES[$bin]:-$bin}" ;;
-	macos) echo "${BREW_NAMES[$bin]:-$bin}" ;;
-	*) echo "$bin" ;;
+	case "$OS:$bin" in
+	# Debian / apt
+	debian:rg) echo "ripgrep" ;;
+	debian:ctags) echo "universal-ctags" ;;
+	debian:pygmentize) echo "python3-pygments" ;;
+	debian:go) echo "golang-go" ;;
+	debian:node) echo "nodejs" ;;
+	debian:pylsp) echo "python3-pylsp" ;;
+	# Arch / pacman
+	arch:rg) echo "ripgrep" ;;
+	arch:ctags) echo "ctags" ;;
+	arch:clangd | arch:clang-tidy) echo "clang" ;;
+	arch:g++) echo "gcc" ;;
+	arch:python3) echo "python" ;;
+	arch:node) echo "nodejs" ;;
+	arch:pylsp) echo "python-lsp-server" ;;
+	arch:pygmentize) echo "python-pygments" ;;
+	arch:black) echo "python-black" ;;
+	# macOS / brew
+	macos:ctags) echo "universal-ctags" ;;
+	macos:clangd | macos:clang-tidy) echo "llvm" ;;
+	macos:g++) echo "gcc" ;;
+	macos:python3) echo "python" ;;
+	macos:pylsp) echo "python-lsp-server" ;;
+	macos:pygmentize) echo "pygments" ;;
+	# openSUSE / zypper
+	opensuse:rg) echo "ripgrep" ;;
+	opensuse:ctags) echo "universal-ctags" ;;
+	opensuse:pygmentize) echo "python3-Pygments" ;;
+	opensuse:clangd | opensuse:clang-tidy) echo "clang" ;;
+	opensuse:g++) echo "gcc-c++" ;;
+	opensuse:node) echo "nodejs" ;;
+	opensuse:pylsp) echo "python-python-lsp-server" ;;
+	opensuse:black) echo "python3-black" ;;
+	# CentOS-family / dnf
+	centos:rg) echo "ripgrep" ;;
+	centos:ctags) echo "universal-ctags" ;;
+	centos:pygmentize) echo "python3-pygments" ;;
+	centos:clangd | centos:clang-tidy) echo "clang-tools-extra" ;;
+	centos:g++) echo "gcc-c++" ;;
+	centos:go) echo "golang" ;;
+	centos:node) echo "nodejs" ;;
+	centos:pylsp) echo "python3-lsp-server" ;;
+	centos:black) echo "python3-black" ;;
+	*)
+		echo "$bin"
+		;;
 	esac
 }
 
 # ──────────── language-grouped optional deps ────────────
 
-declare -A DEPS_BY_GROUP
-DEPS_BY_GROUP["C/C++"]="gcc g++ clangd clang-tidy"
-DEPS_BY_GROUP["Go"]="go gopls staticcheck"
-DEPS_BY_GROUP["Python"]="python3 pylsp black"
-DEPS_BY_GROUP["Zig"]="zig zls"
-DEPS_BY_GROUP["Rust"]="cargo rust-analyzer"
-DEPS_BY_GROUP["Lua"]="lua-language-server"
-DEPS_BY_GROUP["Shell"]="node bash-language-server shfmt"
-DEPS_BY_GROUP["Vim"]="node vim-language-server"
-DEPS_BY_GROUP["JavaScript/TypeScript"]="node typescript-language-server tsc"
-DEPS_BY_GROUP["JSON"]="node vscode-json-language-server"
-DEPS_BY_GROUP["YAML"]="node yaml-language-server"
-DEPS_BY_GROUP["Markdown"]="marksman efm-langserver prettier markdownlint-cli2"
-DEPS_BY_GROUP["Optional tools"]="glow"
+# Note: NOT named GROUPS — that is a special (effectively readonly) bash
+# array holding the current user's group IDs.
+DEP_GROUPS=("C/C++" "Go" "Python" "Zig" "Rust" "Lua" "Shell" "Vim" "JavaScript/TypeScript" "JSON" "YAML" "Markdown" "Optional tools")
+
+# Space-separated binaries for each language group.
+deps_for_group() {
+	case "$1" in
+	"C/C++") echo "gcc g++ clangd clang-tidy" ;;
+	"Go") echo "go gopls staticcheck" ;;
+	"Python") echo "python3 pylsp black" ;;
+	"Zig") echo "zig zls" ;;
+	"Rust") echo "cargo rust-analyzer" ;;
+	"Lua") echo "lua-language-server" ;;
+	"Shell") echo "node bash-language-server shfmt" ;;
+	"Vim") echo "node vim-language-server" ;;
+	"JavaScript/TypeScript") echo "node typescript-language-server tsc" ;;
+	"JSON") echo "node vscode-json-language-server" ;;
+	"YAML") echo "node yaml-language-server" ;;
+	"Markdown") echo "marksman efm-langserver prettier markdownlint-cli2" ;;
+	"Optional tools") echo "glow" ;;
+	esac
+}
 
 # ──────────────────── main ────────────────────
 
@@ -405,43 +465,46 @@ echo ""
 # ──── required tools ────
 echo -e "${BOLD}Required tools${NC}"
 MISSING_REQUIRED=()
-
-check_bin "git" || { MISSING_REQUIRED+=("git"); }
-check_bin "rg" "ripgrep" || { MISSING_REQUIRED+=("rg"); }
-check_bin "ctags" "universal-ctags" || { MISSING_REQUIRED+=("ctags"); }
-check_cc || { MISSING_REQUIRED+=("cc"); }
-check_ts || { MISSING_REQUIRED+=("ts"); }
-check_bin "fzf" || { MISSING_REQUIRED+=("fzf"); }
+for bin in "${REQUIRED_BINS[@]}"; do
+	if check_bin "$bin" "$(dep_name "$bin")"; then
+		:
+	else
+		MISSING_REQUIRED+=("$bin")
+	fi
+done
+check_cc || MISSING_REQUIRED+=("cc")
+check_ts || MISSING_REQUIRED+=("ts")
 echo ""
 
 if $INSTALL_MODE && [[ ${#MISSING_REQUIRED[@]} -gt 0 ]]; then
 	echo -e "${YELLOW}Installing: ${MISSING_REQUIRED[*]}...${NC}"
 	for b in "${MISSING_REQUIRED[@]}"; do
-		if [[ "$b" == "ts" ]]; then
-			echo -e "  ${YELLOW}→ installing tree-sitter-cli via npm...${NC}"
-			if sudo npm install -g tree-sitter-cli 2>/dev/null; then
-				echo -e "  ${GREEN}Done.${NC}"
-			else
-				echo -e "  ${RED}Failed. Run: sudo npm install -g tree-sitter-cli${NC}"
-			fi
-		else
-			pkgs=()
-			pkgs+=("$(pkg_name "$b")")
-			if install_pkg "${pkgs[@]}"; then
-				echo -e "  ${GREEN}${b} installed.${NC}"
-			else
-				echo -e "  ${RED}Failed for ${b}. Run: $(get_install_hint "${pkgs[*]}")${NC}"
-			fi
-		fi
+		echo -e "  ${YELLOW}→ installing ${b}...${NC}"
+		case "$b" in
+		cc)
+			# llvm (brew/zypper/arch) brings clang; gcc/g++ cover the rest
+			install_pkg "$(pkg_name gcc)" || install_pkg "$(pkg_name clangd)" || true
+			;;
+		ts)
+			npm_install_g tree-sitter-cli
+			;;
+		*)
+			install_pkg "$(pkg_name "$b")"
+			;;
+		esac
 	done
 	# Re-verify after install
 	MISSING_REQUIRED=()
-	check_bin "git" &>/dev/null || MISSING_REQUIRED+=("git")
-	check_bin "rg" "ripgrep" &>/dev/null || MISSING_REQUIRED+=("rg")
-	check_bin "ctags" "universal-ctags" &>/dev/null || MISSING_REQUIRED+=("ctags")
+	for bin in "${REQUIRED_BINS[@]}"; do
+		command -v "$bin" &>/dev/null || MISSING_REQUIRED+=("$bin")
+	done
 	check_cc &>/dev/null || MISSING_REQUIRED+=("cc")
 	check_ts &>/dev/null || MISSING_REQUIRED+=("ts")
-	check_bin "fzf" &>/dev/null || MISSING_REQUIRED+=("fzf")
+	if [[ ${#MISSING_REQUIRED[@]} -eq 0 ]]; then
+		echo -e "${GREEN}All required tools now available.${NC}"
+	else
+		echo -e "${RED}Run: $(get_install_hint "$(for b in "${MISSING_REQUIRED[@]}"; do pkg_name "$b"; done | tr '\n' ' ')")${NC}"
+	fi
 	echo ""
 fi
 
@@ -453,34 +516,32 @@ fi
 echo -e "${BOLD}Recommended tools${NC}"
 echo "  (Missing won't block monkey-nvim, but will degrade gtags experience)"
 MISSING_RECOMMENDED=()
-for bin in global pygmentize; do
-	if check_bin "$bin" "${RECOMMENDED[$bin]}"; then
+for bin in "${RECOMMENDED_BINS[@]}"; do
+	if check_bin "$bin" "$(dep_name "$bin")"; then
 		:
 	else
+		echo -e "    ${FAIL} $(dep_name "$bin")"
 		MISSING_RECOMMENDED+=("$bin")
-		echo -e "    ${FAIL} ${RECOMMENDED[$bin]}"
 	fi
 done
 echo ""
 
 if $INSTALL_MODE && [[ ${#MISSING_RECOMMENDED[@]} -gt 0 ]]; then
 	echo -e "${YELLOW}Installing: ${MISSING_RECOMMENDED[*]}...${NC}"
-	for b in "${MISSING_RECOMMENDED[@]}"; do
-		pkgs=()
-		pkgs+=("$(pkg_name "$b")")
-		if install_pkg "${pkgs[@]}"; then
-			echo -e "  ${GREEN}${b} installed.${NC}"
-		else
-			echo -e "  ${RED}Failed for ${b}. Run: $(get_install_hint "${pkgs[*]}")${NC}"
-		fi
-	done
+	pkgs=()
+	for b in "${MISSING_RECOMMENDED[@]}"; do pkgs+=("$(pkg_name "$b")"); done
+	if install_pkg "${pkgs[@]}"; then
+		echo -e "${GREEN}Done.${NC}"
+	else
+		echo -e "${RED}Failed. Run: $(get_install_hint "${pkgs[*]}")${NC}"
+	fi
 	echo ""
 fi
 
 if $INSTALL_MODE; then
 	MISSING_OPTIONAL=()
-	for group in "C/C++" "Go" "Python" "Zig" "Rust" "Lua" "Shell" "Vim" "JavaScript/TypeScript" "JSON" "YAML" "Markdown" "Optional tools"; do
-		for bin in ${DEPS_BY_GROUP[$group]}; do
+	for group in "${DEP_GROUPS[@]}"; do
+		for bin in $(deps_for_group "$group"); do
 			if ! command -v "$bin" &>/dev/null; then
 				MISSING_OPTIONAL+=("$bin")
 			fi
@@ -510,47 +571,47 @@ echo -e "${BOLD}Optional: LSP servers & language tools${NC}"
 echo "  (Install only what you need; missing servers won't block monkey-nvim)"
 echo ""
 
-if ! $INSTALL_MODE; then
-	declare -A INSTALL_HINTS
-	INSTALL_HINTS["clangd"]="$(get_install_hint clangd)  # or clangd-15+"
-	INSTALL_HINTS["gcc"]="$(get_install_hint gcc)"
-	INSTALL_HINTS["g++"]="$(get_install_hint g++)"
-	INSTALL_HINTS["go"]="https://go.dev/dl/"
-	INSTALL_HINTS["gopls"]="go install golang.org/x/tools/gopls@latest"
-	INSTALL_HINTS["python3"]="$(get_install_hint python3)"
-	INSTALL_HINTS["pylsp"]="pip install python-lsp-server"
-	INSTALL_HINTS["cargo"]="https://rustup.rs/  # then: rustup component add rust-analyzer"
-	INSTALL_HINTS["rust-analyzer"]="rustup component add rust-analyzer"
-	INSTALL_HINTS["node"]="https://nodejs.org/  # or: $(get_install_hint nodejs npm)"
-	INSTALL_HINTS["bash-language-server"]="npm install -g bash-language-server"
-	INSTALL_HINTS["shfmt"]="go install mvdan.cc/sh/v3/cmd/shfmt@latest"
-	INSTALL_HINTS["staticcheck"]="go install honnef.co/go/tools/cmd/staticcheck@latest"
-	INSTALL_HINTS["black"]="pip3 install black"
-	INSTALL_HINTS["clang-tidy"]="$(get_install_hint clang-tidy)"
-	INSTALL_HINTS["vim-language-server"]="npm install -g vim-language-server"
-	INSTALL_HINTS["typescript-language-server"]="npm install -g typescript-language-server typescript"
-	INSTALL_HINTS["tsc"]="npm install -g typescript"
-	INSTALL_HINTS["vscode-json-language-server"]="npm install -g vscode-langservers-extracted"
-	INSTALL_HINTS["yaml-language-server"]="npm install -g yaml-language-server"
-	INSTALL_HINTS["lua-language-server"]="$(get_install_hint lua-language-server)"
-	INSTALL_HINTS["efm-langserver"]="go install github.com/mattn/efm-langserver@latest"
-	INSTALL_HINTS["prettier"]="npm install -g prettier"
-	INSTALL_HINTS["markdownlint-cli2"]="npm install -g markdownlint-cli2"
-	INSTALL_HINTS["marksman"]="$(get_install_hint marksman)"
-	INSTALL_HINTS["zig"]="brew install zig  # or: https://ziglang.org/download/"
-	INSTALL_HINTS["zls"]="brew install zls  # or: https://zigtools.org/zls/install/  (must match zig version)"
-	INSTALL_HINTS["glow"]="$(get_install_hint glow)  # or: go install github.com/charmbracelet/glow@latest"
-fi
+# Install hint for an optional binary (used outside --install mode).
+hint_for() {
+	case "$1" in
+	clangd) echo "$(get_install_hint clangd)  # or clangd-15+" ;;
+	gcc | g++ | python3) echo "$(get_install_hint "$1")" ;;
+	go) echo "https://go.dev/dl/" ;;
+	gopls) echo "go install golang.org/x/tools/gopls@latest" ;;
+	pylsp) echo "$(get_install_hint "$(pkg_name pylsp)")  # or: pip install python-lsp-server" ;;
+	cargo) echo "https://rustup.rs/  # then: rustup component add rust-analyzer" ;;
+	rust-analyzer) echo "rustup component add rust-analyzer" ;;
+	node) echo "https://nodejs.org/  # or: $(get_install_hint nodejs npm)" ;;
+	bash-language-server) echo "npm install -g bash-language-server" ;;
+	shfmt) echo "go install mvdan.cc/sh/v3/cmd/shfmt@latest" ;;
+	staticcheck) echo "go install honnef.co/go/tools/cmd/staticcheck@latest" ;;
+	black) echo "$(get_install_hint "$(pkg_name black)")  # or: pip3 install black" ;;
+	clang-tidy) echo "$(get_install_hint clang-tidy)" ;;
+	vim-language-server) echo "npm install -g vim-language-server" ;;
+	typescript-language-server) echo "npm install -g typescript-language-server typescript" ;;
+	tsc) echo "npm install -g typescript" ;;
+	vscode-json-language-server) echo "npm install -g vscode-langservers-extracted" ;;
+	yaml-language-server) echo "npm install -g yaml-language-server" ;;
+	lua-language-server) echo "$(get_install_hint lua-language-server)" ;;
+	efm-langserver) echo "go install github.com/mattn/efm-langserver@latest" ;;
+	prettier) echo "npm install -g prettier" ;;
+	markdownlint-cli2) echo "npm install -g markdownlint-cli2" ;;
+	marksman) echo "$(get_install_hint marksman)" ;;
+	zig) echo "brew install zig  # or: https://ziglang.org/download/" ;;
+	zls) echo "brew install zls  # or: https://zigtools.org/zls/install/  (must match zig version)" ;;
+	glow) echo "$(get_install_hint glow)  # or: go install github.com/charmbracelet/glow@latest" ;;
+	esac
+}
 
-for group in "C/C++" "Go" "Python" "Zig" "Rust" "Lua" "Shell" "Vim" "JavaScript/TypeScript" "JSON" "YAML" "Markdown" "Optional tools"; do
+for group in "${DEP_GROUPS[@]}"; do
 	echo -e "  ${BOLD}${group}${NC}"
-	for bin in ${DEPS_BY_GROUP[$group]}; do
+	for bin in $(deps_for_group "$group"); do
 		status=0
 		check_bin "$bin" &>/dev/null || status=$?
 		if [[ $status -eq 0 ]]; then
 			echo -e "    ${PASS} ${bin}"
 		else
-			echo -e "    ${FAIL} ${bin}  ${NC}${INSTALL_HINTS[$bin]}"
+			echo -e "    ${FAIL} ${bin}  ${NC}$(hint_for "$bin")"
 		fi
 	done
 	echo ""
