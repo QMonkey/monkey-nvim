@@ -441,6 +441,7 @@ It should resolve to `getty@.service`.
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | Colorscheme                                               |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | Status line                                               |
 | [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | Indent guide                                              |
+| [echasnovski/mini.extra](https://github.com/echasnovski/mini.extra)                     | Extra mini.nvim modules (ai specs)                        |
 | [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | Text objects                                              |
 | [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | Surround text with parens/quotes/etc                      |
 | [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | Comment toggling                                          |
@@ -483,8 +484,8 @@ The "Leader" key below means comma key.
 #### 1.1 Remap
 
 ```text
-s       Replace a motion/text object with clipboard content (see §1.7)
-S       Replace from cursor to end of line with clipboard content (see §1.7)
+x       Replace a motion/text object with clipboard content (see §1.7)
+X       Replace from cursor to end of line with clipboard content (see §1.7)
 Y       Copy from the cursor position to the end of the line, same as y$
 H       To the first non-blank character of the line, same as ^
 L       To the last character of the line, same as $
@@ -558,9 +559,9 @@ Leader+]    Jump to last tab
 #### 1.6 Replace (substitute.nvim)
 
 ```text
-s{textobj}  Replace a text object with clipboard content (e.g. siw to replace current word)
-ss          Replace entire current line with clipboard content
-S           Replace from cursor to end of line with clipboard content
+x{textobj}  Replace a text object with clipboard content (e.g. xiw to replace current word)
+xx          Replace entire current line with clipboard content
+X           Replace from cursor to end of line with clipboard content
 ```
 
 #### 1.7 LSP (Language Server Protocol)
@@ -650,17 +651,97 @@ Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mo
 #### 1.13 Surround (mini.surround)
 
 ```text
-ys+textobj+surroundA        Add surround A for the region of textobj
-yss+surroundA               Add surround A for current line
-ds+surroundA                Delete surround A
-cs+surroundA+surroundB      Change surround A to B
+sa+textobj+surroundA        Add surround A for the region of textobj
+sd+surroundA                Delete surround A (2sd" deletes the 2nd nesting level)
+sr+surroundA+surroundB      Change surround A to B
 ```
 
-#### 1.14 Others
+#### 1.14 Operators
+
+Operators combine with text objects (§1.15) or motions: `{operator}{textobject}`. All operators below accept `[count]`.
+
+```text
+# Native Vim
+d c y           Delete / change / yank
+gu gU g~        Lowercase / uppercase / toggle case
+> <             Shift indent
+=               Reindent
+!               Filter lines through external command
+gn gN           Operate on the next / previous search match
+gc              Toggle comment (Comment.nvim)
+
+# substitute.nvim (see §1.6)
+x               Replace text object / motion with register content
+xx              Replace entire current line
+X               Replace from cursor to end of line
+
+# mini.surround (see §1.13)
+sa{motion}{char}    Add surround (2saiw doubles the buns)
+sd{char}            Delete surround    [count] = nesting level, e.g. 2sd"
+sr{old}{new}        Replace surround   [count] = nesting level
+```
+
+#### 1.15 Text objects (mini.ai / vim-matchup / flash.nvim)
+
+All text objects work with every operator (§1.14). mini.ai takes over the `a` / `i` prefix in operator-pending and visual mode, waits for a single identifier character, and falls back to native behavior for unknown identifiers. Consecutive application (e.g. `a(` twice in visual mode) expands the selection.
+
+```text
+# Native Vim (unknown identifiers fall back to these)
+iw aw iW aW     Word / WORD
+is as ip ap     Sentence / paragraph
+i( a( i[ a[ i{ a{ i< a<   Brackets
+i" a" i' a' i` a`   Quotes
+it / at         HTML/XML tag
+gn / gN         Last search pattern match
+
+# mini.ai (enhanced search; treesitter-backed specs)
+( ) [ ] { } < >     Balanced brackets (open and close forms)
+b               Auto-detect any of ) ] }
+" ' `           Balanced quotes
+q               Auto-detect any of " ' `
+t               Tag (balanced)
+f               Function call (treesitter)
+a               Argument (treesitter)
+i               Indent block: `ii` inner / `ai` around (e.g. dii, dai, yii)
+L               Line: `iL` without indent / `aL` whole line (2aL spans two lines)
+B               Buffer: `aB` all lines / `iB` without leading/trailing blank lines
+?               User prompt (type two separator characters)
+
+# vim-matchup (keyword blocks)
+i% / a%         Inside / around if...endif, function...endfunction, etc.
+2i%             Inside of the 2nd surrounding block
+
+# flash.nvim (treesitter selection)
+F               In visual mode: expand selection to the enclosing treesitter node
+                In operator-pending mode: operate on the treesitter node under cursor
+```
+
+`[count]` semantics:
+
+```text
+Native          Repeats the object (2iw = two words); no nesting count
+mini.ai         Brackets / quotes / tags: count = nesting level (2a( = one level out)
+                Consecutive application in visual mode also expands outward
+vim-matchup     Count = the count-th surrounding block
+```
+
+Notes on the custom identifiers (`i` / `L` / `B`) and Neovim 0.13:
+
+- Lowercase `l` is not usable as an identifier: mini.ai's default `al` / `il`
+  extended mappings (around/inside-last, i.e. search previous occurrence)
+  shadow it. That is intentional upstream: Neovim 0.13 ships native `il`/`al`,
+  and mini.ai keeps shadowing them for backwards compatibility.
+- The native 0.13 `il` ("inner line") strips leading AND trailing whitespace
+  and fails on blank lines; our `iL` strips only the indent and keeps trailing
+  whitespace.
+- The native 0.13 `al` means "all lines" (whole buffer, linewise); our `aL`
+  means the current line (charwise) and `aB` is the buffer. Side effect: the
+  native `{}` block alias `aB` is shadowed — use `a{` / `a}` instead.
+
+#### 1.16 Others
 
 ```text
 Leader+ws       Save session
-Leader+wl       Browse/switch sessions
 Leader+rs       Remove session (asks for confirmation)
 
 '.              Jump to last changes
@@ -706,7 +787,9 @@ In quickfix/location windows:
 
 `gdefault` is set, so `:s` performs global substitution (all matches per line) by default. `jumpoptions+=stack` makes the jumplist behave like the tagstack.
 
-#### 1.15 Auto-insert file headers
+Viminfo equivalent (shada) is per-project: command/search history, registers and file marks are stored in `~/.local/state/nvim/shada/<project-root-flattened>.shada` (project root detected by walking up from the startup directory for `.git`/`.root`/`.hg`/... markers, falling back to `~`), so histories do not leak between projects. Unlike Vim's viminfo, Neovim's shada does not persist the jumplist.
+
+#### 1.17 Auto-insert file headers
 
 New `.sh` and `.py` files get a shebang line automatically inserted:
 
@@ -752,22 +835,22 @@ Leader+a        Search selected text in current directory (fzf-lua)
 #### 3.3 Replace
 
 ```text
-s{textobj}  Replace a text object with clipboard content (e.g. siw)
-ss          Replace entire current line with clipboard content
-S           Replace from cursor to end of line with clipboard content
+x{textobj}  Replace a text object with clipboard content (e.g. xiw)
+xx          Replace entire current line with clipboard content
+X           Replace from cursor to end of line with clipboard content
 ```
 
 #### 3.4 Easy motion (flash.nvim)
 
 ```text
 f       Search 1 character to jump with hints (flash.nvim)
-F       Treesitter-based jump
+F       Treesitter-based selection (visual: expand selection; operator-pending: select node)
 ```
 
 #### 3.5 Surround (mini.surround)
 
 ```text
-S+surroundA     Add surround A for selected text (mini.surround)
+sa+surroundA     Add surround A for selected text (2sa doubles the buns)
 ```
 
 ### 4. Command line mode
