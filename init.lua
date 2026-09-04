@@ -440,6 +440,19 @@ local function mc_active()
   return mc() ~= nil and mc().hasCursors()
 end
 
+-- Shared mc() block color for the lualine a and z sections: during a
+-- multi-cursor session both turn purple
+local function mc_color()
+  if mc_active() then
+    if is_tty_console then
+      return { fg = 0, bg = 13, gui = 'bold' }
+    end
+    local purple = vim.fn.mode() ~= 'n' and '#9d7cd8' or '#bb97ee'
+    return { fg = '#2b2d3a', bg = purple, gui = 'bold' }
+  end
+  return {}
+end
+
 require('lualine').setup({
   options = {
     theme = not is_tty_console and 'sonokai' or '16color',
@@ -468,22 +481,13 @@ require('lualine').setup({
           end
           return require('lualine.utils.mode').get_mode()
         end,
-        color = function()
-          if mc_active() then
-            if is_tty_console then
-              return { fg = 0, bg = 13, gui = 'bold' }
-            end
-            local purple = vim.fn.mode() ~= 'n' and '#9d7cd8' or '#bb9af7'
-            return { fg = '#1a1b26', bg = purple, gui = 'bold' }
-          end
-          return {}
-        end,
+        color = mc_color,
       },
     },
     lualine_b = {
-      { 'branch', icon = '⎇' },
+      { 'branch',      icon = '' },
       { 'diff' },
-      { 'diagnostics' },
+      { 'diagnostics', sections = { 'error', 'warn', 'info', 'hint' } },
     },
     lualine_c = {
       { 'filename', path = 0 },
@@ -504,7 +508,9 @@ require('lualine').setup({
       'filetype', 'fileformat', 'encoding',
     },
     lualine_y = { 'progress' },
-    lualine_z = { 'location' },
+    lualine_z = {
+      { 'location', color = mc_color },
+    },
   },
   inactive_sections = {
     lualine_a = {},
@@ -1018,6 +1024,20 @@ vim.opt.updatetime = 300
 -- Display
 vim.opt.list = true
 vim.opt.listchars = 'tab:▸ ,leadmultispace:│   ,eol:¬,trail:·'
+
+-- Trailing whitespace in red (matchadd is window-local; priority -1 keeps it below Search/IncSearch)
+vim.api.nvim_set_hl(0, 'TrailingSpace', { bg = '#fb617e' })
+vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter' }, {
+  group = vim.api.nvim_create_augroup('TrailingWhitespace', { clear = true }),
+  callback = function()
+    for _, m in ipairs(vim.fn.getmatches()) do
+      if m.group == 'TrailingSpace' then
+        return
+      end
+    end
+    vim.fn.matchadd('TrailingSpace', [[\s\+$]], -1)
+  end,
+})
 
 -- Scroll
 vim.opt.scrolloff = 7
