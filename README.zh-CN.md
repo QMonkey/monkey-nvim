@@ -441,6 +441,7 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | 配色方案                               |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | 状态栏                                 |
 | [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | 缩进参考线                             |
+| [echasnovski/mini.extra](https://github.com/echasnovski/mini.extra)                     | mini.nvim 扩展模块（ai 规格）          |
 | [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | 文本对象                               |
 | [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | 围绕字符编辑                           |
 | [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | 注释切换                               |
@@ -483,8 +484,8 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 #### 1.1 按键修改
 
 ```text
-s       用剪贴板的内容替换文本对象选中的字符串（详见§1.6）
-S       用剪贴板的内容替换当前光标到行尾的文本（详见§1.6）
+x       用剪贴板的内容替换文本对象选中的字符串（详见§1.6）
+X       用剪贴板的内容替换当前光标到行尾的文本（详见§1.6）
 Y       复制到行尾，相当于"y$"命令
 H       跳到当前行第一个非空字符,相当于"^"命令
 L       跳到当前行最后一个字符,相当于"$"命令
@@ -560,9 +561,9 @@ Leader+]    切换到最后一个tab窗口
 #### 1.6 替换（substitute.nvim）
 
 ```text
-s{文本对象}  用剪贴板内容替换一个文本对象（如 siw 替换当前词）
-ss          用剪贴板内容替换当前整行
-S           用剪贴板内容替换从光标到行尾
+x{文本对象}  用剪贴板内容替换一个文本对象（如 xiw 替换当前词）
+xx          用剪贴板内容替换当前整行
+X           用剪贴板内容替换从光标到行尾
 ```
 
 #### 1.7 LSP（Language Server Protocol）
@@ -649,17 +650,95 @@ F4      切换终端窗口（打开/隐藏）
 #### 1.13 围绕字符编辑（mini.surround）
 
 ```text
-ys+textobj+surroundA        在textobj指定的范围增A围绕字符
-yss+surroundA               在当前行增加A围绕字符
-ds+surroundA                删除A围绕字符
-cs+surroundA+surroundB      将A围绕字符改成B围绕字符
+sa+textobj+surroundA        在textobj指定的范围增A围绕字符
+sd+surroundA                删除A围绕字符（2sd" 删除第2层嵌套）
+sr+surroundA+surroundB      将A围绕字符改成B围绕字符
 ```
 
-#### 1.14 其他
+#### 1.14 操作符（Operators）
+
+操作符与文本对象（§1.15）或 motion 组合使用：`{操作符}{文本对象}`。以下操作符均支持 `[count]`。
+
+```text
+# Vim 原生
+d c y           删除 / 修改 / 复制
+gu gU g~        转小写 / 转大写 / 大小写互换
+> <             缩进调整
+=               按缩进规则重排
+!               通过外部命令过滤行
+gn gN           操作下一个 / 上一个搜索匹配
+gc              注释开关（Comment.nvim）
+
+# substitute.nvim（见 §1.6）
+x               用寄存器内容替换文本对象 / motion
+xx              替换当前整行
+X               替换光标到行尾
+
+# mini.surround（见 §1.13）
+sa{motion}{char}    增加围绕字符（2saiw 会使围绕字符翻倍）
+sd{char}            删除围绕字符    [count] = 嵌套层级，如 2sd"
+sr{old}{new}        替换围绕字符    [count] = 嵌套层级
+```
+
+#### 1.15 文本对象（mini.ai / vim-matchup / flash.nvim）
+
+所有文本对象都能配合任意操作符（§1.14）使用。mini.ai 接管了 operator-pending 和 visual 模式的 `a` / `i` 前缀，等待一个标识符字符；未识别的标识符回落到原生行为。连续输入（如 visual 模式下按两次 `a(`）可逐层扩展选区。
+
+```text
+# Vim 原生（未识别的标识符自动回落）
+iw aw iW aW     词 / 字串
+is as ip ap     句子 / 段落
+i( a( i[ a[ i{ a{ i< a<   括号
+i" a" i' a' i` a`   引号
+it / at         HTML/XML 标签
+gn / gN         上次搜索匹配
+
+# mini.ai（增强搜索，支持 treesitter）
+( ) [ ] { } < >     平衡括号（开闭两种形式）
+b               自动检测 ) ] }
+" ' `           平衡引号
+q               自动检测 " ' `
+t               标签（平衡匹配）
+f               函数调用（tree-sitter）
+a               函数参数（tree-sitter）
+i               缩进块：`ii` 内部 / `ai` 范围（如 dii、dai、yii）
+L               行：`iL` 去缩进 / `aL` 整行（2aL 跨两行）
+B               缓冲区：`aB` 全部行 / `iB` 去掉首尾空行
+?               交互输入（输入两个分隔符字符）
+
+# vim-matchup（关键词块）
+i% / a%         if...endif、function...endfunction 等的内部 / 范围
+2i%             第 2 层包围块的内部
+
+# flash.nvim（treesitter 选区）
+F               visual 模式：选区扩展到外层 treesitter 节点
+                operator-pending 模式：对光标下的 treesitter 节点执行操作
+```
+
+各插件的 `[count]` 语义：
+
+```text
+Vim 原生        重复对象本身（2iw = 两个词）；括号类无嵌套 count
+mini.ai         括号 / 引号 / 标签：count = 嵌套层级（2a( 选外一层）
+                visual 模式下连续输入同样向外扩展
+vim-matchup     count = 第 N 层包围块
+```
+
+自定义标识符（`i` / `L` / `B`）与 Neovim 0.13 的说明：
+
+- 小写 `l` 不能用作标识符：mini.ai 默认的 `al` / `il` 扩展映射
+  （around/inside-last，即"上一个匹配对象"）会遮蔽它。这是上游的刻意行为：
+  Neovim 0.13 新增了原生 `il`/`al`，mini.ai 为向后兼容继续遮蔽。
+- 0.13 原生 `il`（"inner line"）去除首部**和尾部**空白，且在空白行上直接失败；
+  我们的 `iL` 只去缩进、保留尾部空白。
+- 0.13 原生 `al` 是 "all lines"（整个 buffer，linewise）；我们的 `aL` 是当前行
+  （charwise），整个 buffer 是 `aB`。副作用：原生 `{}` 块别名 `aB` 被遮蔽，
+  请改用 `a{` / `a}`。
+
+#### 1.16 其他
 
 ```text
 Leader+ws       保存session
-Leader+wl       浏览/切换session
 Leader+rs       删除session（需确认）
 
 '.              最后一次变更的地方
@@ -705,7 +784,9 @@ SudoWrite           使用 root 权限保存文件
 
 `gdefault` 已设置，`:s` 默认执行全局替换。`jumpoptions+=stack` 使跳转列表行为类似标签栈。
 
-#### 1.15 自动插入文件头
+Viminfo 的对应物 shada 按工程隔离：命令/搜索历史、寄存器和 file marks 保存到 `~/.local/state/nvim/shada/<工程根目录扁平化>.shada`（从启动目录向上查找 `.git`/`.root`/`.hg`/... 标记定位工程根，找不到时回退到 `~`），各工程的历史互不干扰。与 Vim 的 viminfo 不同，Neovim 的 shada 不持久化跳转列表。
+
+#### 1.17 自动插入文件头
 
 新建 `.sh` 和 `.py` 文件会自动插入 shebang 行：
 
@@ -751,22 +832,22 @@ Leader+a        当前目录搜索选中字符串（fzf-lua）
 #### 3.3 替换
 
 ```text
-s{文本对象}  用剪贴板内容替换文本对象（如 siw）
-ss          用剪贴板内容替换当前整行
-S           用剪贴板内容替换光标到行尾
+x{文本对象}  用剪贴板内容替换文本对象（如 xiw）
+xx          用剪贴板内容替换当前整行
+X           用剪贴板内容替换光标到行尾
 ```
 
 #### 3.4 快速跳转（flash.nvim）
 
 ```text
 f           搜索1个字符并跳转（flash.nvim）
-F           基于 treesitter 的跳转
+F           基于 treesitter 的选区（visual 扩展选区 / operator-pending 选中节点）
 ```
 
 #### 3.5 围绕字符编辑（mini.surround）
 
 ```text
-S+surroundA     选中字符串增加A围绕字符
+sa+surroundA     选中字符串增加A围绕字符（2sa 使围绕字符翻倍）
 ```
 
 ### 4. 命令行模式
