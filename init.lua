@@ -71,6 +71,7 @@ local nav_specs = {
     config = function()
       local fzf_lua = require('fzf-lua')
       fzf_lua.setup({
+        ui_select = {},
         defaults = {
           silent = true,
           file_ignore_patterns = { '.git/', '.hg/', '.svn/', '.bzr/' },
@@ -320,6 +321,115 @@ local tools_specs = {
         direction = 'horizontal',
         start_in_insert = true,
         persist_mode = false,
+      })
+    end,
+  },
+  {
+    src = 'https://github.com/folke/sidekick.nvim',
+    cmd = { 'Sidekick' },
+    keys = {
+      {
+        '<leader>ii',
+        function()
+          require('sidekick.cli').toggle()
+        end,
+        desc = 'Sidekick: toggle CLI (nvim terminal only)',
+      },
+      {
+        '<leader>is',
+        function()
+          require('sidekick.cli').select()
+        end,
+        desc = 'Sidekick: select CLI',
+      },
+      {
+        '<leader>id',
+        function()
+          require('sidekick.cli').close()
+        end,
+        desc = 'Sidekick: detach CLI session',
+      },
+      {
+        '<leader>it',
+        function()
+          require('sidekick.cli').send({ msg = '{this}' })
+        end,
+        mode = { 'x', 'n' },
+        desc = 'Sidekick: send this',
+      },
+      {
+        '<leader>if',
+        function()
+          require('sidekick.cli').send({ msg = '{file}' })
+        end,
+        desc = 'Sidekick: send file',
+      },
+      {
+        '<leader>iv',
+        function()
+          require('sidekick.cli').send({ msg = '{selection}' })
+        end,
+        mode = { 'x' },
+        desc = 'Sidekick: send visual selection',
+      },
+      {
+        '<leader>im',
+        function()
+          local state = require('sidekick.cli.state')
+          state.with(function(s)
+            if s.session then
+              s.session:submit()
+            end
+          end)
+        end,
+        desc = 'Sidekick: submit prompt (select if multiple)',
+      },
+      {
+        '<leader>ip',
+        function()
+          require('sidekick.cli').prompt()
+        end,
+        mode = { 'n', 'x' },
+        desc = 'Sidekick: select prompt',
+      },
+    },
+    dependencies = {
+      { src = 'https://github.com/ibhagwan/fzf-lua' },
+    },
+    config = function()
+      require('sidekick').setup({
+        nes = {
+          enabled = false,
+        },
+        cli = {
+          watch = true,
+          win = {
+            layout = 'right',
+            split = { width = 0.5 },
+          },
+          picker = 'fzf-lua',
+          mux = {
+            enabled = vim.fn.executable('tmux') == 1,
+            create = 'split',
+            split = {
+              vertical = true,
+              size = 0.5,
+            },
+          },
+        },
+        ui = {
+          icons = {
+            nes = '',
+            attached = '*',
+            started = '>',
+            installed = '+',
+            missing = '-',
+            external_attached = 'E*',
+            external_started = 'E>',
+            terminal_attached = 'T*',
+            terminal_started = 'T>',
+          },
+        },
       })
     end,
   },

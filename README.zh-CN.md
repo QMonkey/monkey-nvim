@@ -472,6 +472,7 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | 诊断/quickfix 列表                     |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | 多光标编辑                             |
 | [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | 终端切换                               |
+| [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI 集成（opencode/claude/codex）   |
 
 ## 快捷键
 
@@ -647,7 +648,32 @@ F4      切换终端窗口（打开/隐藏）
 
 使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。
 
-#### 1.13 围绕字符编辑（mini.surround）
+#### 1.13 Sidekick（AI CLI）
+
+```text
+,ii     打开/关闭 opencode 终端窗口
+,is     选择 CLI 工具
+,id     断开 CLI 会话
+,im     提交当前输入（多个会话时弹出选择）
+,if     发送当前文件
+```
+
+以下在普通模式和可视化模式下均可用：
+
+```text
+,it     发送当前上下文（word/line）
+,ip     选择 prompt 模板
+```
+
+仅可视化模式：
+
+```text
+,iv     发送可视选区
+```
+
+
+
+#### 1.14 围绕字符编辑（mini.surround）
 
 ```text
 sa+textobj+surroundA        在textobj指定的范围增A围绕字符
@@ -655,9 +681,9 @@ sd+surroundA                删除A围绕字符（2sd" 删除第2层嵌套）
 sr+surroundA+surroundB      将A围绕字符改成B围绕字符
 ```
 
-#### 1.14 操作符（Operators）
+#### 1.15 操作符（Operators）
 
-操作符与文本对象（§1.15）或 motion 组合使用：`{操作符}{文本对象}`。以下操作符均支持 `[count]`。
+操作符与文本对象（§1.16）或 motion 组合使用：`{操作符}{文本对象}`。以下操作符均支持 `[count]`。
 
 ```text
 # Vim 原生
@@ -674,15 +700,15 @@ x               用寄存器内容替换文本对象 / motion
 xx              替换当前整行
 X               替换光标到行尾
 
-# mini.surround（见 §1.13）
+# mini.surround（见 §1.14）
 sa{motion}{char}    增加围绕字符（2saiw 会使围绕字符翻倍）
 sd{char}            删除围绕字符    [count] = 嵌套层级，如 2sd"
 sr{old}{new}        替换围绕字符    [count] = 嵌套层级
 ```
 
-#### 1.15 文本对象（mini.ai / vim-matchup / flash.nvim）
+#### 1.16 文本对象（mini.ai / vim-matchup / flash.nvim）
 
-所有文本对象都能配合任意操作符（§1.14）使用。mini.ai 接管了 operator-pending 和 visual 模式的 `a` / `i` 前缀，等待一个标识符字符；未识别的标识符回落到原生行为。连续输入（如 visual 模式下按两次 `a(`）可逐层扩展选区。
+所有文本对象都能配合任意操作符（§1.15）使用。mini.ai 接管了 operator-pending 和 visual 模式的 `a` / `i` 前缀，等待一个标识符字符；未识别的标识符回落到原生行为。连续输入（如 visual 模式下按两次 `a(`）可逐层扩展选区。
 
 ```text
 # Vim 原生（未识别的标识符自动回落）
@@ -735,7 +761,7 @@ vim-matchup     count = 第 N 层包围块
   （charwise），整个 buffer 是 `aB`。副作用：原生 `{}` 块别名 `aB` 被遮蔽，
   请改用 `a{` / `a}`。
 
-#### 1.16 其他
+#### 1.17 其他
 
 ```text
 Leader+ws       保存session
@@ -786,7 +812,7 @@ SudoWrite           使用 root 权限保存文件
 
 Viminfo 的对应物 shada 按工程隔离：命令/搜索历史、寄存器和 file marks 保存到 `~/.local/state/nvim/shada/<工程根目录扁平化>.shada`（从启动目录向上查找 `.git`/`.root`/`.hg`/... 标记定位工程根，找不到时回退到 `~`），各工程的历史互不干扰。与 Vim 的 viminfo 不同，Neovim 的 shada 不持久化跳转列表。
 
-#### 1.17 自动插入文件头
+#### 1.18 自动插入文件头
 
 新建 `.sh` 和 `.py` 文件会自动插入 shebang 行：
 

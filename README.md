@@ -472,6 +472,7 @@ It should resolve to `getty@.service`.
 | [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | Diagnostics/quickfix list                                 |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | Multiple cursors                                          |
 | [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | Terminal toggling                                         |
+| [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI integration (opencode/claude/codex)                |
 
 ## Keyboard shortcut
 
@@ -648,7 +649,32 @@ F4      Toggle terminal buffer (open/hide)
 
 Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer.
 
-#### 1.13 Surround (mini.surround)
+#### 1.13 Sidekick (AI CLI)
+
+```text
+,ii     Toggle opencode terminal window
+,is     Select CLI tool
+,id     Detach CLI session
+,im     Submit current prompt (select if multiple sessions)
+,if     Send current file
+```
+
+The following work in both normal and visual mode:
+
+```text
+,it     Send current context (word/line)
+,ip     Select prompt template
+```
+
+Visual mode only:
+
+```text
+,iv     Send visual selection
+```
+
+
+
+#### 1.14 Surround (mini.surround)
 
 ```text
 sa+textobj+surroundA        Add surround A for the region of textobj
@@ -656,9 +682,9 @@ sd+surroundA                Delete surround A (2sd" deletes the 2nd nesting leve
 sr+surroundA+surroundB      Change surround A to B
 ```
 
-#### 1.14 Operators
+#### 1.15 Operators
 
-Operators combine with text objects (§1.15) or motions: `{operator}{textobject}`. All operators below accept `[count]`.
+Operators combine with text objects (§1.16) or motions: `{operator}{textobject}`. All operators below accept `[count]`.
 
 ```text
 # Native Vim
@@ -675,15 +701,15 @@ x               Replace text object / motion with register content
 xx              Replace entire current line
 X               Replace from cursor to end of line
 
-# mini.surround (see §1.13)
+# mini.surround (see §1.14)
 sa{motion}{char}    Add surround (2saiw doubles the buns)
 sd{char}            Delete surround    [count] = nesting level, e.g. 2sd"
 sr{old}{new}        Replace surround   [count] = nesting level
 ```
 
-#### 1.15 Text objects (mini.ai / vim-matchup / flash.nvim)
+#### 1.16 Text objects (mini.ai / vim-matchup / flash.nvim)
 
-All text objects work with every operator (§1.14). mini.ai takes over the `a` / `i` prefix in operator-pending and visual mode, waits for a single identifier character, and falls back to native behavior for unknown identifiers. Consecutive application (e.g. `a(` twice in visual mode) expands the selection.
+All text objects work with every operator (§1.15). mini.ai takes over the `a` / `i` prefix in operator-pending and visual mode, waits for a single identifier character, and falls back to native behavior for unknown identifiers. Consecutive application (e.g. `a(` twice in visual mode) expands the selection.
 
 ```text
 # Native Vim (unknown identifiers fall back to these)
@@ -738,7 +764,7 @@ Notes on the custom identifiers (`i` / `L` / `B`) and Neovim 0.13:
   means the current line (charwise) and `aB` is the buffer. Side effect: the
   native `{}` block alias `aB` is shadowed — use `a{` / `a}` instead.
 
-#### 1.16 Others
+#### 1.17 Others
 
 ```text
 Leader+ws       Save session
@@ -789,7 +815,7 @@ In quickfix/location windows:
 
 Viminfo equivalent (shada) is per-project: command/search history, registers and file marks are stored in `~/.local/state/nvim/shada/<project-root-flattened>.shada` (project root detected by walking up from the startup directory for `.git`/`.root`/`.hg`/... markers, falling back to `~`), so histories do not leak between projects. Unlike Vim's viminfo, Neovim's shada does not persist the jumplist.
 
-#### 1.17 Auto-insert file headers
+#### 1.18 Auto-insert file headers
 
 New `.sh` and `.py` files get a shebang line automatically inserted:
 
