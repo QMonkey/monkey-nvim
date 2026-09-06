@@ -433,6 +433,63 @@ local tools_specs = {
       })
     end,
   },
+  {
+    src = 'https://github.com/milanglacier/minuet-ai.nvim',
+    dependencies = {
+      { src = 'https://github.com/hrsh7th/nvim-cmp' },
+    },
+    event = 'InsertEnter',
+    config = function()
+      local ollama_fim = {
+        n_completions = 1,
+        context_window = 16000,
+        provider = 'openai_fim_compatible',
+        provider_options = {
+          openai_fim_compatible = {
+            api_key = 'TERM',
+            name = 'Ollama',
+            end_point = 'http://localhost:11434/v1/completions',
+            model = 'qwen2.5-coder:7b',
+            optional = {
+              max_tokens = 256,
+              top_p = 0.9,
+            },
+          },
+        },
+      }
+
+      require('minuet').setup({
+        n_completions = ollama_fim.n_completions,
+        context_window = ollama_fim.context_window,
+        provider = ollama_fim.provider,
+        provider_options = ollama_fim.provider_options,
+        presets = {
+          ollama = ollama_fim,
+          openai = {
+            context_window = 4096,
+            request_timeout = 15,
+            throttle = 3000,
+            debounce = 500,
+            provider = 'openai',
+            provider_options = {
+              openai = {
+                api_key = 'OPENAI_API_KEY',
+                model = vim.env.OPENAI_MODEL or 'gpt-4o-mini',
+                end_point = vim.env.OPENAI_BASE_URL or 'https://api.openai.com/v1/chat/completions',
+                optional = {
+                  max_completion_tokens = 512,
+                },
+              },
+            },
+          },
+        },
+      })
+
+      vim.keymap.set('n', '<leader>ic', '<cmd>Minuet cmp toggle<cr>', {
+        desc = 'Minuet: toggle cmp auto-completion',
+      })
+    end,
+  },
 }
 
 local spec = {}
@@ -2003,10 +2060,23 @@ cmp.setup({
     ['<CR>'] = cmp.mapping.confirm({ select = true }),
     ['<C-j>'] = cmp.mapping.select_next_item(),
     ['<C-k>'] = cmp.mapping.select_prev_item(),
+    ['<leader><Tab>'] = cmp.mapping(function(fallback)
+      local map = require('minuet').make_cmp_map()
+      local cb = map.i or map.s
+      if cb then
+        cb(fallback)
+      else
+        fallback()
+      end
+    end, { 'i' }),
   }),
+  performance = {
+    fetching_timeout = 2000,
+  },
   sources = cmp.config.sources({
     { name = 'nvim_lsp' },
     { name = 'luasnip' },
+    { name = 'minuet' },
   }, {
     { name = 'buffer' },
     { name = 'path' },
