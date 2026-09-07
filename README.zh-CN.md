@@ -255,10 +255,14 @@ export NVIM_MINUET_BASE_URL="https://host/provider"         # 前缀，代码会
 export NVIM_MINUET_MODEL="model-id"
 export NVIM_MINUET_NAME="DeepSeek"                          # 显示名
 
-# 本地 preset（FIM 服务：Ollama / llama.cpp / vLLM / LM Studio），可选覆盖
-export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:11434"  # 默认值，代码会拼接 /v1/completions
+# 本地 preset，可选覆盖（默认值面向 llama.cpp）
+export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:8080"   # 默认值（llama-server），代码会拼接 /v1/completions
 export NVIM_MINUET_LOCAL_MODEL="qwen2.5-coder:7b"           # 默认值
-export NVIM_MINUET_LOCAL_NAME="Ollama"                      # 默认值，显示名
+export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # 默认值，显示名
+
+# 注意：当 NVIM_MINUET_LOCAL_NAME 为 "llama.cpp" 时，请求会自动重写到
+# llama.cpp 的 /infill 端点（FIM 正确填充必需）。使用其他服务（如 Ollama）
+# 时换一个名字即可，重写会自动跳过。
 ```
 
 用法与键位见 §1.14。
