@@ -244,11 +244,15 @@ nvim --headless -c 'checkhealth' -c 'qa'
 
 ### 4. AI 补全配置（可选）
 
-minuet-ai.nvim 通过环境变量配置，启动时读取。本地 FIM preset 内置默认值、始终
-可用；远程 preset 的四个变量全部设置时才注册。export 语句加入登录 shell 配置
-（zsh 用 `~/.zprofile`，bash 用 `~/.profile` 或 `~/.bash_profile`）：
+minuet-ai.nvim 通过环境变量配置，启动时读取。设置 `NVIM_MINUET_PRESET` 选择
+生效的 preset——`local_fim` 或 `openai`；为空或未设置时跳过 minuet 的 setup，
+AI 补全整体禁用。export 语句加入登录 shell 配置（zsh 用 `~/.zprofile`，bash
+用 `~/.profile` 或 `~/.bash_profile`）：
 
 ```bash
+# 总开关：local_fim | openai（空/未设置 = 禁用 minuet）
+export NVIM_MINUET_PRESET="local_fim"
+
 # 远程 preset（OpenAI 兼容 chat 端点），全部必填
 export NVIM_MINUET_API_KEY="..."                            # API key
 export NVIM_MINUET_BASE_URL="https://host/provider"         # 前缀，代码会拼接 /v1/chat/completions
@@ -264,6 +268,10 @@ export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # 默认值，显示
 # llama.cpp 的 /infill 端点（FIM 正确填充必需）。使用其他服务（如 Ollama）
 # 时换一个名字即可，重写会自动跳过。
 ```
+
+`local_fim` preset 始终注册、内置默认值；`openai` 仅当上面四个
+`NVIM_MINUET_*` 变量全部设置时才注册。选择了一个未注册的 preset（如缺少
+变量时的 `openai`）在启动时等价于"禁用"。
 
 用法与键位见 §1.14。
 
@@ -700,16 +708,15 @@ F4      切换终端窗口（打开/隐藏）
 #### 1.14 Minuet（AI 代码补全）
 
 内联 AI 建议（virtual text），通过环境变量配置两个 preset：远程 OpenAI 兼容 chat
-端点和本地 FIM 服务（Ollama、llama.cpp、vLLM、LM Studio 等）。用 `,ia` 或
-`:Minuet change_preset openai|local_fim` 切换。
-
-配置由环境变量驱动（见安装步骤 §4）。本地 FIM preset 未覆盖时使用 Ollama
-默认值；远程 preset 的变量全部设置时才注册。
+端点和本地 FIM 服务（Ollama、llama.cpp、vLLM、LM Studio 等）。生效的 preset 在
+启动时由 `NVIM_MINUET_PRESET` 决定（见安装步骤 §4）；之后可用 `,ia` 或
+`:Minuet change_preset openai|local_fim` 切换。若 `NVIM_MINUET_PRESET` 为空或
+未设置，minuet 不会初始化，下面的键位都不会绑定。
 
 普通模式：
 
 ```text
-,ic     开关补全自动触发
+,ig     开关补全自动触发
 ,ia     切换 AI provider preset（本地 <-> 远程）
 ```
 

@@ -244,14 +244,17 @@ nvim --headless -c 'checkhealth' -c 'qa'
 
 ### 4. AI completion setup (optional)
 
-minuet-ai.nvim is configured via environment variables, read at startup. The
-local FIM preset is always available with built-in defaults; the remote preset
-is only registered when all four of its variables are set. Add the exports to
-your login shell config (`~/.zprofile` for zsh, `~/.profile` or
-`~/.bash_profile` for bash):
+minuet-ai.nvim is configured via environment variables, read at startup. Set
+`NVIM_MINUET_PRESET` to select the active preset — `local_fim` or `openai`;
+when it is empty or unset, minuet's setup is skipped entirely (AI completion is
+disabled). Add the exports to your login shell config (`~/.zprofile` for zsh,
+`~/.profile` or `~/.bash_profile` for bash):
 
 ```bash
-# Remote preset (OpenAI-compatible chat endpoint), all required
+# Master switch: local_fim | openai (empty/unset = minuet disabled)
+export NVIM_MINUET_PRESET="local_fim"
+
+# Remote preset (OpenAI-compatible chat endpoint), all four required
 export NVIM_MINUET_API_KEY="..."                            # API key
 export NVIM_MINUET_BASE_URL="https://host/provider"         # prefix; /v1/chat/completions is appended
 export NVIM_MINUET_MODEL="model-id"
@@ -267,6 +270,10 @@ export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # default, display n
 # servers (e.g. Ollama) just set a different name and the rewrite is skipped
 # automatically.
 ```
+
+The `local_fim` preset is always registered with built-in defaults; `openai` is
+only registered when all four `NVIM_MINUET_*` variables above are set. A preset
+that is not registered (e.g. `openai` without its variables) falls back to "disabled" at startup.
 
 Usage and keymaps: see §1.14.
 
@@ -705,17 +712,15 @@ Visual mode only:
 
 Inline AI suggestions (virtual text) with two presets selected via environment
 variables: a remote OpenAI-compatible chat endpoint and a local FIM server
-(Ollama, llama.cpp, vLLM, LM Studio, ...). Switch presets with `,ia` or
-`:Minuet change_preset openai|local_fim`.
-
-Configuration is environment-driven (Installation §4). The local FIM preset
-always uses Ollama defaults unless overridden; the remote preset is registered
-only when all of its variables are set.
+(Ollama, llama.cpp, vLLM, LM Studio, ...). The active preset is chosen at
+startup with `NVIM_MINUET_PRESET` (Installation §4); switch presets later with
+`,ia` or `:Minuet change_preset openai|local_fim`. If `NVIM_MINUET_PRESET` is
+empty or unset, minuet is not set up and none of the keymaps below are bound.
 
 Normal mode:
 
 ```text
-,ic     Toggle inline completion auto-trigger
+,ig     Toggle inline completion auto-trigger
 ,ia     Switch AI provider preset (local <-> remote)
 ```
 

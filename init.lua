@@ -618,9 +618,18 @@ require('lualine').setup({
       },
       'filetype', 'fileformat', 'encoding',
     },
-    lualine_y = { 'progress' },
+    lualine_y = {
+      function()
+        return string.format('%d%%%%', math.floor((100 * vim.fn.line('.')) / vim.fn.line('$')))
+      end,
+    },
     lualine_z = {
-      { 'location', color = mc_color },
+      {
+        function()
+          return string.format('%d/%d:%d', vim.fn.line('.'), vim.fn.line('$'), vim.fn.col('.'))
+        end,
+        color = mc_color,
+      },
     },
   },
   inactive_sections = {
@@ -1137,16 +1146,21 @@ vim.opt.list = true
 vim.opt.listchars = 'tab:▸ ,leadmultispace:│   ,eol:¬,trail:·'
 
 -- Trailing whitespace in red (matchadd is window-local; priority -1 keeps it below Search/IncSearch)
+-- Blacklist: filetypes that skip trailing-whitespace highlighting
+vim.g.trailing_whitespace_blacklist = { 'NeogitStatus', 'fzf', 'toggleterm', 'help' }
 vim.api.nvim_set_hl(0, 'TrailingSpace', { bg = '#fb617e' })
-vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter' }, {
+vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter', 'FileType' }, {
   group = vim.api.nvim_create_augroup('TrailingWhitespace', { clear = true }),
   callback = function()
-    for _, m in ipairs(vim.fn.getmatches()) do
+    local win = vim.api.nvim_get_current_win()
+    for _, m in ipairs(vim.fn.getmatches(win)) do
       if m.group == 'TrailingSpace' then
-        return
+        vim.fn.matchdelete(m.id, win)
       end
     end
-    vim.fn.matchadd('TrailingSpace', [[\s\+$]], -1)
+    if not vim.tbl_contains(vim.g.trailing_whitespace_blacklist, vim.bo.filetype) then
+      vim.fn.matchadd('TrailingSpace', [[\s\+$]], -1, -1, { window = win })
+    end
   end,
 })
 
@@ -1675,7 +1689,7 @@ vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = t
 -- minuet-ai.nvim
 local minuet_presets = {}
 local minuet_preset_order = {}
-local minuet_current_preset = nil
+local minuet_current_preset = vim.env.NVIM_MINUET_PRESET
 
 local local_fim_name = vim.env.NVIM_MINUET_LOCAL_NAME or 'llama.cpp'
 local local_fim_options = {
@@ -1721,7 +1735,6 @@ minuet_presets.local_fim = {
   },
 }
 minuet_preset_order[#minuet_preset_order + 1] = 'local_fim'
-minuet_current_preset = 'local_fim'
 
 if vim.env.NVIM_MINUET_API_KEY
     and vim.env.NVIM_MINUET_BASE_URL
@@ -1749,50 +1762,51 @@ then
     },
   }
   minuet_preset_order[#minuet_preset_order + 1] = 'openai'
-  minuet_current_preset = 'openai'
 end
 
-require('minuet').setup({
-  n_completions = minuet_presets[minuet_current_preset].n_completions or 1,
-  context_window = minuet_presets[minuet_current_preset].context_window,
-  request_timeout = minuet_presets[minuet_current_preset].request_timeout,
-  throttle = minuet_presets[minuet_current_preset].throttle,
-  debounce = minuet_presets[minuet_current_preset].debounce,
-  provider = minuet_presets[minuet_current_preset].provider,
-  provider_options = minuet_presets[minuet_current_preset].provider_options,
-  presets = minuet_presets,
-  cmp = { enable_auto_complete = false },
-  virtualtext = {
-    auto_trigger_ft = { '*' },
-    auto_trigger_ignore_ft = {
-      'help', 'markdown', 'text', 'gitcommit', 'gitrebase', 'qf', 'TelescopePrompt', 'DressingInput', 'toggleterm',
+if minuet_presets[minuet_current_preset] then
+  require('minuet').setup({
+    n_completions = minuet_presets[minuet_current_preset].n_completions or 1,
+    context_window = minuet_presets[minuet_current_preset].context_window,
+    request_timeout = minuet_presets[minuet_current_preset].request_timeout,
+    throttle = minuet_presets[minuet_current_preset].throttle,
+    debounce = minuet_presets[minuet_current_preset].debounce,
+    provider = minuet_presets[minuet_current_preset].provider,
+    provider_options = minuet_presets[minuet_current_preset].provider_options,
+    presets = minuet_presets,
+    cmp = { enable_auto_complete = false },
+    virtualtext = {
+      auto_trigger_ft = { '*' },
+      auto_trigger_ignore_ft = {
+        'help', 'markdown', 'text', 'gitcommit', 'gitrebase', 'qf', 'TelescopePrompt', 'DressingInput', 'toggleterm',
+      },
     },
-  },
-})
+  })
 
-vim.keymap.set('n', '<leader>ig', '<cmd>Minuet virtualtext toggle<cr>', {
-  desc = 'Minuet: toggle virtual text auto-trigger',
-})
-vim.keymap.set('n', '<leader>ia', function()
-  local next_name
-  for i, name in ipairs(minuet_preset_order) do
-    if name == minuet_current_preset then
-      next_name = minuet_preset_order[i % #minuet_preset_order + 1]
-      break
+  vim.keymap.set('n', '<leader>ig', '<cmd>Minuet virtualtext toggle<cr>', {
+    desc = 'Minuet: toggle virtual text auto-trigger',
+  })
+  vim.keymap.set('n', '<leader>ia', function()
+    local next_name
+    for i, name in ipairs(minuet_preset_order) do
+      if name == minuet_current_preset then
+        next_name = minuet_preset_order[i % #minuet_preset_order + 1]
+        break
+      end
     end
-  end
-  next_name = next_name or minuet_preset_order[1]
-  require('minuet').change_preset(next_name)
-  minuet_current_preset = next_name
-end, { desc = 'Minuet: cycle provider preset' })
+    next_name = next_name or minuet_preset_order[1]
+    require('minuet').change_preset(next_name)
+    minuet_current_preset = next_name
+  end, { desc = 'Minuet: cycle provider preset' })
 
-local minuet_vt = require('minuet.virtualtext').action
-vim.keymap.set('i', '<A-a>', minuet_vt.accept, { desc = 'Minuet: accept suggestion' })
-vim.keymap.set('i', '<A-l>', minuet_vt.accept_line, { desc = 'Minuet: accept one line' })
-vim.keymap.set('i', '<A-y>', minuet_vt.accept_n_lines, { desc = 'Minuet: accept n lines' })
-vim.keymap.set('i', '<A-n>', minuet_vt.next, { desc = 'Minuet: next suggestion' })
-vim.keymap.set('i', '<A-p>', minuet_vt.prev, { desc = 'Minuet: prev suggestion' })
-vim.keymap.set('i', '<A-d>', minuet_vt.dismiss, { desc = 'Minuet: dismiss suggestion' })
+  local minuet_vt = require('minuet.virtualtext').action
+  vim.keymap.set('i', '<A-a>', minuet_vt.accept, { desc = 'Minuet: accept suggestion' })
+  vim.keymap.set('i', '<A-l>', minuet_vt.accept_line, { desc = 'Minuet: accept one line' })
+  vim.keymap.set('i', '<A-y>', minuet_vt.accept_n_lines, { desc = 'Minuet: accept n lines' })
+  vim.keymap.set('i', '<A-n>', minuet_vt.next, { desc = 'Minuet: next suggestion' })
+  vim.keymap.set('i', '<A-p>', minuet_vt.prev, { desc = 'Minuet: prev suggestion' })
+  vim.keymap.set('i', '<A-d>', minuet_vt.dismiss, { desc = 'Minuet: dismiss suggestion' })
+end
 
 -- LSP
 vim.api.nvim_set_hl(0, 'LspReferenceText', { link = 'Search' })
