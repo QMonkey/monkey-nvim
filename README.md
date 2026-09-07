@@ -257,10 +257,15 @@ export NVIM_MINUET_BASE_URL="https://host/provider"         # prefix; /v1/chat/c
 export NVIM_MINUET_MODEL="model-id"
 export NVIM_MINUET_NAME="DeepSeek"                          # display name
 
-# Local preset (FIM server: Ollama / llama.cpp / vLLM / LM Studio), optional overrides
-export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:11434"  # default, /v1/completions is appended
+# Local preset, optional overrides (defaults target llama.cpp)
+export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:8080"   # default (llama-server), /v1/completions is appended
 export NVIM_MINUET_LOCAL_MODEL="qwen2.5-coder:7b"           # default
-export NVIM_MINUET_LOCAL_NAME="Ollama"                      # default, display name
+export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # default, display name
+
+# Note: when NVIM_MINUET_LOCAL_NAME is "llama.cpp", requests are rewritten to
+# llama.cpp's /infill endpoint (required for correct FIM infill). For other
+# servers (e.g. Ollama) just set a different name and the rewrite is skipped
+# automatically.
 ```
 
 Usage and keymaps: see §1.14.
