@@ -242,7 +242,28 @@ Neovim 使用的 Unicode 字符（⎇, │, ▸, ·, ¬）无需额外字体即�
 nvim --headless -c 'checkhealth' -c 'qa'
 ```
 
-### 4. 安装
+### 4. AI 补全配置（可选）
+
+minuet-ai.nvim 通过环境变量配置，启动时读取。本地 FIM preset 内置默认值、始终
+可用；远程 preset 的四个变量全部设置时才注册。export 语句加入登录 shell 配置
+（zsh 用 `~/.zprofile`，bash 用 `~/.profile` 或 `~/.bash_profile`）：
+
+```bash
+# 远程 preset（OpenAI 兼容 chat 端点），全部必填
+export NVIM_MINUET_API_KEY="..."                            # API key
+export NVIM_MINUET_BASE_URL="https://host/provider"         # 前缀，代码会拼接 /v1/chat/completions
+export NVIM_MINUET_MODEL="model-id"
+export NVIM_MINUET_NAME="DeepSeek"                          # 显示名
+
+# 本地 preset（FIM 服务：Ollama / llama.cpp / vLLM / LM Studio），可选覆盖
+export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:11434"  # 默认值，代码会拼接 /v1/completions
+export NVIM_MINUET_LOCAL_MODEL="qwen2.5-coder:7b"           # 默认值
+export NVIM_MINUET_LOCAL_NAME="Ollama"                      # 默认值，显示名
+```
+
+用法与键位见 §1.14。
+
+### 5. 安装
 
 - Linux、macOS、WSL
 
@@ -255,7 +276,7 @@ nvim --headless -c 'ZPack sync' -c 'qa'   # 安装所有插件
 nvim
 ```
 
-### 5. 更新
+### 6. 更新
 
 ```bash
 cd monkey-nvim
@@ -268,11 +289,11 @@ git pull
 :ZPack update
 ```
 
-### 6. kmscon 安装与使用（可选）
+### 7. kmscon 安装与使用（可选）
 
 [kmscon](https://github.com/kmscon/kmscon) 是基于 Linux KMS/DRM 的系统级终端，替代传统的 Linux tty，提供完整的 Unicode 支持、multi-seat 能力和真彩色渲染。它是 monkey-nvim 在无头服务器上的绝佳搭档。
 
-#### 6.1 安装 kmscon
+#### 7.1 安装 kmscon
 
 ```bash
 # Ubuntu/Debian（旧版，不含 terminfo）
@@ -296,7 +317,7 @@ meson install -C builddir/
 
 在较旧的系统上，`libtsm` 等依赖版本可能不满足编译要求。此时使用包管理器版本并通过 6.3 节的 `TERM` 变通方案即可。
 
-#### 6.2 用 kmscon 替代 tty（永久生效）
+#### 7.2 用 kmscon 替代 tty（永久生效）
 
 让 kmscon 取代传统的 tty/getty 成为默认系统控制台：
 
@@ -363,7 +384,7 @@ Alias=autovt@.service
 
 上面的 `ln -s ... kmsconvt@tty1.service` + `start` 流程因此只作用于 tty1。如果发现 tty2–tty6 意外也变成了 kmscon，请检查残留的别名（回退方法见 6.5 节）。
 
-#### 6.3 真彩色支持
+#### 7.3 真彩色支持
 
 kmscon 支持真彩色（24-bit）。monkey-nvim 通过 `has('termguicolors')` 自动检测并使用 GUI 颜色渲染。
 
@@ -391,11 +412,11 @@ set -g terminal-overrides ",linux:colors=16"
 
 第一行让 tmux 向程序宣称普通的 8 色终端；第二行告诉 tmux 底层 `linux` 控制台有 16 色（8 基础色 + 8 亮色），使其能合理降级。**不要**在 kmscon 或普通终端模拟器下运行 tmux 时添加这两行——那些场景 `tmux-256color` 才是正确的。
 
-#### 6.4 字体（可选）
+#### 7.4 字体（可选）
 
 kmscon 使用系统内建的字体渲染器。如需 Powerline 风格图标，安装任意系统等宽字体即可。
 
-#### 6.5 回退到传统 tty/getty
+#### 7.5 回退到传统 tty/getty
 
 将虚拟控制台交还给 agetty：
 
@@ -435,44 +456,45 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 
 ## 插件列表
 
-| 插件                                                                                    | 用途                                   |
-| --------------------------------------------------------------------------------------- | -------------------------------------- |
-| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | 基于内置 `vim.pack` 的懒加载插件管理器 |
-| [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | 配色方案                               |
-| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | 状态栏                                 |
-| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | 缩进参考线                             |
-| [echasnovski/mini.extra](https://github.com/echasnovski/mini.extra)                     | mini.nvim 扩展模块（ai 规格）          |
-| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | 文本对象                               |
-| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | 围绕字符编辑                           |
-| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | 注释切换                               |
-| [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | 扩展 % 跳转配对                        |
-| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | 自动配对括号                           |
-| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | 使用剪贴板替换                         |
-| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim)                         | 可视化书签                             |
-| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua)                                 | 模糊文件/缓冲/tag 查找                 |
-| [folke/flash.nvim](https://github.com/folke/flash.nvim)                                 | 快速跳转                               |
-| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                       | 折叠                                   |
-| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)             | 异步库（ufo 依赖）                     |
-| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)   | 语法高亮与解析                         |
-| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp)                                 | 补全引擎                               |
-| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp)                         | LSP 补全源                             |
-| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer)                             | 缓冲区补全源                           |
-| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path)                                 | 路径补全源                             |
-| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline)                           | 命令行补全                             |
-| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip)                 | Luasnip 补全源                         |
-| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip)                                 | 代码片段引擎                           |
-| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | 常用代码片段集合                       |
-| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git 差异标记                           |
-| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git 集成                               |
-| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim)                 | 并排差异对比                           |
-| [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session 管理                           |
-| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | 文件管理器（替代 netrw）               |
-| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | 自动生成 ctags                         |
-| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成                            |
-| [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | 诊断/quickfix 列表                     |
-| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | 多光标编辑                             |
-| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | 终端切换                               |
-| [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI 集成（opencode/claude/codex）   |
+| 插件                                                                                    | 用途                                         |
+| --------------------------------------------------------------------------------------- | -------------------------------------------- |
+| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | 基于内置 `vim.pack` 的懒加载插件管理器       |
+| [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | 配色方案                                     |
+| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | 状态栏                                       |
+| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | 缩进参考线                                   |
+| [echasnovski/mini.extra](https://github.com/echasnovski/mini.extra)                     | mini.nvim 扩展模块（ai 规格）                |
+| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | 文本对象                                     |
+| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | 围绕字符编辑                                 |
+| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | 注释切换                                     |
+| [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | 扩展 % 跳转配对                              |
+| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | 自动配对括号                                 |
+| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | 使用剪贴板替换                               |
+| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim)                         | 可视化书签                                   |
+| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua)                                 | 模糊文件/缓冲/tag 查找                       |
+| [folke/flash.nvim](https://github.com/folke/flash.nvim)                                 | 快速跳转                                     |
+| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                       | 折叠                                         |
+| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)             | 异步库（ufo 依赖）                           |
+| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)   | 语法高亮与解析                               |
+| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp)                                 | 补全引擎                                     |
+| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp)                         | LSP 补全源                                   |
+| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer)                             | 缓冲区补全源                                 |
+| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path)                                 | 路径补全源                                   |
+| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline)                           | 命令行补全                                   |
+| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip)                 | Luasnip 补全源                               |
+| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip)                                 | 代码片段引擎                                 |
+| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | 常用代码片段集合                             |
+| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git 差异标记                                 |
+| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git 集成                                     |
+| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim)                 | 并排差异对比                                 |
+| [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session 管理                                 |
+| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | 文件管理器（替代 netrw）                     |
+| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | 自动生成 ctags                               |
+| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成                                  |
+| [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | 诊断/quickfix 列表                           |
+| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | 多光标编辑                                   |
+| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | 终端切换                                     |
+| [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI 集成（opencode/claude/codex）         |
+| [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI 内联补全（virtual text，远程 + 本地 FIM） |
 
 ## 快捷键
 
@@ -671,9 +693,34 @@ F4      切换终端窗口（打开/隐藏）
 ,iv     发送可视选区
 ```
 
+#### 1.14 Minuet（AI 代码补全）
 
+内联 AI 建议（virtual text），通过环境变量配置两个 preset：远程 OpenAI 兼容 chat
+端点和本地 FIM 服务（Ollama、llama.cpp、vLLM、LM Studio 等）。用 `,ia` 或
+`:Minuet change_preset openai|local_fim` 切换。
 
-#### 1.14 围绕字符编辑（mini.surround）
+配置由环境变量驱动（见安装步骤 §4）。本地 FIM preset 未覆盖时使用 Ollama
+默认值；远程 preset 的变量全部设置时才注册。
+
+普通模式：
+
+```text
+,ic     开关补全自动触发
+,ia     切换 AI provider preset（本地 <-> 远程）
+```
+
+插入模式（有建议显示时）：
+
+```text
+<A-a>   接受整条建议
+<A-l>   只接受一行
+<A-y>   接受 n 行（会提示输入行数）
+<A-n>   下一条建议
+<A-p>   上一条建议
+<A-d>   取消显示
+```
+
+#### 1.15 围绕字符编辑（mini.surround）
 
 ```text
 sa+textobj+surroundA        在textobj指定的范围增A围绕字符
@@ -681,9 +728,9 @@ sd+surroundA                删除A围绕字符（2sd" 删除第2层嵌套）
 sr+surroundA+surroundB      将A围绕字符改成B围绕字符
 ```
 
-#### 1.15 操作符（Operators）
+#### 1.16 操作符（Operators）
 
-操作符与文本对象（§1.16）或 motion 组合使用：`{操作符}{文本对象}`。以下操作符均支持 `[count]`。
+操作符与文本对象（§1.17）或 motion 组合使用：`{操作符}{文本对象}`。以下操作符均支持 `[count]`。
 
 ```text
 # Vim 原生
@@ -700,15 +747,15 @@ x               用寄存器内容替换文本对象 / motion
 xx              替换当前整行
 X               替换光标到行尾
 
-# mini.surround（见 §1.14）
+# mini.surround（见 §1.15）
 sa{motion}{char}    增加围绕字符（2saiw 会使围绕字符翻倍）
 sd{char}            删除围绕字符    [count] = 嵌套层级，如 2sd"
 sr{old}{new}        替换围绕字符    [count] = 嵌套层级
 ```
 
-#### 1.16 文本对象（mini.ai / vim-matchup / flash.nvim）
+#### 1.17 文本对象（mini.ai / vim-matchup / flash.nvim）
 
-所有文本对象都能配合任意操作符（§1.15）使用。mini.ai 接管了 operator-pending 和 visual 模式的 `a` / `i` 前缀，等待一个标识符字符；未识别的标识符回落到原生行为。连续输入（如 visual 模式下按两次 `a(`）可逐层扩展选区。
+所有文本对象都能配合任意操作符（§1.16）使用。mini.ai 接管了 operator-pending 和 visual 模式的 `a` / `i` 前缀，等待一个标识符字符；未识别的标识符回落到原生行为。连续输入（如 visual 模式下按两次 `a(`）可逐层扩展选区。
 
 ```text
 # Vim 原生（未识别的标识符自动回落）
@@ -761,7 +808,7 @@ vim-matchup     count = 第 N 层包围块
   （charwise），整个 buffer 是 `aB`。副作用：原生 `{}` 块别名 `aB` 被遮蔽，
   请改用 `a{` / `a}`。
 
-#### 1.17 其他
+#### 1.18 其他
 
 ```text
 Leader+ws       保存session
@@ -812,7 +859,7 @@ SudoWrite           使用 root 权限保存文件
 
 Viminfo 的对应物 shada 按工程隔离：命令/搜索历史、寄存器和 file marks 保存到 `~/.local/state/nvim/shada/<工程根目录扁平化>.shada`（从启动目录向上查找 `.git`/`.root`/`.hg`/... 标记定位工程根，找不到时回退到 `~`），各工程的历史互不干扰。与 Vim 的 viminfo 不同，Neovim 的 shada 不持久化跳转列表。
 
-#### 1.18 自动插入文件头
+#### 1.19 自动插入文件头
 
 新建 `.sh` 和 `.py` 文件会自动插入 shebang 行：
 
@@ -1007,6 +1054,8 @@ monkey-nvim 在检测到显示服务器时设置 `clipboard=unnamed,unnamedplus`
 > 可选 CLI 工具：`wl-clipboard`（Wayland，提供 `wl-copy`/`wl-paste`）、`xclip` 或 `xsel`（X11）。Neovim 内建剪贴板支持，这些工具仅在 Neovim 外部需要命令行剪贴板访问时使用。
 
 ## 额外设置
+
+### 其他
 
 - 在 bashrc 中加入以下 Shell 代码，在 Neovim 中查看 man 文档：
 
