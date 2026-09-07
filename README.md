@@ -242,7 +242,30 @@ You can also run Neovim's built-in health check for plugin-related diagnostics:
 nvim --headless -c 'checkhealth' -c 'qa'
 ```
 
-### 4. Install monkey-nvim
+### 4. AI completion setup (optional)
+
+minuet-ai.nvim is configured via environment variables, read at startup. The
+local FIM preset is always available with built-in defaults; the remote preset
+is only registered when all four of its variables are set. Add the exports to
+your login shell config (`~/.zprofile` for zsh, `~/.profile` or
+`~/.bash_profile` for bash):
+
+```bash
+# Remote preset (OpenAI-compatible chat endpoint), all required
+export NVIM_MINUET_API_KEY="..."                            # API key
+export NVIM_MINUET_BASE_URL="https://host/provider"         # prefix; /v1/chat/completions is appended
+export NVIM_MINUET_MODEL="model-id"
+export NVIM_MINUET_NAME="DeepSeek"                          # display name
+
+# Local preset (FIM server: Ollama / llama.cpp / vLLM / LM Studio), optional overrides
+export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:11434"  # default, /v1/completions is appended
+export NVIM_MINUET_LOCAL_MODEL="qwen2.5-coder:7b"           # default
+export NVIM_MINUET_LOCAL_NAME="Ollama"                      # default, display name
+```
+
+Usage and keymaps: see §1.14.
+
+### 5. Install monkey-nvim
 
 - Linux, macOS, WSL
 
@@ -255,7 +278,7 @@ nvim --headless -c 'ZPack sync' -c 'qa'   # Install all plugins
 nvim
 ```
 
-### 5. Update project
+### 6. Update project
 
 ```bash
 cd monkey-nvim
@@ -268,11 +291,11 @@ Then in Neovim:
 :ZPack update
 ```
 
-### 6. kmscon setup (optional)
+### 7. kmscon setup (optional)
 
 [kmscon](https://github.com/kmscon/kmscon) is a Linux KMS/DRM-based system console that replaces the legacy tty with full Unicode support, multi-seat capability, and true color rendering. It is an excellent companion for monkey-nvim on headless servers.
 
-#### 6.1 Install kmscon
+#### 7.1 Install kmscon
 
 ```bash
 # Ubuntu/Debian (older versions without terminfo)
@@ -296,7 +319,7 @@ Building from source automatically compiles and installs the kmscon terminfo ent
 
 On older systems, dependencies like `libtsm` may be too old to satisfy the build requirements. In that case, use the package manager version and apply the `TERM` workaround in section 6.3.
 
-#### 6.2 Replace tty with kmscon (permanent)
+#### 7.2 Replace tty with kmscon (permanent)
 
 To make kmscon the default system console instead of the legacy tty/getty, replace agetty with kmscon on the desired tty:
 
@@ -363,7 +386,7 @@ So:
 
 The `ln -s ... kmsconvt@tty1.service` + `start` flow above therefore affects only tty1. If tty2–tty6 unexpectedly become kmscon, check for a leftover alias (see 6.5 to revert).
 
-#### 6.3 True color support
+#### 7.3 True color support
 
 kmscon supports true color (24-bit). monkey-nvim detects this automatically via `has('termguicolors')` and renders GUI colors directly.
 
@@ -391,11 +414,11 @@ set -g terminal-overrides ",linux:colors=16"
 
 The first line makes tmux advertise a plain 8-color terminal to programs; the second tells tmux the underlying `linux` console has 16 colors (8 base + 8 bright) so it can downconvert sensibly. Do **not** add these lines when tmux runs under kmscon or a normal terminal emulator — there `tmux-256color` is correct.
 
-#### 6.4 Fonts (optional)
+#### 7.4 Fonts (optional)
 
 kmscon uses the system's built-in font renderer. If you prefer Powerline-style icons, install a system monospace font of your choice.
 
-#### 6.5 Revert to the legacy tty/getty
+#### 7.5 Revert to the legacy tty/getty
 
 To hand the virtual consoles back to agetty:
 
@@ -473,6 +496,7 @@ It should resolve to `getty@.service`.
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | Multiple cursors                                          |
 | [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | Terminal toggling                                         |
 | [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI integration (opencode/claude/codex)                |
+| [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI inline completion (virtual text, remote + local FIM)   |
 
 ## Keyboard shortcut
 
@@ -672,9 +696,36 @@ Visual mode only:
 ,iv     Send visual selection
 ```
 
+#### 1.14 Minuet (AI code completion)
 
+Inline AI suggestions (virtual text) with two presets selected via environment
+variables: a remote OpenAI-compatible chat endpoint and a local FIM server
+(Ollama, llama.cpp, vLLM, LM Studio, ...). Switch presets with `,ia` or
+`:Minuet change_preset openai|local_fim`.
 
-#### 1.14 Surround (mini.surround)
+Configuration is environment-driven (Installation §4). The local FIM preset
+always uses Ollama defaults unless overridden; the remote preset is registered
+only when all of its variables are set.
+
+Normal mode:
+
+```text
+,ic     Toggle inline completion auto-trigger
+,ia     Switch AI provider preset (local <-> remote)
+```
+
+Insert mode (shown while a suggestion is displayed):
+
+```text
+<A-a>   Accept whole suggestion
+<A-l>   Accept one line
+<A-y>   Accept n lines (prompts for the number)
+<A-n>   Next suggestion
+<A-p>   Previous suggestion
+<A-d>   Dismiss suggestion
+```
+
+#### 1.15 Surround (mini.surround)
 
 ```text
 sa+textobj+surroundA        Add surround A for the region of textobj
@@ -682,9 +733,9 @@ sd+surroundA                Delete surround A (2sd" deletes the 2nd nesting leve
 sr+surroundA+surroundB      Change surround A to B
 ```
 
-#### 1.15 Operators
+#### 1.16 Operators
 
-Operators combine with text objects (§1.16) or motions: `{operator}{textobject}`. All operators below accept `[count]`.
+Operators combine with text objects (§1.17) or motions: `{operator}{textobject}`. All operators below accept `[count]`.
 
 ```text
 # Native Vim
@@ -701,15 +752,15 @@ x               Replace text object / motion with register content
 xx              Replace entire current line
 X               Replace from cursor to end of line
 
-# mini.surround (see §1.14)
+# mini.surround (see §1.15)
 sa{motion}{char}    Add surround (2saiw doubles the buns)
 sd{char}            Delete surround    [count] = nesting level, e.g. 2sd"
 sr{old}{new}        Replace surround   [count] = nesting level
 ```
 
-#### 1.16 Text objects (mini.ai / vim-matchup / flash.nvim)
+#### 1.17 Text objects (mini.ai / vim-matchup / flash.nvim)
 
-All text objects work with every operator (§1.15). mini.ai takes over the `a` / `i` prefix in operator-pending and visual mode, waits for a single identifier character, and falls back to native behavior for unknown identifiers. Consecutive application (e.g. `a(` twice in visual mode) expands the selection.
+All text objects work with every operator (§1.16). mini.ai takes over the `a` / `i` prefix in operator-pending and visual mode, waits for a single identifier character, and falls back to native behavior for unknown identifiers. Consecutive application (e.g. `a(` twice in visual mode) expands the selection.
 
 ```text
 # Native Vim (unknown identifiers fall back to these)
@@ -764,7 +815,7 @@ Notes on the custom identifiers (`i` / `L` / `B`) and Neovim 0.13:
   means the current line (charwise) and `aB` is the buffer. Side effect: the
   native `{}` block alias `aB` is shadowed — use `a{` / `a}` instead.
 
-#### 1.17 Others
+#### 1.18 Others
 
 ```text
 Leader+ws       Save session
@@ -815,7 +866,7 @@ In quickfix/location windows:
 
 Viminfo equivalent (shada) is per-project: command/search history, registers and file marks are stored in `~/.local/state/nvim/shada/<project-root-flattened>.shada` (project root detected by walking up from the startup directory for `.git`/`.root`/`.hg`/... markers, falling back to `~`), so histories do not leak between projects. Unlike Vim's viminfo, Neovim's shada does not persist the jumplist.
 
-#### 1.18 Auto-insert file headers
+#### 1.19 Auto-insert file headers
 
 New `.sh` and `.py` files get a shebang line automatically inserted:
 
@@ -1014,6 +1065,8 @@ If you use a standalone clipboard manager (optional):
 > Optional CLI tools: `wl-clipboard` (Wayland, provides `wl-copy`/`wl-paste`), `xclip` or `xsel` (X11). Neovim has built-in clipboard support, so these are only needed for command-line clipboard access outside Neovim.
 
 ## Extra setup
+
+### Other
 
 - Use Neovim to view man pages:
 
