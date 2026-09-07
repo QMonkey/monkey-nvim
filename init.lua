@@ -1147,7 +1147,7 @@ vim.opt.listchars = 'tab:▸ ,leadmultispace:│   ,eol:¬,trail:·'
 
 -- Trailing whitespace in red (matchadd is window-local; priority -1 keeps it below Search/IncSearch)
 -- Blacklist: filetypes that skip trailing-whitespace highlighting
-vim.g.trailing_whitespace_blacklist = { 'NeogitStatus', 'fzf', 'toggleterm', 'help' }
+vim.g.trailing_whitespace_blacklist = { 'NeogitStatus', 'NeogitPopup', 'fzf', 'toggleterm', 'help' }
 vim.api.nvim_set_hl(0, 'TrailingSpace', { bg = '#fb617e' })
 vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter', 'FileType' }, {
   group = vim.api.nvim_create_augroup('TrailingWhitespace', { clear = true }),
