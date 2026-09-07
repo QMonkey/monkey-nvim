@@ -433,63 +433,7 @@ local tools_specs = {
       })
     end,
   },
-  {
-    src = 'https://github.com/milanglacier/minuet-ai.nvim',
-    dependencies = {
-      { src = 'https://github.com/hrsh7th/nvim-cmp' },
-    },
-    event = 'InsertEnter',
-    config = function()
-      local ollama_fim = {
-        n_completions = 1,
-        context_window = 16000,
-        provider = 'openai_fim_compatible',
-        provider_options = {
-          openai_fim_compatible = {
-            api_key = 'TERM',
-            name = 'Ollama',
-            end_point = 'http://localhost:11434/v1/completions',
-            model = 'qwen2.5-coder:7b',
-            optional = {
-              max_tokens = 256,
-              top_p = 0.9,
-            },
-          },
-        },
-      }
-
-      require('minuet').setup({
-        n_completions = ollama_fim.n_completions,
-        context_window = ollama_fim.context_window,
-        provider = ollama_fim.provider,
-        provider_options = ollama_fim.provider_options,
-        presets = {
-          ollama = ollama_fim,
-          openai = {
-            context_window = 4096,
-            request_timeout = 15,
-            throttle = 3000,
-            debounce = 500,
-            provider = 'openai',
-            provider_options = {
-              openai = {
-                api_key = 'OPENAI_API_KEY',
-                model = vim.env.OPENAI_MODEL or 'gpt-4o-mini',
-                end_point = vim.env.OPENAI_BASE_URL or 'https://api.openai.com/v1/chat/completions',
-                optional = {
-                  max_completion_tokens = 512,
-                },
-              },
-            },
-          },
-        },
-      })
-
-      vim.keymap.set('n', '<leader>ic', '<cmd>Minuet cmp toggle<cr>', {
-        desc = 'Minuet: toggle cmp auto-completion',
-      })
-    end,
-  },
+  { src = 'https://github.com/milanglacier/minuet-ai.nvim' },
 }
 
 local spec = {}
@@ -1728,6 +1672,102 @@ vim.keymap.set('n', '<leader>d', '<cmd>Trouble diagnostics toggle<CR>', { silent
 vim.keymap.set('n', '<leader>q', '<cmd>Trouble quickfix toggle<CR>', { silent = true })
 vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = true })
 
+-- minuet-ai.nvim
+local minuet_presets = {}
+local minuet_preset_order = {}
+local minuet_current_preset = nil
+
+minuet_presets.local_fim = {
+  n_completions = 1,
+  context_window = 16000,
+  provider = 'openai_fim_compatible',
+  provider_options = {
+    openai_fim_compatible = {
+      api_key = 'TERM',
+      name = vim.env.NVIM_MINUET_LOCAL_NAME or 'Ollama',
+      end_point = (vim.env.NVIM_MINUET_LOCAL_BASE_URL or 'http://localhost:11434') .. '/v1/completions',
+      model = vim.env.NVIM_MINUET_LOCAL_MODEL or 'qwen2.5-coder:7b',
+      optional = {
+        max_tokens = 256,
+        top_p = 0.9,
+      },
+    },
+  },
+}
+minuet_preset_order[#minuet_preset_order + 1] = 'local_fim'
+minuet_current_preset = 'local_fim'
+
+if vim.env.NVIM_MINUET_API_KEY
+    and vim.env.NVIM_MINUET_BASE_URL
+    and vim.env.NVIM_MINUET_MODEL
+    and vim.env.NVIM_MINUET_NAME
+then
+  minuet_presets.openai = {
+    context_window = 4096,
+    request_timeout = 15,
+    throttle = 3000,
+    debounce = 500,
+    provider = 'openai_compatible',
+    provider_options = {
+      openai_compatible = {
+        api_key = 'NVIM_MINUET_API_KEY',
+        name = vim.env.NVIM_MINUET_NAME,
+        end_point = vim.env.NVIM_MINUET_BASE_URL .. '/v1/chat/completions',
+        model = vim.env.NVIM_MINUET_MODEL,
+        stream = false,
+        optional = {
+          max_tokens = 512,
+          reasoning_effort = 'none',
+        },
+      },
+    },
+  }
+  minuet_preset_order[#minuet_preset_order + 1] = 'openai'
+  minuet_current_preset = 'openai'
+end
+
+require('minuet').setup({
+  n_completions = minuet_presets[minuet_current_preset].n_completions or 1,
+  context_window = minuet_presets[minuet_current_preset].context_window,
+  request_timeout = minuet_presets[minuet_current_preset].request_timeout,
+  throttle = minuet_presets[minuet_current_preset].throttle,
+  debounce = minuet_presets[minuet_current_preset].debounce,
+  provider = minuet_presets[minuet_current_preset].provider,
+  provider_options = minuet_presets[minuet_current_preset].provider_options,
+  presets = minuet_presets,
+  cmp = { enable_auto_complete = false },
+  virtualtext = {
+    auto_trigger_ft = { '*' },
+    auto_trigger_ignore_ft = {
+      'help', 'markdown', 'text', 'gitcommit', 'gitrebase', 'qf', 'TelescopePrompt', 'DressingInput', 'toggleterm',
+    },
+  },
+})
+
+vim.keymap.set('n', '<leader>ig', '<cmd>Minuet virtualtext toggle<cr>', {
+  desc = 'Minuet: toggle virtual text auto-trigger',
+})
+vim.keymap.set('n', '<leader>ia', function()
+  local next_name
+  for i, name in ipairs(minuet_preset_order) do
+    if name == minuet_current_preset then
+      next_name = minuet_preset_order[i % #minuet_preset_order + 1]
+      break
+    end
+  end
+  next_name = next_name or minuet_preset_order[1]
+  require('minuet').change_preset(next_name)
+  minuet_current_preset = next_name
+end, { desc = 'Minuet: cycle provider preset' })
+
+local minuet_vt = require('minuet.virtualtext').action
+vim.keymap.set('i', '<A-a>', minuet_vt.accept, { desc = 'Minuet: accept suggestion' })
+vim.keymap.set('i', '<A-l>', minuet_vt.accept_line, { desc = 'Minuet: accept one line' })
+vim.keymap.set('i', '<A-y>', minuet_vt.accept_n_lines, { desc = 'Minuet: accept n lines' })
+vim.keymap.set('i', '<A-n>', minuet_vt.next, { desc = 'Minuet: next suggestion' })
+vim.keymap.set('i', '<A-p>', minuet_vt.prev, { desc = 'Minuet: prev suggestion' })
+vim.keymap.set('i', '<A-d>', minuet_vt.dismiss, { desc = 'Minuet: dismiss suggestion' })
+
 -- LSP
 vim.api.nvim_set_hl(0, 'LspReferenceText', { link = 'Search' })
 vim.api.nvim_set_hl(0, 'LspReferenceRead', { link = 'Search' })
@@ -2060,15 +2100,6 @@ cmp.setup({
     ['<CR>'] = cmp.mapping.confirm({ select = true }),
     ['<C-j>'] = cmp.mapping.select_next_item(),
     ['<C-k>'] = cmp.mapping.select_prev_item(),
-    ['<leader><Tab>'] = cmp.mapping(function(fallback)
-      local map = require('minuet').make_cmp_map()
-      local cb = map.i or map.s
-      if cb then
-        cb(fallback)
-      else
-        fallback()
-      end
-    end, { 'i' }),
   }),
   performance = {
     fetching_timeout = 2000,
@@ -2076,7 +2107,6 @@ cmp.setup({
   sources = cmp.config.sources({
     { name = 'nvim_lsp' },
     { name = 'luasnip' },
-    { name = 'minuet' },
   }, {
     { name = 'buffer' },
     { name = 'path' },
