@@ -107,7 +107,7 @@ local nav_specs = {
   },
   {
     src = 'https://github.com/kevinhwang91/nvim-ufo',
-    dependencies = { { src = 'https://github.com/kevinhwang91/promise-async' } },
+    dependencies = { src = 'https://github.com/kevinhwang91/promise-async' },
     event = 'VeryLazy',
     cmd = { 'UfoEnable', 'UfoDisable', 'UfoInspect', 'UfoAttach', 'UfoDetach', 'UfoEnableFold', 'UfoDisableFold' },
     config = function()
@@ -166,11 +166,11 @@ local git_specs = {
   { src = 'https://github.com/lewis6991/gitsigns.nvim' },
   {
     src = 'https://github.com/NeogitOrg/neogit',
+    dependencies = { src = 'https://github.com/esmuellert/codediff.nvim' },
     cmd = { 'Neogit', 'NeogitResetState', 'NeogitLogCurrent', 'NeogitCommit' },
     keys = {
       { '<leader>gL', function() require('neogit').action('log', 'log_all_references')() end, desc = 'Neogit log (all)' },
     },
-    dependencies = { { src = 'https://github.com/esmuellert/codediff.nvim' } },
     config = function()
       require('neogit').setup({ diff_viewer = 'codediff', integrations = { codediff = true } })
       require('codediff').setup({ diff = { compact = true } })
@@ -212,23 +212,12 @@ local project_specs = {
   {
     src = 'https://github.com/dhananjaylatkar/cscope_maps.nvim',
     cmd = { 'Cscope', 'Cs', 'Cstag', 'CsPrompt' },
-    init = function()
-      package.preload["cscope.pickers.trouble"] = function()
-        return {
-          run = function(opts)
-            vim.fn.setqflist(opts.cscope.parsed_output)
-            vim.fn.setqflist({}, "a", { title = opts.cscope.prompt_title })
-            vim.cmd("Trouble quickfix")
-          end,
-        }
-      end
-    end,
     config = function()
       require("cscope_maps").setup({
         disable_maps = true,
         cscope = {
           exec = 'gtags-cscope',
-          picker = "trouble",
+          picker = "quickfix",
           project_rooter = { enable = false },
           tag = { keymap = false },
         },
@@ -245,27 +234,47 @@ local project_specs = {
 
 local tools_specs = {
   {
-    src = 'https://github.com/folke/trouble.nvim',
-    cmd = 'Trouble',
+    src = 'https://github.com/kevinhwang91/nvim-bqf',
+    dependencies = { src = 'https://github.com/junegunn/fzf' },
+    ft = 'qf',
     config = function()
-      require('trouble').setup({
-        auto_close = true,
-        auto_refresh = true,
-        height = 10,
-        keys = {
-          ['<c-t>'] = function(_, ctx)
-            local item = ctx.item
-            if not (item and (item.filename or item.buf)) then
-              return
-            end
-            local name = item.filename or vim.fn.bufname(item.buf)
-            vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
-            if item.pos then
-              vim.api.nvim_win_set_cursor(0, item.pos)
-              vim.cmd('normal! zzzv')
-            end
-          end,
-        },
+      require('bqf').setup({
+        auto_resize_height = true,
+      })
+      -- Workaround for a nvim-bqf bug: leaving zf (fzf filter) mode leaks the
+      -- old preview float, which overlays the fresh one as a gray film. When
+      -- the fzf window closes, wait for bqf to finish restoring the list,
+      -- then close ALL BqfPreview* windows (the leaked one cannot be told
+      -- apart from the fresh one) and re-open the preview for the list
+      -- window zf was launched from (quickfix or loclist) right away instead
+      -- of waiting for the next cursor move.
+      vim.api.nvim_create_autocmd('FileType', {
+        group = vim.api.nvim_create_augroup('BqfFzfOrphan', { clear = true }),
+        pattern = 'fzf',
+        callback = function(args)
+          local fzf_win = vim.fn.bufwinid(args.buf)
+          if fzf_win == -1 then
+            return
+          end
+          local src_win = vim.fn.win_getid(vim.fn.winnr('#'))
+          vim.api.nvim_create_autocmd('WinClosed', {
+            pattern = tostring(fzf_win),
+            once = true,
+            callback = function()
+              vim.defer_fn(function()
+                for _, wid in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+                  local bufnr = vim.api.nvim_win_get_buf(wid)
+                  if vim.fn.bufname(bufnr):find('^BqfPreview') and vim.api.nvim_win_is_valid(wid) then
+                    vim.api.nvim_win_close(wid, true)
+                  end
+                end
+                if vim.api.nvim_win_is_valid(src_win) then
+                  require('bqf.preview.handler').open(src_win, nil, true)
+                end
+              end, 150)
+            end,
+          })
+        end,
       })
     end,
   },
@@ -294,6 +303,7 @@ local tools_specs = {
   },
   {
     src = 'https://github.com/folke/sidekick.nvim',
+    dependencies = { src = 'https://github.com/ibhagwan/fzf-lua' },
     cmd = { 'Sidekick' },
     keys = {
       {
@@ -360,9 +370,6 @@ local tools_specs = {
         mode = { 'n', 'x' },
         desc = 'Sidekick: select prompt',
       },
-    },
-    dependencies = {
-      { src = 'https://github.com/ibhagwan/fzf-lua' },
     },
     config = function()
       require('sidekick').setup({
@@ -875,8 +882,7 @@ end
 
 local gtags_group = vim.api.nvim_create_augroup('GTags', { clear = true })
 
--- Switch the cscope DB to the entered buffer's project and build GTAGS
--- when missing
+-- Switch the cscope DB to the entered buffer's project and build GTAGS when missing
 vim.api.nvim_create_autocmd({ 'BufEnter' }, {
   group = gtags_group,
   callback = function(e)
@@ -1603,7 +1609,7 @@ vim.keymap.set('n', 'g]', function()
   vim.fn.setqflist({}, 'a', { title = 'tag ' .. name })
 
   vim.bo.tagfunc = tagfunc
-  require('trouble').open('quickfix')
+  vim.cmd('botright copen')
 end, { silent = true, desc = 'tag + open quickfix' })
 
 vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
@@ -1750,10 +1756,32 @@ vim.api.nvim_create_user_command('SudoWrite', function()
   vim.bo.readonly = false
 end, {})
 
--- trouble.nvim
-vim.keymap.set('n', '<leader>d', '<cmd>Trouble diagnostics toggle<CR>', { silent = true })
-vim.keymap.set('n', '<leader>q', '<cmd>Trouble quickfix toggle<CR>', { silent = true })
-vim.keymap.set('n', '<leader>l', '<cmd>Trouble loclist toggle<CR>', { silent = true })
+-- quickfix / loclist / diagnostics
+local function qf_toggle(open, close_cmd)
+  local ftype = vim.bo.filetype
+  local last_winnr = vim.fn.winnr('#')
+  local win_count = #vim.fn.tabpagebuflist()
+  vim.cmd('silent! ' .. close_cmd)
+  if #vim.fn.tabpagebuflist() == win_count then
+    if type(open) == 'function' then
+      open()
+    else
+      vim.cmd('silent! botright ' .. open)
+    end
+  elseif ftype == 'qf' then
+    vim.cmd(last_winnr .. 'wincmd w')
+  end
+end
+
+vim.keymap.set('n', '<leader>d', function()
+  qf_toggle(function()
+    vim.diagnostic.setloclist({ title = 'Diagnostics' })
+    vim.cmd('botright lopen')
+  end, 'lclose')
+end, { silent = true, desc = 'Diagnostics into location list' })
+vim.keymap.set('n', '<leader>q', function() qf_toggle('copen', 'cclose') end, { silent = true, desc = 'Toggle quickfix' })
+vim.keymap.set('n', '<leader>l', function() qf_toggle('lopen', 'lclose') end,
+  { silent = true, desc = 'Toggle location list' })
 
 -- minuet-ai.nvim
 local minuet_presets = {}
@@ -1900,7 +1928,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
         return
       end
       vim.fn.setqflist({}, ' ', result)
-      require('trouble').open('quickfix')
+      vim.cmd('botright copen')
     end
 
     vim.keymap.set('n', 'gd', function()
