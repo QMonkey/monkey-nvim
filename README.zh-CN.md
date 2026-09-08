@@ -502,9 +502,8 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | 文件管理器（替代 netrw）                     |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | 自动生成 ctags                               |
 | [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成                                  |
-| [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | 诊断/quickfix 列表                           |
+| [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                       | Better quickfix 窗口（预览、过滤、fzf）                      |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | 多光标编辑                                   |
-| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | 终端切换                                     |
 | [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI 集成（opencode/claude/codex）         |
 | [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI 内联补全（virtual text，远程 + 本地 FIM） |
 
@@ -549,13 +548,14 @@ Ctrl+h  退格        (BackSpace)
 Ctrl+d  向前删除    (Del)
 ```
 
-#### 1.2 F1 ~ F4
+#### 1.2 F1 ~ F5
 
 ```text
 F1      打开 fzf-lua live grep
 F2      切换 fzf-lua 恢复/关闭
-F3      在终端中运行一次性命令
-F4      切换终端窗口（打开/隐藏）
+F3      在底部新终端中运行命令（:TermExec <cmd>，Tab 补全当前目录文件）
+F4      切换全局终端（底部，打开/隐藏）
+F5      切换全局终端（右侧，打开/隐藏）
 ```
 
 使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。
@@ -610,15 +610,15 @@ K                   其他文件类型使用 `:Man`，Vim/help 文件使用 `:he
 gd                 跳转到定义（无 LSP 时回退到标签跳转）
 gc                 跳转到声明
 gt                 跳转到类型定义
-gi                 跳转到实现（结果在 trouble 中）
-gr                 查看引用（结果在 trouble 中）
+gi                 跳转到实现（结果在 quickfix 中）
+gr                 查看引用（结果在 quickfix 中）
 
 Leader+rn          重命名符号
 [d                 上一个诊断
 ]d                 下一个诊断
 [D                 第一个诊断
 ]D                 最后一个诊断
-Leader+d           切换诊断列表（trouble）
+Leader+d           切换 location list（当前 buffer 诊断）
 ```
 
 文件在保存时自动通过 LSP 格式化。自动补全默认开启 — LSP 建议会自动弹出。
@@ -676,11 +676,14 @@ m/          在Location List里，查看当前buffer的所有标记
 #### 1.12 终端
 
 ```text
-F3      在终端中运行一次性命令
-F4      切换终端窗口（打开/隐藏）
+F3      在底部新终端中运行命令（:TermExec <cmd>，Tab 补全当前目录文件）
+F4      切换全局终端（底部，20 行）
+F5      切换全局终端（右侧，半宽）
 ```
 
-使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。
+F4/F5 切换同一个全局终端——可见时按任意键隐藏，隐藏后在当前 tab 重开（job 与滚动历史保留）。F3 每次打开一个额外终端，命令作为 job 运行，结束后窗口保留并显示 `[Process exited N]`。
+
+使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。终端窗口不显示行号和空白标记。
 
 #### 1.13 Sidekick（AI CLI）
 
@@ -836,8 +839,8 @@ con             清除搜索高亮
 Leader+cr       切换到当前文件所在项目根路径
 Leader+space        去除行尾空白字符
 Leader+Leader+space  去除行尾空白字符 + \r（DOS 换行符）
-Leader+q            打开/关闭quickfix（trouble）
-Leader+l            打开/关闭location list（trouble）
+Leader+q            打开/关闭quickfix（bqf 预览）
+Leader+l            打开/关闭location list
 Leader+gg           打开 Neogit
 Leader+gl           打开 Neogit log（当前文件）
 Leader+gL           打开 Neogit log（所有引用）
@@ -865,6 +868,7 @@ SudoWrite           使用 root 权限保存文件
 
 - `o`/`Enter` — 打开条目（文件+行号）
 - `q` — 关闭窗口
+- nvim-bqf：浮窗实时预览（treesitter 高亮），`<Tab>`/`<S-Tab>` 标记条目后 `zn`/`zN` 过滤成新列表，`zf` 进入 fzf 过滤，`<C-t>`/`T` 在新 tab 打开
 
 `gdefault` 已设置，`:s` 默认执行全局替换。`jumpoptions+=stack` 使跳转列表行为类似标签栈。
 
