@@ -248,7 +248,25 @@ local tools_specs = {
     src = 'https://github.com/folke/trouble.nvim',
     cmd = 'Trouble',
     config = function()
-      require('trouble').setup({ auto_close = true, auto_refresh = true, height = 10 })
+      require('trouble').setup({
+        auto_close = true,
+        auto_refresh = true,
+        height = 10,
+        keys = {
+          ['<c-t>'] = function(_, ctx)
+            local item = ctx.item
+            if not (item and (item.filename or item.buf)) then
+              return
+            end
+            local name = item.filename or vim.fn.bufname(item.buf)
+            vim.cmd('tabnew ' .. vim.fn.fnameescape(name))
+            if item.pos then
+              vim.api.nvim_win_set_cursor(0, item.pos)
+              vim.cmd('normal! zzzv')
+            end
+          end,
+        },
+      })
     end,
   },
   {
@@ -272,56 +290,6 @@ local tools_specs = {
           end
         end)
       end)
-    end,
-  },
-  {
-    src = 'https://github.com/akinsho/toggleterm.nvim',
-    cmd = { 'TermSelect', 'TermExec', 'TermNew', 'ToggleTerm', 'ToggleTermToggleAll', 'ToggleTermSendVisualLines', 'ToggleTermSendVisualSelection', 'ToggleTermSendCurrentLine', 'ToggleTermSetName' },
-    keys = {
-      {
-        '<F3>',
-        function()
-          local cmd = vim.fn.input('Command: ')
-          if cmd ~= '' then
-            vim.cmd('2TermExec cmd=' .. vim.fn.shellescape(cmd))
-          end
-        end,
-        desc = 'Run one-off command'
-      },
-      {
-        '<F4>',
-        function()
-          local term = require('toggleterm.terminal').get(1)
-          local was_open = term and term:is_open()
-          vim.cmd('1ToggleTerm direction=horizontal')
-          if not was_open and require('toggleterm.terminal').get(1):is_open() then
-            vim.cmd('resize 20')
-          end
-        end,
-        mode = { 'n', 't' },
-        desc = 'Toggle horizontal terminal'
-      },
-      {
-        '<F5>',
-        function()
-          local term = require('toggleterm.terminal').get(1)
-          local was_open = term and term:is_open()
-          vim.cmd('1ToggleTerm direction=vertical')
-          if not was_open and require('toggleterm.terminal').get(1):is_open() then
-            vim.cmd('vertical resize ' .. math.floor(vim.o.columns / 2))
-          end
-        end,
-        mode = { 'n', 't' },
-        desc = 'Toggle vertical terminal'
-      },
-    },
-    config = function()
-      require('toggleterm').setup({
-        size = 20,
-        direction = 'horizontal',
-        start_in_insert = true,
-        persist_mode = false,
-      })
     end,
   },
   {
@@ -616,7 +584,7 @@ require('lualine').setup({
           return result
         end,
       },
-      'filetype', 'fileformat', 'encoding',
+      'filetype', 'encoding', 'fileformat',
     },
     lualine_y = {
       function()
@@ -726,6 +694,91 @@ vim.api.nvim_create_autocmd('BufReadPost', {
     local lcount = vim.api.nvim_buf_line_count(0)
     if mark[1] > 1 and mark[1] <= lcount then
       vim.api.nvim_win_set_cursor(0, mark)
+    end
+  end,
+})
+
+-- Terminal
+-- F4/F5 toggle one global terminal (bottom / right); either key hides it
+-- while visible. The job and history survive hides. F3 opens extra terminals.
+local function terminal_toggle(vertical)
+  vim.cmd('stopinsert')
+  local buf = vim.g.terminal_bufnr or 0
+  local running = buf > 0 and vim.api.nvim_buf_is_valid(buf) and vim.b[buf].terminal_job_id ~= nil
+      and vim.fn.jobwait({ vim.b[buf].terminal_job_id }, 0)[1] == -1
+  if running then
+    local tab = vim.fn.tabpagenr()
+    local wins = vim.fn.win_findbuf(buf)
+    for _, wid in ipairs(wins) do
+      if vim.fn.win_id2tabwin(wid)[1] == tab then
+        vim.api.nvim_win_call(wid, function() vim.cmd('hide') end)
+        return
+      end
+    end
+    for _, wid in ipairs(wins) do
+      vim.api.nvim_win_call(wid, function() vim.cmd('hide') end)
+    end
+    if vertical then
+      vim.cmd('botright vertical sbuffer ' .. buf)
+    else
+      vim.cmd('botright sbuffer ' .. buf)
+      vim.cmd('resize 20')
+    end
+    vim.cmd('startinsert')
+  else
+    if vertical then
+      vim.cmd('botright vnew | terminal')
+    else
+      vim.cmd('botright 20new | terminal')
+    end
+    vim.schedule(function() vim.cmd('startinsert') end)
+    vim.g.terminal_bufnr = vim.api.nvim_get_current_buf()
+  end
+end
+
+-- :TermExec [command] — the command (if any) runs as a terminal
+-- job in a new 20-row bottom split. Arguments complete against cwd files.
+vim.api.nvim_create_user_command('TermExec', function(o)
+  vim.cmd('botright 20new')
+  vim.fn.jobstart(o.args, { term = true })
+end, {
+  nargs = '*',
+  complete = function(lead)
+    return vim.fn.getcompletion(lead, 'file')
+  end,
+})
+
+vim.keymap.set('n', '<F3>', function()
+  vim.api.nvim_feedkeys(':TermExec ', 't', false)
+end, { desc = 'Open a terminal at the bottom' })
+vim.keymap.set({ 'n', 't' }, '<F4>', function() terminal_toggle(false) end,
+  { silent = true, desc = 'Toggle the global terminal at the bottom' })
+vim.keymap.set({ 'n', 't' }, '<F5>', function() terminal_toggle(true) end,
+  { silent = true, desc = 'Toggle the global terminal on the right' })
+vim.keymap.set('t', '<ScrollWheelUp>', '<C-\\><C-n><ScrollWheelUp>', { silent = true })
+vim.keymap.set('t', '<ScrollWheelDown>', '<C-\\><C-n><ScrollWheelDown>', { silent = true })
+
+local term_group = vim.api.nvim_create_augroup('TerminalSettings', { clear = true })
+vim.api.nvim_create_autocmd('TermOpen', {
+  group = term_group,
+  callback = function(args)
+    if vim.api.nvim_buf_get_name(args.buf):find('fzf') == nil then
+      vim.bo[args.buf].buflisted = false
+      vim.bo[args.buf].bufhidden = 'hide'
+    end
+  end,
+})
+
+-- Window-local opts must be (re)applied on every display: each new window
+-- showing a terminal buffer inherits the global number/list settings again.
+vim.api.nvim_create_autocmd('BufWinEnter', {
+  group = term_group,
+  callback = function(args)
+    if vim.bo[args.buf].buftype == 'terminal' and vim.api.nvim_buf_get_name(args.buf):find('fzf') == nil then
+      vim.wo.number = false
+      vim.wo.relativenumber = false
+      vim.wo.list = false
+      vim.wo.scrolloff = 0
     end
   end,
 })
@@ -1013,11 +1066,17 @@ vim.opt.ruler = true
 local relativenumber_group = vim.api.nvim_create_augroup('RelativeNumber', { clear = true })
 vim.api.nvim_create_autocmd({ 'WinEnter', 'InsertLeave' }, {
   group = relativenumber_group,
-  command = 'set relativenumber',
+  callback = function()
+    if vim.bo.buftype == 'terminal' then return end
+    vim.cmd('set relativenumber')
+  end,
 })
 vim.api.nvim_create_autocmd({ 'WinLeave', 'InsertEnter' }, {
   group = relativenumber_group,
-  command = 'set norelativenumber number',
+  callback = function()
+    if vim.bo.buftype == 'terminal' then return end
+    vim.cmd('set norelativenumber number')
+  end,
 })
 
 -- Cursorline
@@ -1147,20 +1206,26 @@ vim.opt.listchars = 'tab:▸ ,leadmultispace:│   ,eol:¬,trail:·'
 
 -- Trailing whitespace in red (matchadd is window-local; priority -1 keeps it below Search/IncSearch)
 -- Blacklist: filetypes that skip trailing-whitespace highlighting
-vim.g.trailing_whitespace_blacklist = { 'NeogitStatus', 'NeogitPopup', 'fzf', 'toggleterm', 'help' }
+vim.g.trailing_whitespace_blacklist = { 'NeogitStatus', 'NeogitPopup', 'fzf', 'terminal', 'help' }
 vim.api.nvim_set_hl(0, 'TrailingSpace', { bg = '#fb617e' })
 vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter', 'FileType' }, {
   group = vim.api.nvim_create_augroup('TrailingWhitespace', { clear = true }),
   callback = function()
     local win = vim.api.nvim_get_current_win()
-    for _, m in ipairs(vim.fn.getmatches(win)) do
-      if m.group == 'TrailingSpace' then
-        vim.fn.matchdelete(m.id, win)
+    vim.schedule(function()
+      if not vim.api.nvim_win_is_valid(win) then
+        return
       end
-    end
-    if not vim.tbl_contains(vim.g.trailing_whitespace_blacklist, vim.bo.filetype) then
-      vim.fn.matchadd('TrailingSpace', [[\s\+$]], -1, -1, { window = win })
-    end
+      for _, m in ipairs(vim.fn.getmatches(win)) do
+        if m.group == 'TrailingSpace' then
+          vim.fn.matchdelete(m.id, win)
+        end
+      end
+      local bo = vim.bo[vim.api.nvim_win_get_buf(win)]
+      if bo.buftype == '' and not vim.tbl_contains(vim.g.trailing_whitespace_blacklist, bo.filetype) then
+        vim.fn.matchadd('TrailingSpace', [[\s\+$]], -1, -1, { window = win })
+      end
+    end)
   end,
 })
 
@@ -1268,7 +1333,11 @@ vim.api.nvim_create_autocmd('InsertLeave', {
 -- Resize
 vim.api.nvim_create_autocmd('VimResized', {
   group = vim.api.nvim_create_augroup('AutoResize', { clear = true }),
-  command = 'tabdo wincmd =',
+  callback = function()
+    local cur = vim.api.nvim_get_current_tabpage()
+    vim.cmd('tabdo wincmd =')
+    vim.api.nvim_set_current_tabpage(cur)
+  end,
 })
 
 vim.keymap.set({ 'n', 't' }, '<leader>z', function()
@@ -1778,7 +1847,7 @@ if minuet_presets[minuet_current_preset] then
     virtualtext = {
       auto_trigger_ft = { '*' },
       auto_trigger_ignore_ft = {
-        'help', 'markdown', 'text', 'gitcommit', 'gitrebase', 'qf', 'TelescopePrompt', 'DressingInput', 'toggleterm',
+        'help', 'markdown', 'text', 'gitcommit', 'gitrebase', 'qf', 'TelescopePrompt', 'DressingInput', 'terminal',
       },
     },
   })
