@@ -504,9 +504,8 @@ It should resolve to `getty@.service`.
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | File explorer (replaces netrw)                            |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | Automatic ctags generation                                |
 | [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope integration                                        |
-| [folke/trouble.nvim](https://github.com/folke/trouble.nvim)                             | Diagnostics/quickfix list                                 |
+| [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                       | Better quickfix window (preview, filter, fzf)             |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | Multiple cursors                                          |
-| [akinsho/toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)                   | Terminal toggling                                         |
 | [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI integration (opencode/claude/codex)                |
 | [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI inline completion (virtual text, remote + local FIM)   |
 
@@ -551,13 +550,14 @@ Ctrl+h  Backspace      (BackSpace)
 Ctrl+d  Delete forward (Del)
 ```
 
-#### 1.2 F1 ~ F4
+#### 1.2 F1 ~ F5
 
 ```text
 F1      Open fzf-lua live grep
 F2      Toggle fzf-lua resume/close
-F3      Run a one-off command in terminal
-F4      Toggle terminal buffer (open/hide)
+F3      Run a command in a new bottom terminal (Tab completes cwd files)
+F4      Toggle the global terminal at the bottom (open/hide)
+F5      Toggle the global terminal at the right (open/hide)
 ```
 
 #### 1.3 Buffer
@@ -610,15 +610,15 @@ K                   `:Man` for other filetypes, `:help` in Vim/help files
 gd                  Go to definition (falls back to tag jump when no LSP)
 gc                  Go to declaration
 gt                  Go to type definition
-gi                  Go to implementation (results in trouble)
-gr                  Show references (results in trouble)
+gi                  Go to implementation (results in quickfix)
+gr                  Show references (results in quickfix)
 
 Leader+rn           Rename symbol
 [d                  Previous diagnostic
 ]d                  Next diagnostic
 [D                  First diagnostic
 ]D                  Last diagnostic
-Leader+d            Toggle diagnostics (trouble)
+Leader+d            Toggle location list with buffer diagnostics
 ```
 
 Files are auto-formatted on save via LSP. Completion is enabled by default — LSP-powered suggestions appear automatically as you type.
@@ -679,11 +679,15 @@ m/          View all marks in Location List
 #### 1.12 Terminal
 
 ```text
-F3      Open a terminal with one-off command
-F4      Toggle terminal buffer (open/hide)
+F3      Open a bottom terminal running a command (`:TermExec <cmd>`, empty
+        input opens an empty terminal; Tab completes cwd files)
+F4      Toggle the global terminal at the bottom (20 rows)
+F5      Toggle the global terminal at the right (half width)
 ```
 
-Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer.
+F4 and F5 toggle the same global terminal — either key hides it while visible, and it reopens with job and scrollback intact in whatever tab you are in. F3 opens an extra terminal per invocation; the command runs as a job and the window stays open showing `[Process exited N]` afterwards.
+
+Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer. Terminal windows show no line numbers or whitespace markers.
 
 #### 1.13 Sidekick (AI CLI)
 
@@ -842,8 +846,8 @@ con             Clear search highlight
 Leader+cr       Change project root
 Leader+space        Strip trailing whitespace
 Leader+Leader+space  Strip trailing whitespace + \r (DOS newlines)
-Leader+q            Toggle quickfix (trouble)
-Leader+l            Toggle location list (trouble)
+Leader+q            Toggle quickfix (bqf preview)
+Leader+l            Toggle location list
 Leader+gg           Open Neogit
 Leader+gl           Open Neogit log (current file)
 Leader+gL           Open Neogit log (all refs)
@@ -871,6 +875,7 @@ In quickfix/location windows:
 
 - `o`/`Enter` — Open entry (file + line)
 - `q` — Close window
+- nvim-bqf: live floating preview with treesitter highlighting, `<Tab>`/`<S-Tab>` sign items then `zn`/`zN` to filter into a new list, `zf` for fzf filtering, `<C-t>`/`T` open in a new tab
 
 `gdefault` is set, so `:s` performs global substitution (all matches per line) by default. `jumpoptions+=stack` makes the jumplist behave like the tagstack.
 
