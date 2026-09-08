@@ -24,11 +24,10 @@ local theme_specs = {
 }
 
 local editor_specs = {
-  { src = 'https://github.com/echasnovski/mini.indentscope' },
-  { src = 'https://github.com/echasnovski/mini.extra' },
-  { src = 'https://github.com/echasnovski/mini.ai' },
-  { src = 'https://github.com/echasnovski/mini.surround' },
-  { src = 'https://github.com/numToStr/Comment.nvim' },
+  { src = 'https://github.com/nvim-mini/mini.ai' },
+  { src = 'https://github.com/nvim-mini/mini.surround' },
+  { src = 'https://github.com/nvim-mini/mini.extra' },
+  { src = 'https://github.com/nvim-mini/mini.comment' },
   { src = 'https://github.com/windwp/nvim-autopairs' },
   { src = 'https://github.com/gbprod/substitute.nvim' },
   { src = 'https://github.com/chentoast/marks.nvim' },
@@ -527,16 +526,12 @@ local function mc_active()
 end
 
 -- Shared mc() block color for the lualine a and z sections: during a
--- multi-cursor session both turn purple
+-- multi-cursor session both turn purple. Colors point at the theme's purple
+-- groups so they follow the active colorscheme.
 local function mc_color()
-  if mc_active() then
-    if is_tty_console then
-      return { fg = 0, bg = 13, gui = 'bold' }
-    end
-    local purple = vim.fn.mode() ~= 'n' and '#9d7cd8' or '#bb97ee'
-    return { fg = '#2b2d3a', bg = purple, gui = 'bold' }
-  end
-  return {}
+  if not mc_active() then return {} end
+  if is_tty_console then return { fg = 0, bg = 13, gui = 'bold' } end
+  return 'MiniStatuslineModeOther'
 end
 
 require('lualine').setup({
@@ -1213,7 +1208,7 @@ vim.opt.listchars = 'tab:▸ ,leadmultispace:│   ,eol:¬,trail:·'
 -- Trailing whitespace in red (matchadd is window-local; priority -1 keeps it below Search/IncSearch)
 -- Blacklist: filetypes that skip trailing-whitespace highlighting
 vim.g.trailing_whitespace_blacklist = { 'NeogitStatus', 'NeogitPopup', 'fzf', 'terminal', 'help' }
-vim.api.nvim_set_hl(0, 'TrailingSpace', { bg = '#fb617e' })
+vim.api.nvim_set_hl(0, 'TrailingSpace', { link = 'IncSearch' })
 vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter', 'FileType' }, {
   group = vim.api.nvim_create_augroup('TrailingWhitespace', { clear = true }),
   callback = function()
@@ -1420,7 +1415,8 @@ vim.g.markdown_fenced_languages = { 'c', 'cpp', 'zig', 'rust', 'go', 'javascript
   'bash=sh', 'zsh', 'vim', 'sql', 'yaml', 'json', 'jsonc' }
 
 -- Docset
-vim.api.nvim_create_user_command('LspHover', vim.lsp.buf.hover, { nargs = '*', range = true })
+vim.api.nvim_create_user_command('LspHover', function() vim.lsp.buf.hover({ border = 'rounded' }) end,
+  { nargs = '*', range = true })
 
 local docset_group = vim.api.nvim_create_augroup('DocSet', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
@@ -1618,9 +1614,6 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
   command = 'setfiletype tags',
 })
 
--- mini.indentscope
-require('mini.indentscope').setup({ draw = { delay = 0 } })
-
 -- mini.ai
 local gen_ai_spec = require('mini.extra').gen_ai_spec
 require('mini.ai').setup({
@@ -1646,8 +1639,8 @@ require('mini.surround').setup({
 vim.keymap.set('n', 's', '<Nop>')
 vim.keymap.set('x', 's', '<Nop>')
 
--- Comment.nvim
-require('Comment').setup()
+-- mini.comment
+require('mini.comment').setup()
 
 -- nvim-autopairs
 local npairs = require('nvim-autopairs')
@@ -1680,7 +1673,7 @@ require('nvim-treesitter.install').install({
 
 -- Git
 local gitsigns = require('gitsigns')
-gitsigns.setup()
+gitsigns.setup({ preview_config = { border = 'rounded' } })
 
 vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gl', '<cmd>NeogitLogCurrent<CR>', { silent = true })
@@ -1916,38 +1909,13 @@ vim.api.nvim_create_autocmd('LspAttach', {
     local buf = args.buf
     local bufopts = { buffer = buf, silent = true }
 
-    vim.keymap.set('n', 'gh', vim.lsp.buf.hover, bufopts)
-    local function handle_locations(result)
-      if result.items and #result.items == 1 then
-        local item = result.items[1]
-        local b = vim.fn.bufadd(item.filename)
-        vim.cmd("normal! m'")
-        vim.bo[b].buflisted = true
-        vim.api.nvim_set_current_buf(b)
-        vim.api.nvim_win_set_cursor(0, { item.lnum, item.col - 1 })
-        return
-      end
-      vim.fn.setqflist({}, ' ', result)
-      vim.cmd('botright copen')
-    end
+    vim.keymap.set('n', 'gh', function() vim.lsp.buf.hover({ border = 'rounded' }) end, bufopts)
 
-    vim.keymap.set('n', 'gd', function()
-      vim.lsp.buf.definition({ on_list = handle_locations })
-    end, bufopts)
-    vim.keymap.set('n', 'gc', function()
-      vim.lsp.buf.declaration({ on_list = handle_locations })
-    end, bufopts)
-    vim.keymap.set('n', 'gt', function()
-      vim.lsp.buf.type_definition({ on_list = handle_locations })
-    end, bufopts)
-    vim.keymap.set('n', 'gi', function()
-      vim.lsp.buf.implementation({ on_list = handle_locations })
-    end, bufopts)
-    vim.keymap.set('n', 'gr', function()
-      vim.lsp.buf.references({ includeDeclaration = true }, {
-        on_list = handle_locations,
-      })
-    end, bufopts)
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
+    vim.keymap.set('n', 'gc', vim.lsp.buf.declaration, bufopts)
+    vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, bufopts)
+    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, bufopts)
+    vim.keymap.set('n', 'gr', function() vim.lsp.buf.references({ includeDeclaration = true }) end, bufopts)
 
     vim.keymap.set('n', '[d', function() vim.diagnostic.jump({ count = -1 }) end, bufopts)
     vim.keymap.set('n', ']d', function() vim.diagnostic.jump({ count = 1 }) end, bufopts)

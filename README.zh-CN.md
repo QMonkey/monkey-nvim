@@ -473,11 +473,10 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | 基于内置 `vim.pack` 的懒加载插件管理器       |
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | 配色方案                                     |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | 状态栏                                       |
-| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | 缩进参考线                                   |
-| [echasnovski/mini.extra](https://github.com/echasnovski/mini.extra)                     | mini.nvim 扩展模块（ai 规格）                |
-| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | 文本对象                                     |
-| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | 围绕字符编辑                                 |
-| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | 注释切换                                     |
+| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                     | mini.nvim 扩展模块（ai 规格）                |
+| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                           | 文本对象                                     |
+| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)               | 围绕字符编辑                                 |
+| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                   | 注释切换                                     |
 | [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | 扩展 % 跳转配对                              |
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | 自动配对括号                                 |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | 使用剪贴板替换                               |
@@ -754,7 +753,7 @@ gu gU g~        转小写 / 转大写 / 大小写互换
 =               按缩进规则重排
 !               通过外部命令过滤行
 gn gN           操作下一个 / 上一个搜索匹配
-gc              注释开关（Comment.nvim）
+gc              注释开关（mini.comment）
 
 # substitute.nvim（见 §1.6）
 x               用寄存器内容替换文本对象 / motion

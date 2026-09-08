@@ -475,11 +475,10 @@ It should resolve to `getty@.service`.
 | [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | Lazy-loading plugin manager on top of built-in `vim.pack` |
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | Colorscheme                                               |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | Status line                                               |
-| [echasnovski/mini.indentscope](https://github.com/echasnovski/mini.indentscope)         | Indent guide                                              |
-| [echasnovski/mini.extra](https://github.com/echasnovski/mini.extra)                     | Extra mini.nvim modules (ai specs)                        |
-| [echasnovski/mini.ai](https://github.com/echasnovski/mini.ai)                           | Text objects                                              |
-| [echasnovski/mini.surround](https://github.com/echasnovski/mini.surround)               | Surround text with parens/quotes/etc                      |
-| [numToStr/Comment.nvim](https://github.com/numToStr/Comment.nvim)                       | Comment toggling                                          |
+| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                     | Extra mini.nvim modules (ai specs)                        |
+| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                           | Text objects                                              |
+| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)               | Surround text with parens/quotes/etc                      |
+| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                   | Comment toggling                                          |
 | [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | Extended % matching                                       |
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | Auto-close brackets/parens                                |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | Substitute with clipboard                                 |
@@ -759,7 +758,7 @@ gu gU g~        Lowercase / uppercase / toggle case
 =               Reindent
 !               Filter lines through external command
 gn gN           Operate on the next / previous search match
-gc              Toggle comment (Comment.nvim)
+gc              Toggle comment (mini.comment)
 
 # substitute.nvim (see §1.6)
 x               Replace text object / motion with register content
