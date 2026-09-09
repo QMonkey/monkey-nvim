@@ -475,10 +475,10 @@ It should resolve to `getty@.service`.
 | [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | Lazy-loading plugin manager on top of built-in `vim.pack` |
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | Colorscheme                                               |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | Status line                                               |
-| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                     | Extra mini.nvim modules (ai specs)                        |
-| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                           | Text objects                                              |
-| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)               | Surround text with parens/quotes/etc                      |
-| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                   | Comment toggling                                          |
+| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                         | Extra mini.nvim modules (ai specs)                        |
+| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                               | Text objects                                              |
+| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)                   | Surround text with parens/quotes/etc                      |
+| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                     | Comment toggling                                          |
 | [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | Extended % matching                                       |
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | Auto-close brackets/parens                                |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | Substitute with clipboard                                 |
@@ -488,13 +488,8 @@ It should resolve to `getty@.service`.
 | [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                       | Folding                                                   |
 | [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)             | Async library (ufo dependency)                            |
 | [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)   | Syntax highlighting & parsing                             |
-| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp)                                 | Completion engine                                         |
-| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp)                         | LSP completion source                                     |
-| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer)                             | Buffer word completion source                             |
-| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path)                                 | Path completion source                                    |
-| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline)                           | Cmdline completion                                        |
-| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip)                 | Luasnip completion source                                 |
-| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip)                                 | Snippet engine                                            |
+| [saghen/blink.cmp](https://github.com/saghen/blink.cmp)                                 | Completion engine (LSP/buffer/path/cmdline/snippets)      |
+| [saghen/blink.lib](https://github.com/saghen/blink.lib)                                 | Shared library (blink.cmp dependency)                     |
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | Snippet collection                                        |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git diff in sign column                                   |
 | [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git wrapper                                               |
@@ -678,8 +673,8 @@ m/          View all marks in Location List
 #### 1.12 Terminal
 
 ```text
-F3      Open a bottom terminal running a command (`:TermExec <cmd>`, empty
-        input opens an empty terminal; Tab completes cwd files)
+F3      Open a bottom terminal pre-filling `:botright 20new | terminal `
+        (type an optional command and press <CR>; empty input opens a shell)
 F4      Toggle the global terminal at the bottom (20 rows)
 F5      Toggle the global terminal at the right (half width)
 ```
@@ -889,7 +884,7 @@ New `.sh` and `.py` files get a shebang line automatically inserted:
 
 ### 2. Insert mode
 
-#### 2.1 Snippets (LuaSnip)
+#### 2.1 Snippets (blink.cmp)
 
 ```text
 Ctrl+l      Expand snippet / confirm completion
