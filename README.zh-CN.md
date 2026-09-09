@@ -473,10 +473,10 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | 基于内置 `vim.pack` 的懒加载插件管理器       |
 | [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | 配色方案                                     |
 | [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | 状态栏                                       |
-| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                     | mini.nvim 扩展模块（ai 规格）                |
-| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                           | 文本对象                                     |
-| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)               | 围绕字符编辑                                 |
-| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                   | 注释切换                                     |
+| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                         | mini.nvim 扩展模块（ai 规格）                |
+| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                               | 文本对象                                     |
+| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)                   | 围绕字符编辑                                 |
+| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                     | 注释切换                                     |
 | [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | 扩展 % 跳转配对                              |
 | [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | 自动配对括号                                 |
 | [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | 使用剪贴板替换                               |
@@ -486,13 +486,8 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                       | 折叠                                         |
 | [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)             | 异步库（ufo 依赖）                           |
 | [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)   | 语法高亮与解析                               |
-| [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp)                                 | 补全引擎                                     |
-| [hrsh7th/cmp-nvim-lsp](https://github.com/hrsh7th/cmp-nvim-lsp)                         | LSP 补全源                                   |
-| [hrsh7th/cmp-buffer](https://github.com/hrsh7th/cmp-buffer)                             | 缓冲区补全源                                 |
-| [hrsh7th/cmp-path](https://github.com/hrsh7th/cmp-path)                                 | 路径补全源                                   |
-| [hrsh7th/cmp-cmdline](https://github.com/hrsh7th/cmp-cmdline)                           | 命令行补全                                   |
-| [saadparwaiz1/cmp_luasnip](https://github.com/saadparwaiz1/cmp_luasnip)                 | Luasnip 补全源                               |
-| [L3MON4D3/LuaSnip](https://github.com/L3MON4D3/LuaSnip)                                 | 代码片段引擎                                 |
+| [saghen/blink.cmp](https://github.com/saghen/blink.cmp)                                 | 补全引擎（LSP/缓冲区/路径/命令行/片段一体）  |
+| [saghen/blink.lib](https://github.com/saghen/blink.lib)                                 | 共享库（blink.cmp 依赖）                     |
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | 常用代码片段集合                             |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git 差异标记                                 |
 | [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git 集成                                     |
@@ -501,7 +496,7 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | 文件管理器（替代 netrw）                     |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | 自动生成 ctags                               |
 | [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成                                  |
-| [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                       | Better quickfix 窗口（预览、过滤、fzf）                      |
+| [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                       | Better quickfix 窗口（预览、过滤、fzf）      |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | 多光标编辑                                   |
 | [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI 集成（opencode/claude/codex）         |
 | [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI 内联补全（virtual text，远程 + 本地 FIM） |
@@ -552,7 +547,7 @@ Ctrl+d  向前删除    (Del)
 ```text
 F1      打开 fzf-lua live grep
 F2      切换 fzf-lua 恢复/关闭
-F3      在底部新终端中运行命令（:TermExec <cmd>，Tab 补全当前目录文件）
+F3      在底部新终端中运行命令（预填 :botright 20new | terminal，输入命令后回车；直接回车打开空终端）
 F4      切换全局终端（底部，打开/隐藏）
 F5      切换全局终端（右侧，打开/隐藏）
 ```
@@ -675,7 +670,7 @@ m/          在Location List里，查看当前buffer的所有标记
 #### 1.12 终端
 
 ```text
-F3      在底部新终端中运行命令（:TermExec <cmd>，Tab 补全当前目录文件）
+F3      在底部新终端中运行命令（预填 :botright 20new | terminal，输入命令后回车；直接回车打开空终端）
 F4      切换全局终端（底部，20 行）
 F5      切换全局终端（右侧，半宽）
 ```
@@ -882,7 +877,7 @@ Viminfo 的对应物 shada 按工程隔离：命令/搜索历史、寄存器和 
 
 ### 2. 插入模式
 
-#### 2.1 代码片段（LuaSnip）
+#### 2.1 代码片段（blink.cmp）
 
 ```text
 Ctrl+l      展开/确认补全
