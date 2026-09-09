@@ -151,13 +151,11 @@ local nav_specs = {
 
 local code_specs = {
   { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
-  { src = 'https://github.com/hrsh7th/nvim-cmp' },
-  { src = 'https://github.com/hrsh7th/cmp-nvim-lsp' },
-  { src = 'https://github.com/hrsh7th/cmp-buffer' },
-  { src = 'https://github.com/hrsh7th/cmp-path' },
-  { src = 'https://github.com/hrsh7th/cmp-cmdline' },
-  { src = 'https://github.com/L3MON4D3/LuaSnip' },
-  { src = 'https://github.com/saadparwaiz1/cmp_luasnip' },
+  {
+    src = 'https://github.com/saghen/blink.cmp',
+    dependencies = { src = 'https://github.com/saghen/blink.lib' },
+    build = function() require('blink.cmp').build():pwait() end,
+  },
   { src = 'https://github.com/rafamadriz/friendly-snippets' },
 }
 
@@ -171,7 +169,7 @@ local git_specs = {
       { '<leader>gL', function() require('neogit').action('log', 'log_all_references')() end, desc = 'Neogit log (all)' },
     },
     config = function()
-      require('neogit').setup({ diff_viewer = 'codediff', integrations = { codediff = true } })
+      require('neogit').setup({ kind = 'split_above', diff_viewer = 'codediff', integrations = { codediff = true } })
       require('codediff').setup({ diff = { compact = true } })
     end,
   },
@@ -738,21 +736,7 @@ local function terminal_toggle(vertical)
   end
 end
 
--- :TermExec [command] — the command (if any) runs as a terminal
--- job in a new 20-row bottom split. Arguments complete against cwd files.
-vim.api.nvim_create_user_command('TermExec', function(o)
-  vim.cmd('botright 20new')
-  vim.fn.jobstart(o.args, { term = true })
-end, {
-  nargs = '*',
-  complete = function(lead)
-    return vim.fn.getcompletion(lead, 'file')
-  end,
-})
-
-vim.keymap.set('n', '<F3>', function()
-  vim.api.nvim_feedkeys(':TermExec ', 't', false)
-end, { desc = 'Open a terminal at the bottom' })
+vim.keymap.set('n', '<F3>', ':botright 20new | terminal<Space>', { desc = 'Open a terminal at the bottom' })
 vim.keymap.set({ 'n', 't' }, '<F4>', function() terminal_toggle(false) end,
   { silent = true, desc = 'Toggle the global terminal at the bottom' })
 vim.keymap.set({ 'n', 't' }, '<F5>', function() terminal_toggle(true) end,
@@ -2142,8 +2126,7 @@ vim.lsp.config('vscode-json-language-server', {
   },
 })
 
-local cmp_nvim_lsp = require('cmp_nvim_lsp')
-vim.lsp.config('*', { capabilities = cmp_nvim_lsp.default_capabilities() })
+vim.lsp.config('*', { capabilities = require('blink.cmp').get_lsp_capabilities() })
 
 local enabled = {
   'clangd', 'zls', 'rust_analyzer', 'gopls', 'typescript-language-server', 'pylsp', 'lua-language-server',
@@ -2166,72 +2149,53 @@ vim.api.nvim_create_autocmd('BufWritePre', {
   end,
 })
 
--- nvim-cmp
-local cmp = require('cmp')
-local luasnip = require('luasnip')
-
-require('luasnip.loaders.from_vscode').lazy_load()
-
-cmp.setup({
-  snippet = {
-    expand = function(args)
-      luasnip.lsp_expand(args.body)
-    end,
+-- blink.cmp
+require('blink.cmp').setup({
+  completion = {
+    list = {
+      selection = { preselect = true, auto_insert = true },
+    },
+    menu = { border = 'rounded' },
+    documentation = {
+      auto_show = true,
+      auto_show_delay_ms = 200,
+      window = { border = 'rounded' },
+    },
   },
-  mapping = cmp.mapping.preset.insert({
-    ['<Tab>'] = cmp.mapping(function(fallback)
-      if luasnip.jumpable(1) then
-        luasnip.jump(1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<S-Tab>'] = cmp.mapping(function(fallback)
-      if luasnip.jumpable(-1) then
-        luasnip.jump(-1)
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<C-l>'] = cmp.mapping(function(fallback)
-      if cmp.visible() then
-        cmp.confirm({ select = true })
-      elseif luasnip.expand_or_jumpable() then
-        luasnip.expand_or_jump()
-      else
-        fallback()
-      end
-    end, { 'i', 's' }),
-    ['<CR>'] = cmp.mapping.confirm({ select = true }),
-    ['<C-j>'] = cmp.mapping.select_next_item(),
-    ['<C-k>'] = cmp.mapping.select_prev_item(),
-  }),
-  performance = {
-    fetching_timeout = 2000,
+  signature = {
+    enabled = true,
+    trigger = {
+      show_on_keyword = true,
+    },
+    window = {
+      border = 'rounded',
+      max_width = 100,
+    },
   },
-  sources = cmp.config.sources({
-    { name = 'nvim_lsp' },
-    { name = 'luasnip' },
-  }, {
-    { name = 'buffer' },
-    { name = 'path' },
-  }),
-})
-
-require('cmp_cmdline')
-
-cmp.setup.cmdline(':', {
-  mapping = cmp.mapping.preset.cmdline(),
-  sources = cmp.config.sources({
-    { name = 'path' },
-  }, {
-    { name = 'cmdline' },
-  }),
-})
-
-cmp.setup.cmdline({ '/', '?' }, {
-  mapping = cmp.mapping.preset.cmdline(),
+  keymap = {
+    preset = 'default',
+    ['<Tab>'] = { 'snippet_forward', 'fallback' },
+    ['<S-Tab>'] = { 'snippet_backward', 'fallback' },
+    ['<C-l>'] = { 'select_and_accept', 'snippet_forward', 'fallback' },
+    ['<CR>'] = { 'select_and_accept', 'fallback' },
+    ['<C-j>'] = { 'select_next', 'fallback' },
+    ['<C-k>'] = { 'select_prev', 'fallback' },
+  },
   sources = {
-    { name = 'buffer' },
+    default = { 'lsp', 'snippets', 'buffer', 'path' },
+    providers = {
+      path = {
+        enabled = function()
+          return not (vim.fn.mode() == 'c' and (vim.fn.getcmdtype() == '/' or vim.fn.getcmdtype() == '?'))
+        end,
+      },
+    },
+  },
+  cmdline = {
+    sources = { default = { 'path', 'cmdline', 'buffer' } },
+    completion = {
+      menu = { auto_show = true },
+      list = { selection = { preselect = true, auto_insert = true } },
+    },
   },
 })
