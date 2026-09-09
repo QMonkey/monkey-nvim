@@ -304,46 +304,32 @@ local tools_specs = {
     cmd = { 'Sidekick' },
     keys = {
       {
-        '<leader>ii',
-        function()
-          require('sidekick.cli').toggle()
-        end,
-        desc = 'Sidekick: toggle CLI (nvim terminal only)',
+        '<leader>is', function() require('sidekick.cli').select() end, desc = 'Sidekick: select CLI',
       },
       {
-        '<leader>is',
-        function()
-          require('sidekick.cli').select()
-        end,
-        desc = 'Sidekick: select CLI',
+        '<leader>id', function() require('sidekick.cli').close() end, desc = 'Sidekick: detach CLI session',
       },
       {
-        '<leader>id',
-        function()
-          require('sidekick.cli').close()
-        end,
-        desc = 'Sidekick: detach CLI session',
+        '<leader>ii', function() require('sidekick.cli').toggle() end, desc = 'Sidekick: toggle CLI (nvim terminal only)',
+      },
+      {
+        '<leader>if', function() require('sidekick.cli').send({ msg = '{file}' }) end, desc = 'Sidekick: send file',
       },
       {
         '<leader>it',
-        function()
-          require('sidekick.cli').send({ msg = '{this}' })
-        end,
-        mode = { 'x', 'n' },
+        function() require('sidekick.cli').send({ msg = '{this}' }) end,
+        mode = { 'n', 'x' },
         desc = 'Sidekick: send this',
       },
       {
-        '<leader>if',
-        function()
-          require('sidekick.cli').send({ msg = '{file}' })
-        end,
-        desc = 'Sidekick: send file',
+        '<leader>ip',
+        function() require('sidekick.cli').prompt() end,
+        mode = { 'n', 'x' },
+        desc = 'Sidekick: select prompt',
       },
       {
         '<leader>iv',
-        function()
-          require('sidekick.cli').send({ msg = '{selection}' })
-        end,
+        function() require('sidekick.cli').send({ msg = '{selection}' }) end,
         mode = { 'x' },
         desc = 'Sidekick: send visual selection',
       },
@@ -358,14 +344,6 @@ local tools_specs = {
           end)
         end,
         desc = 'Sidekick: submit prompt (select if multiple)',
-      },
-      {
-        '<leader>ip',
-        function()
-          require('sidekick.cli').prompt()
-        end,
-        mode = { 'n', 'x' },
-        desc = 'Sidekick: select prompt',
       },
     },
     config = function()
@@ -684,14 +662,8 @@ require('auto-session').setup({
     -- fallback), then point the remaining window at the most recently
     -- used file buffer.
     function()
-      local to_close = {}
       for _, win in ipairs(vim.api.nvim_list_wins()) do
-        if vim.bo[vim.api.nvim_win_get_buf(win)].buftype == 'terminal' then
-          to_close[#to_close + 1] = win
-        end
-      end
-      for _, win in ipairs(to_close) do
-        if vim.api.nvim_win_is_valid(win) then
+        if vim.api.nvim_win_is_valid(win) and vim.bo[vim.api.nvim_win_get_buf(win)].buftype == 'terminal' then
           pcall(vim.api.nvim_win_close, win, false)
         end
       end
@@ -699,20 +671,18 @@ require('auto-session').setup({
       for _, win in ipairs(vim.api.nvim_list_wins()) do
         local buf = vim.api.nvim_win_get_buf(win)
         if vim.bo[buf].buflisted and vim.bo[buf].buftype == '' and vim.api.nvim_buf_get_name(buf) ~= '' then
-          return true
+          return
         end
       end
 
-      local lastused
+      local last
       for _, info in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
-        local buf = info.bufnr
-        if vim.bo[buf].buftype == '' and vim.api.nvim_buf_get_name(buf) ~= ''
-            and (lastused == nil or info.lastused > lastused.used) then
-          lastused = { buf = buf, used = info.lastused }
+        if vim.bo[info.bufnr].buflisted and vim.bo[info.bufnr].buftype == '' and vim.api.nvim_buf_get_name(info.bufnr) ~= ''
+            and (not last or info.lastused > last.lastused) then
+          last = info
         end
       end
-      if lastused then vim.cmd('buffer ' .. lastused.buf) end
-      return true
+      if last then vim.api.nvim_set_current_buf(last.bufnr) end
     end,
   },
 })
@@ -1156,7 +1126,7 @@ vim.opt.magic = true
 vim.opt.directory = vim.fn.stdpath("data") .. "/swap//"
 vim.opt.jumpoptions:append('stack')
 
--- Clipboard {
+-- Clipboard
 -- Choose the clipboard backend for the +/* registers.
 -- Over ssh, prefer OSC 52 so yanks reach the local clipboard; the remote
 -- X11/Wayland clipboard is otherwise unreachable from here.
@@ -1200,7 +1170,6 @@ elseif not is_physical_console and (has_display or has_wayland or has_mac) then
 elseif has_tmux then
   vim.opt.clipboard = 'unnamed,unnamedplus'
 end
--- }
 
 -- Indent
 vim.opt.smartindent = true
