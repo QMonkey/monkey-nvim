@@ -676,6 +676,45 @@ require('auto-session').setup({
   auto_save_enabled = true,
   auto_restore_enabled = true,
   close_filetypes_on_save = { 'oil' },
+  pre_save_cmds = {
+    -- mksession drops terminal buffers but still rebuilds their windows as
+    -- blank tabs/splits: quitting with no real-file window left saves a
+    -- session that restores as a blank nvim. So close terminal windows
+    -- first (the last one cannot close, E444, and falls through to the
+    -- fallback), then point the remaining window at the most recently
+    -- used file buffer.
+    function()
+      local to_close = {}
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.bo[vim.api.nvim_win_get_buf(win)].buftype == 'terminal' then
+          to_close[#to_close + 1] = win
+        end
+      end
+      for _, win in ipairs(to_close) do
+        if vim.api.nvim_win_is_valid(win) then
+          pcall(vim.api.nvim_win_close, win, false)
+        end
+      end
+
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        local buf = vim.api.nvim_win_get_buf(win)
+        if vim.bo[buf].buflisted and vim.bo[buf].buftype == '' and vim.api.nvim_buf_get_name(buf) ~= '' then
+          return true
+        end
+      end
+
+      local lastused
+      for _, info in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
+        local buf = info.bufnr
+        if vim.bo[buf].buftype == '' and vim.api.nvim_buf_get_name(buf) ~= ''
+            and (lastused == nil or info.lastused > lastused.used) then
+          lastused = { buf = buf, used = info.lastused }
+        end
+      end
+      if lastused then vim.cmd('buffer ' .. lastused.buf) end
+      return true
+    end,
+  },
 })
 
 vim.keymap.set('n', '<leader>ws', '<cmd>AutoSession save<CR>', { silent = true })
