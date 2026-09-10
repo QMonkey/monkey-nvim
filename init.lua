@@ -199,7 +199,6 @@ local code_specs = {
         move = { set_jumps = true },
       })
       local select = require('nvim-treesitter-textobjects.select')
-      local move = require('nvim-treesitter-textobjects.move')
       local selects = {
         ['af'] = '@function.outer',
         ['if'] = '@function.inner',
@@ -207,25 +206,44 @@ local code_specs = {
         ['ic'] = '@class.inner',
         ['aP'] = '@parameter.outer',
         ['iP'] = '@parameter.inner',
-        ['al'] = '@loop.outer',
-        ['il'] = '@loop.inner',
+        ['aL'] = '@loop.outer',
+        ['iL'] = '@loop.inner',
+        ['ad'] = '@conditional.outer',
+        ['id'] = '@conditional.inner',
+        ['aC'] = '@comment.outer',
+        ['iC'] = '@comment.inner',
       }
       for lhs, query in pairs(selects) do
         vim.keymap.set({ 'x', 'o' }, lhs, function()
           select.select_textobject(query, 'textobjects')
         end, { silent = true, desc = 'ts textobj ' .. lhs })
       end
+      local move = require('nvim-treesitter-textobjects.move')
       local moves = {
         [']f'] = { move.goto_next_start, '@function.outer' },
         ['[f'] = { move.goto_previous_start, '@function.outer' },
+        [']F'] = { move.goto_next_end, '@function.outer' },
+        ['[F'] = { move.goto_previous_end, '@function.outer' },
+        [']c'] = { move.goto_next_start, '@class.outer' },
+        ['[c'] = { move.goto_previous_start, '@class.outer' },
+        [']C'] = { move.goto_next_end, '@class.outer' },
+        ['[C'] = { move.goto_previous_end, '@class.outer' },
         [']P'] = { move.goto_next_start, '@parameter.outer' },
         ['[P'] = { move.goto_previous_start, '@parameter.outer' },
+        [']L'] = { move.goto_next_start, '@loop.outer' },
+        ['[L'] = { move.goto_previous_start, '@loop.outer' },
       }
       for lhs, fn in pairs(moves) do
         vim.keymap.set({ 'n', 'x', 'o' }, lhs, function()
           fn[1](fn[2], 'textobjects')
         end, { silent = true, desc = 'ts move ' .. lhs })
       end
+
+      local swap = require('nvim-treesitter-textobjects.swap')
+      vim.keymap.set('n', '<leader>x', function() swap.swap_next('@parameter.inner') end,
+        { silent = true, desc = 'swap param forward' })
+      vim.keymap.set('n', '<leader>X', function() swap.swap_previous('@parameter.inner') end,
+        { silent = true, desc = 'swap param backward' })
     end,
   },
   {
@@ -685,8 +703,43 @@ vim.api.nvim_create_autocmd('BufReadPost', {
 })
 
 -- Terminal
--- F4/F5 toggle one global terminal (bottom / right); either key hides it
--- while visible. The job and history survive hides. F3 opens extra terminals.
+-- Ensure the global terminal exists and is on screen in the current tab,
+-- creating it if missing or showing it if hidden. Returns the terminal buf
+-- and whether it was just created. Focus is left on the terminal window.
+local function ensure_terminal(vertical)
+  vim.cmd('stopinsert')
+  local buf = vim.g.terminal_bufnr or 0
+  local running = buf > 0 and vim.api.nvim_buf_is_valid(buf) and vim.b[buf].terminal_job_id ~= nil
+      and vim.fn.jobwait({ vim.b[buf].terminal_job_id }, 0)[1] == -1
+  if not running then
+    if vertical then
+      vim.cmd('botright vnew | terminal')
+    else
+      vim.cmd('botright 20new | terminal')
+    end
+    buf = vim.api.nvim_get_current_buf()
+    vim.g.terminal_bufnr = buf
+    return buf, true
+  end
+  local tab = vim.fn.tabpagenr()
+  local wins = vim.fn.win_findbuf(buf)
+  for _, wid in ipairs(wins) do
+    if vim.fn.win_id2tabwin(wid)[1] == tab then
+      return buf, false
+    end
+  end
+  for _, wid in ipairs(wins) do
+    vim.api.nvim_win_call(wid, function() vim.cmd('hide') end)
+  end
+  if vertical then
+    vim.cmd('botright vertical sbuffer ' .. buf)
+  else
+    vim.cmd('botright sbuffer ' .. buf)
+    vim.cmd('resize 20')
+  end
+  return buf, false
+end
+
 local function terminal_toggle(vertical)
   vim.cmd('stopinsert')
   local buf = vim.g.terminal_bufnr or 0
@@ -694,31 +747,18 @@ local function terminal_toggle(vertical)
       and vim.fn.jobwait({ vim.b[buf].terminal_job_id }, 0)[1] == -1
   if running then
     local tab = vim.fn.tabpagenr()
-    local wins = vim.fn.win_findbuf(buf)
-    for _, wid in ipairs(wins) do
+    for _, wid in ipairs(vim.fn.win_findbuf(buf)) do
       if vim.fn.win_id2tabwin(wid)[1] == tab then
         vim.api.nvim_win_call(wid, function() vim.cmd('hide') end)
         return
       end
     end
-    for _, wid in ipairs(wins) do
-      vim.api.nvim_win_call(wid, function() vim.cmd('hide') end)
-    end
-    if vertical then
-      vim.cmd('botright vertical sbuffer ' .. buf)
-    else
-      vim.cmd('botright sbuffer ' .. buf)
-      vim.cmd('resize 20')
-    end
-    vim.cmd('startinsert')
-  else
-    if vertical then
-      vim.cmd('botright vnew | terminal')
-    else
-      vim.cmd('botright 20new | terminal')
-    end
+  end
+  local _, created = ensure_terminal(vertical)
+  if created then
     vim.schedule(function() vim.cmd('startinsert') end)
-    vim.g.terminal_bufnr = vim.api.nvim_get_current_buf()
+  else
+    vim.cmd('startinsert')
   end
 end
 
@@ -826,30 +866,22 @@ local function send_to_pane(text, submit)
     if pane then
       return tmux_send(pane, text, submit)
     end
-    return open_pane_picker(function(p)
-      tmux_send(p, text, submit)
-    end)
+    return open_pane_picker(function(p) tmux_send(p, text, submit) end)
   end
 
-  -- No tmux: fall back to the global terminal, creating it (F5-style vsplit)
-  -- if it never existed or died, and showing it if hidden. Focus returns to
-  -- the code window after the terminal becomes visible.
-  local buf = vim.g.terminal_bufnr or 0
-  local running = buf > 0 and vim.api.nvim_buf_is_valid(buf) and vim.b[buf].terminal_job_id ~= nil
-      and vim.fn.jobwait({ vim.b[buf].terminal_job_id }, 0)[1] == -1
-  if not running then
-    vim.cmd('botright vnew | terminal')
-    vim.g.terminal_bufnr = vim.api.nvim_get_current_buf()
-    buf = vim.g.terminal_bufnr
-  elseif #vim.fn.win_findbuf(buf) == 0 then
-    vim.cmd('botright vertical sbuffer ' .. buf)
-  end
+  -- No tmux: fall back to the global terminal (F5-style vsplit) via the same
+  -- ensure/reveal logic as F4/F5. Focus returns to the code window after the
+  -- terminal becomes visible.
+  local prev_win = vim.api.nvim_get_current_win()
+  local buf = ensure_terminal(true)
   local chan = vim.b[buf].terminal_job_id
   vim.fn.chansend(chan, text)
   if submit then
     vim.fn.chansend(chan, '\n')
   end
-  vim.cmd('wincmd p')
+  if vim.api.nvim_win_is_valid(prev_win) then
+    vim.api.nvim_set_current_win(prev_win)
+  end
 end
 
 -- ,sa attach a pane so sends skip the picker
@@ -1728,7 +1760,7 @@ local gen_ai_spec = require('mini.extra').gen_ai_spec
 require('mini.ai').setup({
   custom_textobjects = {
     i = gen_ai_spec.indent(),
-    L = gen_ai_spec.line(),
+    e = gen_ai_spec.line(),
     B = gen_ai_spec.buffer(),
   },
   mappings = {
