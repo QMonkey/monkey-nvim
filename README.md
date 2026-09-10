@@ -492,15 +492,13 @@ It should resolve to `getty@.service`.
 | [saghen/blink.lib](https://github.com/saghen/blink.lib)                                 | Shared library (blink.cmp dependency)                     |
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | Snippet collection                                        |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git diff in sign column                                   |
-| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git wrapper                                               |
-| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim)                 | Side-by-side diff                                         |
+| [nvim-mini/mini-git](https://github.com/nvim-mini/mini-git)                             | Git integration (`:Git` passthrough + events)             |
 | [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session management                                        |
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | File explorer (replaces netrw)                            |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | Automatic ctags generation                                |
 | [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope integration                                        |
 | [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                       | Better quickfix window (preview, filter, fzf)             |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | Multiple cursors                                          |
-| [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI integration (opencode/claude/codex)                |
 | [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI inline completion (virtual text, remote + local FIM)   |
 
 ## Keyboard shortcut
@@ -549,9 +547,15 @@ Ctrl+d  Delete forward (Del)
 ```text
 F1      Open fzf-lua live grep
 F2      Toggle fzf-lua resume/close
-F3      Run a command in a new bottom terminal (Tab completes cwd files)
+F3      Open a bottom terminal pre-filling `:botright 20new | terminal `
+        (type an optional command and press <CR>; empty input opens a shell)
 F4      Toggle the global terminal at the bottom (open/hide)
 F5      Toggle the global terminal at the right (open/hide)
+,ss     Paste the visual selection / current line into a tmux pane (fzf-lua)
+,sf     Paste the current file path
+,sp     Type a prompt and paste it
+,sm     Submit (Enter) in the target pane
+,sd     Detach the attached pane
 ```
 
 #### 1.3 Buffer
@@ -677,34 +681,40 @@ F3      Open a bottom terminal pre-filling `:botright 20new | terminal `
         (type an optional command and press <CR>; empty input opens a shell)
 F4      Toggle the global terminal at the bottom (20 rows)
 F5      Toggle the global terminal at the right (half width)
+,ss     Paste the visual selection / current line into a tmux pane picked via
+        fzf-lua; outside tmux it goes to the F4 global terminal instead
+,sf     Paste the current file path
+,sp     Type a prompt and paste it
+,sm     Submit (Enter) the message composed in the target pane — content
+        comes from ,ss/,sf/,sp
+,sa     Attach a pane (persisted per project via shada) so sends skip the picker
+,sd     Detach the attached pane
+
+,ss/sf/sp only paste — the target stays free to compose around them; ,sm
+submits with Enter.
 ```
 
 F4 and F5 toggle the same global terminal — either key hides it while visible, and it reopens with job and scrollback intact in whatever tab you are in. F3 opens an extra terminal per invocation; the command runs as a job and the window stays open showing `[Process exited N]` afterwards.
 
 Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer. Terminal windows show no line numbers or whitespace markers.
 
-#### 1.13 Sidekick (AI CLI)
+#### 1.13 Send to pane (,s group)
+
+Text goes to a tmux pane or, outside tmux, to the F4/F5 global terminal
+(auto-opened as a right split on first send). The first send opens an fzf pane
+picker and attaches the pick (persisted per project via shada); later sends go
+straight to the attached pane. The attached pane is marked `*` in the picker,
+the pane running nvim itself is excluded, and a vanished pane auto-detaches.
 
 ```text
-,ii     Toggle opencode terminal window
-,is     Select CLI tool
-,id     Detach CLI session
-,im     Submit current prompt (select if multiple sessions)
-,if     Send current file
+,ss     Paste the visual selection / current line
+,sf     Paste the current file path
+,sp     Type a prompt and paste it
+,sm     Submit (Enter) the message composed in the target pane
+,sa/sd  Attach / detach the target pane
 ```
 
-The following work in both normal and visual mode:
-
-```text
-,it     Send current context (word/line)
-,ip     Select prompt template
-```
-
-Visual mode only:
-
-```text
-,iv     Send visual selection
-```
+,ss/sf/sp only paste — compose around them in the target; ,sm submits.
 
 #### 1.14 Minuet (AI code completion)
 
@@ -842,11 +852,15 @@ Leader+space        Strip trailing whitespace
 Leader+Leader+space  Strip trailing whitespace + \r (DOS newlines)
 Leader+q            Toggle quickfix (bqf preview)
 Leader+l            Toggle location list
-Leader+gg           Open Neogit
-Leader+gl           Open Neogit log (current file)
-Leader+gL           Open Neogit log (all refs)
-Leader+gd           Gitsigns diff this
-Leader+gD           CodeDiff
+Leader+gg           Git status panel (fzf-lua: stage/unstage/reset, diff preview)
+Leader+gc           Git commits for current buffer (visual: selected lines)
+Leader+gC           Git commits for repo
+Leader+gl           Git log for current file (mini.git, opens in tab)
+Leader+gL           Git log all refs with graph (mini.git, opens in tab)
+Leader+gS           Git show at cursor: line/selected range history, or open commit diff under cursor (mini.git)
+Leader+gF           Open file as of commit under cursor (mini.git, inside diff/log tab)
+Leader+gd           Gitsigns diff this (side-by-side)
+Leader+gD           Git diff working tree (all files, opens in tab)
 Leader+gb           Gitsigns blame line
 Leader+gB           Gitsigns blame
 Leader+hs           Gitsigns stage hunk
@@ -860,7 +874,15 @@ Leader+hQ           Gitsigns set quickfix all
 Leader+hl           Gitsigns set loclist
 
 Visual mode:
-Leader+gl           Neogit log for selected lines
+Leader+gS           Git log -L for selected lines
+Leader+gc           Git commits -L for selected lines
+
+Inside fzf-lua pickers (preview scrolling):
+A-u / A-d           Half page up / down
+A-f / A-b           Full page down / up
+A-j / A-k           Line down / up
+F3                  Toggle preview line wrap (on by default)
+Git status: ctrl-h / ctrl-l = stage / unstage
 
 SudoWrite           Save file with sudo
 ```
@@ -976,17 +998,14 @@ Ctrl+e  Jump to the end of the command line
 :FzfLua resume
 ```
 
-### 3. Neogit
+### 3. mini.git
 
 ```vim
-" Open Neogit status
-:Neogit
+" Git status in a split
+:Git status
 
-" Open Neogit log for current file
-:Neogit log_current
-
-" Open Neogit log
-:Neogit log
+" Git log for current file
+:vert Git log --oneline --follow -- %
 ```
 
 ### 4. Gutentags
@@ -1012,18 +1031,26 @@ g]      Jump to tag and open quickfix
 
 ## Use git in Neovim
 
-### 1. git for Neovim: [Neogit](https://github.com/NeogitOrg/neogit)
+### 1. Git integration: [mini.git](https://github.com/nvim-mini/mini-git)
+
+`:Git` runs any real git subcommand asynchronously in the current repo, with
+`<Tab>` completion for subcommands, options and paths. Interactive editors
+(`git commit`, `git rebase -i`, ...) open inside the current session.
 
 ```vim
-" Open Neogit status
-:Neogit
-:Neogit log_current
-:Neogit log
-:Neogit pull
-:Neogit push
-:Neogit commit
-:Neogit branch
+:Git status
+:Git log --oneline --graph --all
+:Git pull
+:Git push
+:Git commit
+:Git branch
 ```
+
+`User` events are fired after every command: `MiniGitCommandDone` (with
+`exit_code`, `stdout`, `stderr`, `git_subcommand` in `args.data`),
+`MiniGitCommandSplit`, and `MiniGitUpdated` when repository tracking data
+changes. `MiniGit.show_at_cursor()` shows line/range history or the commit
+under the cursor.
 
 ### 2. Git diff gutter: [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
 
@@ -1041,10 +1068,18 @@ g]      Jump to tag and open quickfix
 :Gitsigns setloclist
 ```
 
-### 3. Side-by-side diff: [codediff.nvim](https://github.com/esmuellert/codediff.nvim)
+### 3. Diff: mini.git + gitsigns.nvim
 
 ```vim
-:CodeDiff
+" Whole working tree diff (all files, unified)
+:vert Git diff
+
+" Side-by-side diff of current file (gitsigns, vim diff split)
+:Gitsigns diffthis
+
+" Line / selected range history (`git log -L`); on a commit hash in a log
+" split it opens that commit
+:lua MiniGit.show_at_cursor()
 ```
 
 ## Precautions
