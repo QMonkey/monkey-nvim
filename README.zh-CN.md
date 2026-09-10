@@ -490,15 +490,13 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [saghen/blink.lib](https://github.com/saghen/blink.lib)                                 | 共享库（blink.cmp 依赖）                     |
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | 常用代码片段集合                             |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git 差异标记                                 |
-| [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit)                                 | Git 集成                                     |
-| [esmuellert/codediff.nvim](https://github.com/esmuellert/codediff.nvim)                 | 并排差异对比                                 |
+| [nvim-mini/mini-git](https://github.com/nvim-mini/mini-git)                             | Git 集成（`:Git` 透传 + 事件）               |
 | [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session 管理                                 |
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | 文件管理器（替代 netrw）                     |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | 自动生成 ctags                               |
 | [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成                                  |
 | [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                       | Better quickfix 窗口（预览、过滤、fzf）      |
 | [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | 多光标编辑                                   |
-| [folke/sidekick.nvim](https://github.com/folke/sidekick.nvim)                           | AI CLI 集成（opencode/claude/codex）         |
 | [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI 内联补全（virtual text，远程 + 本地 FIM） |
 
 ## 快捷键
@@ -550,6 +548,14 @@ F2      切换 fzf-lua 恢复/关闭
 F3      在底部新终端中运行命令（预填 :botright 20new | terminal，输入命令后回车；直接回车打开空终端）
 F4      切换全局终端（底部，打开/隐藏）
 F5      切换全局终端（右侧，打开/隐藏）
+,ss     将可视选区/当前行粘贴到 tmux pane（fzf-lua 选择）；不在 tmux 时粘贴到 F4 全局终端
+,sf     粘贴当前文件路径
+,sp     输入提示词并粘贴
+,sm     在目标 pane 中回车提交——内容由 ,ss/,sf/,sp 组装
+,sa     挂载一个 pane（随 shada 按项目持久化），之后发送不再弹选择器
+,sd     取消挂载
+
+,ss/sf/sp 只粘贴不提交，方便在目标里继续组织内容；,sm 回车提交。
 ```
 
 使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。
@@ -673,34 +679,36 @@ m/          在Location List里，查看当前buffer的所有标记
 F3      在底部新终端中运行命令（预填 :botright 20new | terminal，输入命令后回车；直接回车打开空终端）
 F4      切换全局终端（底部，20 行）
 F5      切换全局终端（右侧，半宽）
+,ss     将可视选区/当前行粘贴到 tmux pane（fzf-lua 选择）；不在 tmux 时粘贴到 F4 全局终端
+,sf     粘贴当前文件路径
+,sp     输入提示词并粘贴
+,sm     在目标 pane 中回车提交——内容由 ,ss/,sf/,sp 组装
+,sa     挂载一个 pane（随 shada 按项目持久化），之后发送不再弹选择器
+,sd     取消挂载
+
+,ss/sf/sp 只粘贴不提交，方便在目标里继续组织内容；,sm 回车提交。
 ```
 
 F4/F5 切换同一个全局终端——可见时按任意键隐藏，隐藏后在当前 tab 重开（job 与滚动历史保留）。F3 每次打开一个额外终端，命令作为 job 运行，结束后窗口保留并显示 `[Process exited N]`。
 
 使用 `<Ctrl-\><Ctrl-n>` 从终端模式切换到普通模式。普通模式下 `<ScrollWheelUp>` 和 `<ScrollWheelDown>` 可滚动终端缓冲区。终端窗口不显示行号和空白标记。
 
-#### 1.13 Sidekick（AI CLI）
+#### 1.13 发送到 pane（,s 组）
+
+文本发送到 tmux pane；不在 tmux 时发送到 F4/F5 全局终端（首次发送自动以右侧
+vsplit 打开）。首次发送会弹出 fzf 选择 pane 并自动挂载（随 shada 按项目持久
+化），之后的发送直达挂载目标。挂载项在 picker 中以 `*` 标记，nvim 自身的
+pane 不在列表中，目标消失时自动摘除。
 
 ```text
-,ii     打开/关闭 opencode 终端窗口
-,is     选择 CLI 工具
-,id     断开 CLI 会话
-,im     提交当前输入（多个会话时弹出选择）
-,if     发送当前文件
+,ss     粘贴可视选区/当前行
+,sf     粘贴当前文件路径
+,sp     输入提示词并粘贴
+,sm     在目标 pane 中回车提交
+,sa/sd  挂载 / 取消挂载目标 pane
 ```
 
-以下在普通模式和可视化模式下均可用：
-
-```text
-,it     发送当前上下文（word/line）
-,ip     选择 prompt 模板
-```
-
-仅可视化模式：
-
-```text
-,iv     发送可视选区
-```
+,ss/sf/sp 只粘贴不提交，方便在目标里继续组织内容；,sm 回车提交。
 
 #### 1.14 Minuet（AI 代码补全）
 
@@ -835,11 +843,15 @@ Leader+space        去除行尾空白字符
 Leader+Leader+space  去除行尾空白字符 + \r（DOS 换行符）
 Leader+q            打开/关闭quickfix（bqf 预览）
 Leader+l            打开/关闭location list
-Leader+gg           打开 Neogit
-Leader+gl           打开 Neogit log（当前文件）
-Leader+gL           打开 Neogit log（所有引用）
-Leader+gd           Gitsigns diff this
-Leader+gD           CodeDiff
+Leader+gg           Git status 面板（fzf-lua：stage/unstage/reset，diff 预览）
+Leader+gc           当前文件的 Git commits（可视模式：选中行历史）
+Leader+gC           仓库的 Git commits
+Leader+gl           当前文件 Git log（mini.git，tab 打开）
+Leader+gL           所有分支的 Git log（带 graph，tab 打开）
+Leader+gS           光标处历史：行/选区 git log -L，或展开光标所在 commit 的 diff
+Leader+gF           打开光标所在 commit 时的文件（用于 log/diff 内下钻）
+Leader+gd           Gitsigns diff this（当前文件并排 diff）
+Leader+gD           Git diff 工作区全部改动（tab 打开）
 Leader+gb           Gitsigns blame line
 Leader+gB           Gitsigns blame
 Leader+hs           Gitsigns stage hunk
@@ -853,7 +865,15 @@ Leader+hQ           Gitsigns set quickfix all
 Leader+hl           Gitsigns set loclist
 
 可视模式：
-Leader+gl           对选中行打开 Neogit log
+Leader+gS           对选中行执行 `git log -L`
+Leader+gc           对选中行执行 Git commits 历史
+
+fzf-lua picker 内（预览滚动）：
+A-u / A-d           半屏上/下滚动
+A-f / A-b           全屏下/上滚动
+A-j / A-k           行下/上滚动
+F3                  切换预览自动换行（默认开启）
+Git status：ctrl-h / ctrl-l = stage / unstage
 
 SudoWrite           使用 root 权限保存文件
 ```
@@ -969,17 +989,14 @@ Ctrl+e  跳到命令行最后
 :FzfLua resume
 ```
 
-### 3. Neogit
+### 3. mini.git
 
 ```vim
-" 打开 Neogit 状态
-:Neogit
+" 在分屏中打开 Git status
+:Git status
 
-" 打开当前文件日志
-:Neogit log_current
-
-" 打开项目日志
-:Neogit log
+" 当前文件 Git log
+:vert Git log --oneline --follow -- %
 ```
 
 ### 4. Gutentags
@@ -1005,17 +1022,25 @@ g]      跳转到标签并打开 quickfix
 
 ## 在 Neovim 中使用 git
 
-### 1. git for Neovim: [Neogit](https://github.com/NeogitOrg/neogit)
+### 1. Git 集成：[mini.git](https://github.com/nvim-mini/mini-git)
+
+`:Git` 以异步方式在当前仓库运行任意真实 git 子命令，支持 `<Tab>` 补全子命令、
+选项与路径。需要交互编辑器的命令（`git commit`、`git rebase -i` 等）会在
+当前会话内打开编辑窗口。
 
 ```vim
-:Neogit
-:Neogit log_current
-:Neogit log
-:Neogit pull
-:Neogit push
-:Neogit commit
-:Neogit branch
+:Git status
+:Git log --oneline --graph --all
+:Git pull
+:Git push
+:Git commit
+:Git branch
 ```
+
+每条命令执行后都会触发 `User` 事件：`MiniGitCommandDone`（`args.data` 中含
+`exit_code`、`stdout`、`stderr`、`git_subcommand`）、`MiniGitCommandSplit`，
+仓库跟踪数据变化时触发 `MiniGitUpdated`。`MiniGit.show_at_cursor()` 可查看
+行/选区历史，或展开光标所在的 commit。
 
 ### 2. Git 差异标记：[gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)
 
@@ -1030,10 +1055,17 @@ g]      跳转到标签并打开 quickfix
 :Gitsigns setloclist
 ```
 
-### 3. 并排差异对比：[codediff.nvim](https://github.com/esmuellert/codediff.nvim)
+### 3. 差异查看：mini.git + gitsigns.nvim
 
 ```vim
-:CodeDiff
+" 工作区全部改动的统一 diff
+:vert Git diff
+
+" 当前文件并排 diff（gitsigns，vim diff 分屏）
+:Gitsigns diffthis
+
+" 行/选区历史（git log -L）；在 log 分屏中光标停在 commit hash 上可展开该 commit
+:lua MiniGit.show_at_cursor()
 ```
 
 ## 注意事项
