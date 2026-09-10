@@ -63,9 +63,13 @@ local nav_specs = {
         end,
         desc = 'Document functions'
       },
-      { '<leader>e', function() require('fzf-lua').blines() end,      desc = 'Buffer lines' },
-      { '<leader>a', function() require('fzf-lua').grep_cword() end,  desc = 'Grep cword' },
-      { '<leader>a', function() require('fzf-lua').grep_visual() end, mode = 'v',           desc = 'Grep visual' },
+      { '<leader>e',  function() require('fzf-lua').blines() end,       desc = 'Buffer lines' },
+      { '<leader>a',  function() require('fzf-lua').grep_cword() end,   desc = 'Grep cword' },
+      { '<leader>a',  function() require('fzf-lua').grep_visual() end,  mode = 'v',                 desc = 'Grep visual' },
+      { '<leader>gg', function() require('fzf-lua').git_status() end,   desc = 'Git status' },
+      { '<leader>gc', function() require('fzf-lua').git_bcommits() end, desc = 'Git buffer commits' },
+      { '<leader>gc', function() require('fzf-lua').git_bcommits() end, mode = 'x',                 desc = 'Git commits for selected lines' },
+      { '<leader>gC', function() require('fzf-lua').git_commits() end,  desc = 'Git commits (repo)' },
     },
     config = function()
       local fzf_lua = require('fzf-lua')
@@ -75,9 +79,30 @@ local nav_specs = {
           silent = true,
           file_ignore_patterns = { '.git/', '.hg/', '.svn/', '.bzr/' },
         },
+        winopts = {
+          height = 0.9,
+          preview = { wrap = true },
+        },
         keymap = {
           builtin = { ['<F2>'] = 'hide' },
-          fzf = { ['ctrl-j'] = 'down', ['ctrl-k'] = 'up' },
+          fzf = {
+            ['ctrl-j'] = 'down',
+            ['ctrl-k'] = 'up',
+            ['alt-u'] = 'preview-half-page-up',
+            ['alt-d'] = 'preview-half-page-down',
+            ['alt-f'] = 'preview-page-down',
+            ['alt-b'] = 'preview-page-up',
+            ['alt-j'] = 'preview-down',
+            ['alt-k'] = 'preview-up',
+          },
+        },
+        git = {
+          status = {
+            actions = {
+              ['ctrl-h'] = { fn = fzf_lua.actions.git_stage, reload = true },
+              ['ctrl-l'] = { fn = fzf_lua.actions.git_unstage, reload = true },
+            },
+          },
         },
         files = { hidden = true },
         grep = { rg_opts = '--hidden' },
@@ -152,6 +177,58 @@ local nav_specs = {
 local code_specs = {
   { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
   {
+    src = 'https://github.com/nvim-treesitter/nvim-treesitter-context',
+    config = function()
+      require('treesitter-context').setup()
+      vim.keymap.set('n', '[c', function() require('treesitter-context').go_to_context() end,
+        { silent = true, desc = 'Jump to context' })
+    end,
+  },
+  {
+    src = 'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
+    dependencies = { src = 'https://github.com/nvim-treesitter/nvim-treesitter' },
+    init = function()
+      vim.g.no_plugin_maps = true
+    end,
+    config = function()
+      require('nvim-treesitter-textobjects').setup({
+        select = {
+          lookahead = true,
+          selection_modes = { ['@function.outer'] = 'V', ['@class.outer'] = 'V' },
+        },
+        move = { set_jumps = true },
+      })
+      local select = require('nvim-treesitter-textobjects.select')
+      local move = require('nvim-treesitter-textobjects.move')
+      local selects = {
+        ['af'] = '@function.outer',
+        ['if'] = '@function.inner',
+        ['ac'] = '@class.outer',
+        ['ic'] = '@class.inner',
+        ['aP'] = '@parameter.outer',
+        ['iP'] = '@parameter.inner',
+        ['al'] = '@loop.outer',
+        ['il'] = '@loop.inner',
+      }
+      for lhs, query in pairs(selects) do
+        vim.keymap.set({ 'x', 'o' }, lhs, function()
+          select.select_textobject(query, 'textobjects')
+        end, { silent = true, desc = 'ts textobj ' .. lhs })
+      end
+      local moves = {
+        [']f'] = { move.goto_next_start, '@function.outer' },
+        ['[f'] = { move.goto_previous_start, '@function.outer' },
+        [']P'] = { move.goto_next_start, '@parameter.outer' },
+        ['[P'] = { move.goto_previous_start, '@parameter.outer' },
+      }
+      for lhs, fn in pairs(moves) do
+        vim.keymap.set({ 'n', 'x', 'o' }, lhs, function()
+          fn[1](fn[2], 'textobjects')
+        end, { silent = true, desc = 'ts move ' .. lhs })
+      end
+    end,
+  },
+  {
     src = 'https://github.com/saghen/blink.cmp',
     dependencies = { src = 'https://github.com/saghen/blink.lib' },
     build = function() require('blink.cmp').build():pwait() end,
@@ -161,22 +238,7 @@ local code_specs = {
 
 local git_specs = {
   { src = 'https://github.com/lewis6991/gitsigns.nvim' },
-  {
-    src = 'https://github.com/NeogitOrg/neogit',
-    dependencies = { src = 'https://github.com/esmuellert/codediff.nvim' },
-    cmd = { 'Neogit', 'NeogitResetState', 'NeogitLogCurrent', 'NeogitCommit' },
-    keys = {
-      { '<leader>gL', function() require('neogit').action('log', 'log_all_references')() end, desc = 'Neogit log (all)' },
-    },
-    config = function()
-      require('neogit').setup({ kind = 'split_above', diff_viewer = 'codediff', integrations = { codediff = true } })
-      require('codediff').setup({ diff = { compact = true } })
-    end,
-  },
-  {
-    src = 'https://github.com/esmuellert/codediff.nvim',
-    cmd = { 'CodeDiff', 'VscodeDiff' },
-  },
+  { src = 'https://github.com/nvim-mini/mini-git' },
 }
 
 local project_specs = {
@@ -296,91 +358,6 @@ local tools_specs = {
           end
         end)
       end)
-    end,
-  },
-  {
-    src = 'https://github.com/folke/sidekick.nvim',
-    dependencies = { src = 'https://github.com/ibhagwan/fzf-lua' },
-    cmd = { 'Sidekick' },
-    keys = {
-      {
-        '<leader>is', function() require('sidekick.cli').select() end, desc = 'Sidekick: select CLI',
-      },
-      {
-        '<leader>id', function() require('sidekick.cli').close() end, desc = 'Sidekick: detach CLI session',
-      },
-      {
-        '<leader>ii', function() require('sidekick.cli').toggle() end, desc = 'Sidekick: toggle CLI (nvim terminal only)',
-      },
-      {
-        '<leader>if', function() require('sidekick.cli').send({ msg = '{file}' }) end, desc = 'Sidekick: send file',
-      },
-      {
-        '<leader>it',
-        function() require('sidekick.cli').send({ msg = '{this}' }) end,
-        mode = { 'n', 'x' },
-        desc = 'Sidekick: send this',
-      },
-      {
-        '<leader>ip',
-        function() require('sidekick.cli').prompt() end,
-        mode = { 'n', 'x' },
-        desc = 'Sidekick: select prompt',
-      },
-      {
-        '<leader>iv',
-        function() require('sidekick.cli').send({ msg = '{selection}' }) end,
-        mode = { 'x' },
-        desc = 'Sidekick: send visual selection',
-      },
-      {
-        '<leader>im',
-        function()
-          local state = require('sidekick.cli.state')
-          state.with(function(s)
-            if s.session then
-              s.session:submit()
-            end
-          end)
-        end,
-        desc = 'Sidekick: submit prompt (select if multiple)',
-      },
-    },
-    config = function()
-      require('sidekick').setup({
-        nes = {
-          enabled = false,
-        },
-        cli = {
-          watch = true,
-          win = {
-            layout = 'right',
-            split = { width = 0.5 },
-          },
-          picker = 'fzf-lua',
-          mux = {
-            enabled = vim.fn.executable('tmux') == 1,
-            create = 'split',
-            split = {
-              vertical = true,
-              size = 0.5,
-            },
-          },
-        },
-        ui = {
-          icons = {
-            nes = '',
-            attached = '*',
-            started = '>',
-            installed = '+',
-            missing = '-',
-            external_attached = 'E*',
-            external_started = 'E>',
-            terminal_attached = 'T*',
-            terminal_started = 'T>',
-          },
-        },
-      })
     end,
   },
   { src = 'https://github.com/milanglacier/minuet-ai.nvim' },
@@ -778,6 +755,141 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
   end,
 })
 
+-- Send to pane
+-- ,s group: deliver text to a tmux pane or the global terminal — REPLs, AI
+-- CLIs, build panes, anything. Targets are dynamic: fzf-picked tmux panes
+-- with per-project attach state (shada), or the F4/F5 global terminal.
+-- ,sa attaches a pane (survives restarts), ,sd detaches; `submit` false =
+-- paste only, leaving the target free to compose around the text.
+local function open_pane_picker(on_pane)
+  local panes = {}
+  -- exclude the pane running this nvim: pasting into our own terminal is always a mistake
+  local self_pane = vim.env.TMUX_PANE
+  local out = vim.fn.system(
+    'tmux list-panes -a -F "#{pane_id}|#{session_name}:#{window_index}.#{pane_index}|#{pane_current_command}|#{pane_current_path}"')
+  for line in vim.gsplit(out, '\n', { plain = true, trimempty = true }) do
+    local id, sess, cmd, path = line:match('^([^|]+)|([^|]+)|([^|]+)|(.*)$')
+    if id and id ~= self_pane then
+      -- mark the currently attached pane so re-attach is visible
+      local mark = vim.g.SEND_PANE_ID == id and '* ' or ''
+      panes[#panes + 1] = mark .. ('%s %s [%s] %s'):format(sess, path, cmd, id)
+    end
+  end
+  if #panes == 0 then
+    vim.notify('send-to-pane: no other tmux panes', vim.log.levels.WARN)
+    return
+  end
+  require('fzf-lua').fzf_exec(panes, {
+    prompt = 'Pane> ',
+    actions = {
+      ['default'] = function(sel)
+        local pane = sel[1]:match('(%%%S+)$')
+        if pane then
+          -- picking a pane attaches it: the next send skips the picker
+          vim.g.SEND_PANE_ID = pane
+          on_pane(pane)
+        end
+      end,
+    },
+  })
+end
+
+local function tmux_send(pane, text, submit)
+  if text ~= '' then
+    vim.fn.system({ 'tmux', 'load-buffer', '-' }, text)
+    -- multi-line: bracketed paste (-p, kept LF via -r). tmux's default
+    -- converts LF to CR (= Enter per line, TUIs submit each line); with
+    -- markers the whole block arrives as one paste into the input box.
+    local args = { 'tmux', 'paste-buffer', '-t', pane }
+    if text:find('\n', 1, true) then
+      table.insert(args, '-p')
+      table.insert(args, '-r')
+    end
+    vim.fn.system(args)
+  end
+  if submit then
+    vim.fn.system({ 'tmux', 'send-keys', '-t', pane, 'Enter' })
+  end
+end
+
+local function send_to_pane(text, submit)
+  if vim.fn.empty(vim.fn.getenv('TMUX')) == 0 then
+    local pane = vim.g.SEND_PANE_ID
+    if pane then
+      local check = vim.fn.system({ 'tmux', 'display-message', '-p', '-t', pane, '#{pane_id}' })
+      if vim.v.shell_error ~= 0 or not check:find(pane, 1, true) then
+        vim.g.SEND_PANE_ID = nil
+        vim.notify('send-to-pane: attached pane is gone, detached', vim.log.levels.WARN)
+        pane = nil
+      end
+    end
+    if pane then
+      return tmux_send(pane, text, submit)
+    end
+    return open_pane_picker(function(p)
+      tmux_send(p, text, submit)
+    end)
+  end
+
+  -- No tmux: fall back to the global terminal, creating it (F5-style vsplit)
+  -- if it never existed or died, and showing it if hidden. Focus returns to
+  -- the code window after the terminal becomes visible.
+  local buf = vim.g.terminal_bufnr or 0
+  local running = buf > 0 and vim.api.nvim_buf_is_valid(buf) and vim.b[buf].terminal_job_id ~= nil
+      and vim.fn.jobwait({ vim.b[buf].terminal_job_id }, 0)[1] == -1
+  if not running then
+    vim.cmd('botright vnew | terminal')
+    vim.g.terminal_bufnr = vim.api.nvim_get_current_buf()
+    buf = vim.g.terminal_bufnr
+  elseif #vim.fn.win_findbuf(buf) == 0 then
+    vim.cmd('botright vertical sbuffer ' .. buf)
+  end
+  local chan = vim.b[buf].terminal_job_id
+  vim.fn.chansend(chan, text)
+  if submit then
+    vim.fn.chansend(chan, '\n')
+  end
+  vim.cmd('wincmd p')
+end
+
+-- ,sa attach a pane so sends skip the picker
+-- ,sd detach
+vim.keymap.set('n', '<leader>sa', function()
+  if vim.fn.empty(vim.fn.getenv('TMUX')) == 1 then
+    vim.notify('send-to-pane: attach only applies to tmux', vim.log.levels.WARN)
+    return
+  end
+  open_pane_picker(function(pane)
+    vim.g.SEND_PANE_ID = pane
+    vim.notify('send-to-pane: attached ' .. pane)
+  end)
+end, { desc = 'Attach pane' })
+vim.keymap.set('n', '<leader>sd', function()
+  vim.notify('send-to-pane: detached ' .. (vim.g.SEND_PANE_ID or 'nothing'))
+  vim.g.SEND_PANE_ID = nil
+end, { desc = 'Detach pane' })
+
+-- ,ss sends the visual selection / current line
+-- ,sf sends the file path
+-- ,sp sends a typed prompt
+-- ,sm only submits (Enter) the message composed in the target pane
+vim.keymap.set('x', '<leader>ss', function()
+  vim.cmd('silent normal! y')
+  send_to_pane(vim.fn.getreg('"'), false)
+end, { silent = true, desc = 'Send selection to pane' })
+vim.keymap.set('n', '<leader>ss', function() send_to_pane(vim.fn.getline('.'), false) end,
+  { silent = true, desc = 'Send line to pane' })
+vim.keymap.set('n', '<leader>sf', function() send_to_pane(vim.fn.expand('%:p'), false) end,
+  { silent = true, desc = 'Send filepath to pane' })
+vim.keymap.set('n', '<leader>sp', function()
+  local prompt = vim.fn.input('Prompt> ')
+  if prompt ~= '' then
+    send_to_pane(prompt, false)
+  end
+end, { desc = 'Send prompt to pane' })
+vim.keymap.set('n', '<leader>sm', function() send_to_pane('', true) end,
+  { silent = true, desc = 'Submit (Enter) in pane' })
+
 -- cscope_maps.nvim + gtags
 vim.env.GTAGSLABEL = 'native-pygments'
 
@@ -1039,13 +1151,18 @@ vim.api.nvim_create_autocmd('FocusGained', {
   group = tags_group,
   callback = function() tags_check_branch() end,
 })
-for _, ev in ipairs({ 'NeogitBranchCheckout', 'NeogitReset', 'NeogitMerge', 'NeogitRebase', 'NeogitStash', 'NeogitPullComplete' }) do
-  vim.api.nvim_create_autocmd('User', {
-    group = tags_group,
-    pattern = ev,
-    callback = function() tags_check_branch() end,
-  })
-end
+local tags_git_subcommands = {
+  'branch', 'checkout', 'switch', 'restore', 'reset', 'merge', 'rebase', 'cherry-pick', 'revert', 'stash', 'pull',
+}
+vim.api.nvim_create_autocmd('User', {
+  group = tags_group,
+  pattern = 'MiniGitCommandDone',
+  callback = function(args)
+    if vim.list_contains(tags_git_subcommands, args.data.git_subcommand) then
+      tags_check_branch()
+    end
+  end,
+})
 
 -- Encoding
 vim.opt.encoding = 'utf-8'
@@ -1199,7 +1316,7 @@ vim.opt.listchars = 'tab:▸ ,leadmultispace:│   ,eol:¬,trail:·'
 
 -- Trailing whitespace in red (matchadd is window-local; priority -1 keeps it below Search/IncSearch)
 -- Blacklist: filetypes that skip trailing-whitespace highlighting
-vim.g.trailing_whitespace_blacklist = { 'NeogitStatus', 'NeogitPopup', 'fzf', 'terminal', 'help' }
+vim.g.trailing_whitespace_blacklist = { 'fzf', 'terminal', 'help' }
 vim.api.nvim_set_hl(0, 'TrailingSpace', { link = 'IncSearch' })
 vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter', 'FileType' }, {
   group = vim.api.nvim_create_augroup('TrailingWhitespace', { clear = true }),
@@ -1666,12 +1783,16 @@ require('nvim-treesitter.install').install({
 -- Git
 local gitsigns = require('gitsigns')
 gitsigns.setup({ preview_config = { border = 'rounded' } })
+require('mini.git').setup({ command = { split = 'horizontal' } })
 
-vim.keymap.set('n', '<leader>gg', '<cmd>Neogit<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gl', '<cmd>NeogitLogCurrent<CR>', { silent = true })
-vim.keymap.set('x', '<leader>gl', ":'<,'>NeogitLogCurrent<CR>", { silent = true })
+vim.keymap.set('n', '<leader>gl', '<cmd>tab Git log --oneline --follow -- %<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gL', '<cmd>tab Git log --oneline --graph --all<CR>', { silent = true })
+vim.keymap.set({ 'n', 'x' }, '<leader>gS', function() MiniGit.show_at_cursor() end,
+  { silent = true, desc = 'Git show at cursor (line/range history or commit)' })
+vim.keymap.set('n', '<leader>gF', function() MiniGit.show_diff_source() end,
+  { silent = true, desc = 'Git open file at commit under cursor' })
 vim.keymap.set('n', '<leader>gd', '<cmd>Gitsigns diffthis<CR>', { silent = true })
-vim.keymap.set('n', '<leader>gD', '<cmd>CodeDiff<CR>', { silent = true })
+vim.keymap.set('n', '<leader>gD', '<cmd>tab Git diff<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gb', '<cmd>Gitsigns blame_line<CR>', { silent = true })
 vim.keymap.set('n', '<leader>gB', '<cmd>Gitsigns blame<CR>', { silent = true })
 
@@ -1686,6 +1807,18 @@ vim.keymap.set('n', '<leader>hs', '<cmd>Gitsigns stage_hunk<CR>', { silent = tru
 vim.keymap.set('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>', { silent = true })
 vim.keymap.set('n', '<leader>hr', '<cmd>Gitsigns reset_hunk<CR>', { silent = true })
 vim.keymap.set('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>', { silent = true })
+
+-- `:G` alias for `:Git` (fugitive-style): forwards modifiers, bang and args;
+-- completion delegates to `:Git`'s context-aware completion by rewriting the
+-- cmdline (e.g. `:G log --<Tab>` completes as `:Git log --<Tab>`)
+local function g_complete(_, cmd_line, cursor_pos)
+  local lead = cmd_line:match('^%S+')
+  local git_line = cmd_line:gsub('^%S+', 'Git', 1)
+  return vim.fn.getcompletion(git_line, 'cmdline', cursor_pos + ('Git'):len() - lead:len())
+end
+vim.api.nvim_create_user_command('G', function(input)
+  vim.cmd(('%s Git%s %s'):format(input.mods, input.bang and '!' or '', input.args))
+end, { bang = true, nargs = '+', bar = true, complete = g_complete, desc = 'Alias for :Git' })
 
 -- oil.nvim
 require('oil').setup({
