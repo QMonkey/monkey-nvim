@@ -852,6 +852,19 @@ local function tmux_send(pane, text, submit)
   end
 end
 
+local function send_to_terminal(text, submit)
+  local prev_win = vim.api.nvim_get_current_win()
+  local buf = ensure_terminal(true)
+  local chan = vim.b[buf].terminal_job_id
+  vim.fn.chansend(chan, text)
+  if submit then
+    vim.fn.chansend(chan, '\n')
+  end
+  if vim.api.nvim_win_is_valid(prev_win) then
+    vim.api.nvim_set_current_win(prev_win)
+  end
+end
+
 local function send_to_pane(text, submit)
   if vim.fn.empty(vim.fn.getenv('TMUX')) == 0 then
     local pane = vim.g.SEND_PANE_ID
@@ -869,19 +882,8 @@ local function send_to_pane(text, submit)
     return open_pane_picker(function(p) tmux_send(p, text, submit) end)
   end
 
-  -- No tmux: fall back to the global terminal (F5-style vsplit) via the same
-  -- ensure/reveal logic as F4/F5. Focus returns to the code window after the
-  -- terminal becomes visible.
-  local prev_win = vim.api.nvim_get_current_win()
-  local buf = ensure_terminal(true)
-  local chan = vim.b[buf].terminal_job_id
-  vim.fn.chansend(chan, text)
-  if submit then
-    vim.fn.chansend(chan, '\n')
-  end
-  if vim.api.nvim_win_is_valid(prev_win) then
-    vim.api.nvim_set_current_win(prev_win)
-  end
+  -- No tmux: fall back to the global terminal (F5-style vsplit)
+  send_to_terminal(text, submit)
 end
 
 -- ,sa attach a pane so sends skip the picker
