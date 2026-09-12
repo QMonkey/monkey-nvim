@@ -551,11 +551,6 @@ F3      Open a bottom terminal pre-filling `:botright 20new | terminal `
         (type an optional command and press <CR>; empty input opens a shell)
 F4      Toggle the global terminal at the bottom (open/hide)
 F5      Toggle the global terminal at the right (open/hide)
-,ss     Paste the visual selection / current line into a tmux pane (fzf-lua)
-,sf     Paste the current file path
-,sp     Type a prompt and paste it
-,sm     Submit (Enter) in the target pane
-,sd     Detach the attached pane
 ```
 
 #### 1.3 Buffer
@@ -681,17 +676,6 @@ F3      Open a bottom terminal pre-filling `:botright 20new | terminal `
         (type an optional command and press <CR>; empty input opens a shell)
 F4      Toggle the global terminal at the bottom (20 rows)
 F5      Toggle the global terminal at the right (half width)
-,ss     Paste the visual selection / current line into a tmux pane picked via
-        fzf-lua; outside tmux it goes to the F4 global terminal instead
-,sf     Paste the current file path
-,sp     Type a prompt and paste it
-,sm     Submit (Enter) the message composed in the target pane — content
-        comes from ,ss/,sf/,sp
-,sa     Attach a pane (persisted per project via shada) so sends skip the picker
-,sd     Detach the attached pane
-
-,ss/sf/sp only paste — the target stays free to compose around them; ,sm
-submits with Enter.
 ```
 
 F4 and F5 toggle the same global terminal — either key hides it while visible, and it reopens with job and scrollback intact in whatever tab you are in. F3 opens an extra terminal per invocation; the command runs as a job and the window stays open showing `[Process exited N]` afterwards.
@@ -707,14 +691,15 @@ straight to the attached pane. The attached pane is marked `*` in the picker,
 the pane running nvim itself is excluded, and a vanished pane auto-detaches.
 
 ```text
-,ss     Paste the visual selection / current line
+,ss     Paste the visual selection / current line into a tmux pane (fzf-lua)
 ,sf     Paste the current file path
 ,sp     Type a prompt and paste it
-,sm     Submit (Enter) the message composed in the target pane
-,sa/sd  Attach / detach the target pane
+,sm     Submit (Enter) in the target pane
+,sa     Attach a pane so sends skip the picker
+,sd     Detach the attached pane
 ```
 
-,ss/sf/sp only paste — compose around them in the target; ,sm submits.
+,ss, ,sf and ,sp only paste — compose around them in the target; ,sm submits.
 
 #### 1.14 Minuet (AI code completion)
 
