@@ -837,12 +837,12 @@ end
 local function tmux_send(pane, text, submit)
   if text ~= '' then
     vim.fn.system({ 'tmux', 'load-buffer', '-' }, text)
-    -- multi-line: bracketed paste (-p, kept LF via -r). tmux's default
-    -- converts LF to CR (= Enter per line, TUIs submit each line); with
-    -- markers the whole block arrives as one paste into the input box.
-    local args = { 'tmux', 'paste-buffer', '-t', pane }
+    -- Always bracketed paste (-p): without it tmux sends each byte as a typed
+    -- key, and a literal Tab in the text hits the target TUI's own Tab binding
+    -- (e.g. opencode's plan-mode switch). -r only for multi-line so embedded
+    -- LFs arrive as one paste instead of Enter per line.
+    local args = { 'tmux', 'paste-buffer', '-t', pane, '-p' }
     if text:find('\n', 1, true) then
-      table.insert(args, '-p')
       table.insert(args, '-r')
     end
     vim.fn.system(args)
