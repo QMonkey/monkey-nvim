@@ -567,11 +567,15 @@ Leader+o    Open a new buffer with given file path in current window
 Leader+Leader+s    Open a horizontal split with given file path in current window
 Leader+Leader+v    Open a vertical split with given file path in current window
 
-Ctrl+h      Jump to the left split
-Ctrl+j      Jump to the below split
-Ctrl+k      Jump to the above split
-Ctrl+l      Jump to the right split
-Leader+z    Toggle zoom
+Alt+h      Jump to the left split (normal, insert and terminal mode)
+Alt+j      Jump to the below split (normal, insert and terminal mode)
+Alt+k      Jump to the above split (normal, insert and terminal mode)
+Alt+l      Jump to the right split (normal, insert and terminal mode)
+Ctrl+h     Jump to the left split (normal-mode alias)
+Ctrl+j     Jump to the below split (normal-mode alias)
+Ctrl+k     Jump to the above split (normal-mode alias)
+Ctrl+l     Jump to the right split (normal-mode alias)
+Leader+z   Toggle zoom
 ```
 
 #### 1.5 Tab
@@ -680,7 +684,7 @@ F5      Toggle the global terminal at the right (half width)
 
 F4 and F5 toggle the same global terminal — either key hides it while visible, and it reopens with job and scrollback intact in whatever tab you are in. F3 opens an extra terminal per invocation; the command runs as a job and the window stays open showing `[Process exited N]` afterwards.
 
-Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer. Terminal windows show no line numbers or whitespace markers.
+Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. `Alt+[` is a handier alternative that works in every mode (it is a no-op in normal mode and Esc-like elsewhere); `Ctrl+[` cannot be used: it IS the Esc byte, mapping it would steal Esc from programs inside the terminal. `Alt+h/j/k/l` jump between splits directly from terminal mode; when focus returns to a terminal window, terminal mode is restored automatically. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer. Terminal windows show no line numbers or whitespace markers.
 
 #### 1.13 Send to pane (,s group)
 
@@ -721,7 +725,7 @@ Insert mode (shown while a suggestion is displayed):
 
 ```text
 <A-a>   Accept whole suggestion
-<A-l>   Accept one line
+<A-e>   Accept one line
 <A-y>   Accept n lines (prompts for the number)
 <A-n>   Next suggestion
 <A-p>   Previous suggestion
