@@ -769,6 +769,11 @@ vim.keymap.set({ 'n', 't' }, '<F5>', function() terminal_toggle(true) end,
   { silent = true, desc = 'Toggle the global terminal on the right' })
 vim.keymap.set('t', '<ScrollWheelUp>', '<C-\\><C-n><ScrollWheelUp>', { silent = true })
 vim.keymap.set('t', '<ScrollWheelDown>', '<C-\\><C-n><ScrollWheelDown>', { silent = true })
+-- A-[ as a universal "back to normal mode": <C-\><C-n> is a no-op in normal
+-- mode and Esc-like everywhere else, terminal mode included. C-[ itself IS
+-- the Esc byte, so it can never be mapped without stealing Esc from programs
+-- running inside the terminal.
+vim.keymap.set({ 'n', 'i', 'v', 'c', 'o', 't' }, '<A-[>', '<C-\\><C-n>', { silent = true })
 
 local term_group = vim.api.nvim_create_augroup('TerminalSettings', { clear = true })
 vim.api.nvim_create_autocmd('TermOpen', {
@@ -1442,10 +1447,22 @@ vim.keymap.set('n', '<leader><leader>t', function()
 end, { silent = true })
 
 -- Split
+local function win_nav(dir)
+  vim.cmd('stopinsert')
+  vim.cmd('wincmd ' .. dir)
+  if vim.bo.buftype == 'terminal' then
+    vim.schedule(function() vim.cmd('startinsert') end)
+  end
+end
+
+vim.keymap.set('n', '<C-h>', '<C-w>h')
 vim.keymap.set('n', '<C-j>', '<C-w>j')
 vim.keymap.set('n', '<C-k>', '<C-w>k')
-vim.keymap.set('n', '<C-h>', '<C-w>h')
 vim.keymap.set('n', '<C-l>', '<C-w>l')
+vim.keymap.set({ 'n', 't', 'i' }, '<A-h>', function() win_nav('h') end, { silent = true })
+vim.keymap.set({ 'n', 't', 'i' }, '<A-j>', function() win_nav('j') end, { silent = true })
+vim.keymap.set({ 'n', 't', 'i' }, '<A-k>', function() win_nav('k') end, { silent = true })
+vim.keymap.set({ 'n', 't', 'i' }, '<A-l>', function() win_nav('l') end, { silent = true })
 vim.keymap.set('n', '<leader><leader>s', function()
   local name = vim.fn.input('New split name: ', '', 'file')
   if name ~= '' then
@@ -2050,7 +2067,7 @@ if minuet_presets[minuet_current_preset] then
 
   local minuet_vt = require('minuet.virtualtext').action
   vim.keymap.set('i', '<A-a>', minuet_vt.accept, { desc = 'Minuet: accept suggestion' })
-  vim.keymap.set('i', '<A-l>', minuet_vt.accept_line, { desc = 'Minuet: accept one line' })
+  vim.keymap.set('i', '<A-e>', minuet_vt.accept_line, { desc = 'Minuet: accept one line' })
   vim.keymap.set('i', '<A-y>', minuet_vt.accept_n_lines, { desc = 'Minuet: accept n lines' })
   vim.keymap.set('i', '<A-n>', minuet_vt.next, { desc = 'Minuet: next suggestion' })
   vim.keymap.set('i', '<A-p>', minuet_vt.prev, { desc = 'Minuet: prev suggestion' })
