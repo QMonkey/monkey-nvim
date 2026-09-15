@@ -491,7 +491,6 @@ readlink -f /etc/systemd/system/autovt@.service /usr/lib/systemd/system/autovt@.
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | 常用代码片段集合                             |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git 差异标记                                 |
 | [nvim-mini/mini-git](https://github.com/nvim-mini/mini-git)                             | Git 集成（`:Git` 透传 + 事件）               |
-| [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session 管理                                 |
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | 文件管理器（替代 netrw）                     |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | 自动生成 ctags                               |
 | [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope 集成                                  |
@@ -817,7 +816,7 @@ vim-matchup     count = 第 N 层包围块
 #### 1.18 其他
 
 ```text
-Leader+ws       保存session
+Leader+ws       保存当前项目的session
 Leader+rs       删除session（需确认）
 
 '.              最后一次变更的地方
@@ -1009,6 +1008,20 @@ gD      跳转到定义（Cstag）
 gR      查找调用者（Cscope find c）
 g]      跳转到标签并打开 quickfix
 ```
+
+### 5. Session（原生 :mksession）
+
+```vim
+" 保存当前项目的 session 到 ~/.local/share/nvim/sessions/
+Leader+ws
+
+" 删除当前 session 文件（弹出确认）
+Leader+rs
+```
+
+退出 Neovim 时会自动重写已追踪的 session（`v:this_session` 已设置），启动时从
+`~/.local/share/nvim/sessions/` 自动恢复。每次写入前会清理显示 oil/terminal
+等排除类型 buffer 的窗口，它们不会进入保存的 session。
 
 ## 在 Neovim 中使用 git
 
