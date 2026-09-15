@@ -784,6 +784,19 @@ vim.keymap.set('t', '<ScrollWheelDown>', '<C-\\><C-n><ScrollWheelDown>', { silen
 -- mode and Esc-like everywhere else, terminal mode included.
 vim.keymap.set({ 'n', 'i', 'v', 's', 'c', 'o', 't' }, '<A-;>', '<C-\\><C-n>', { silent = true })
 
+-- `r` followed by a special key (e.g. <A-;>) must abort like <Esc>: the
+-- builtin `r` cannot be reached by mappings in its char prompt, so a special
+-- key would replace the character (a modifier-stripped char in nvim). `r` is
+-- therefore mapped to read the char itself and cancel on <Esc>/special keys.
+-- Special keys are the internal keycodes starting with the 0x80 byte.
+vim.keymap.set('n', 'r', function()
+  local c = vim.fn.getcharstr()
+  if c == '\27' or c:byte(1) == 128 then
+    return
+  end
+  vim.cmd.normal({ args = { vim.v.count1 .. 'r' .. c }, bang = true })
+end, { silent = true })
+
 local term_group = vim.api.nvim_create_augroup('TerminalSettings', { clear = true })
 vim.api.nvim_create_autocmd('TermOpen', {
   group = term_group,
@@ -815,6 +828,43 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
 -- with per-project attach state (shada), or the F4/F5 global terminal.
 -- ,sa attaches a pane (survives restarts), ,sd detaches; `submit` false =
 -- paste only, leaving the target free to compose around the text.
+-- Attachment is verified against a uuid stored as a pane option: generated
+-- once per pane, shared by all nvims attaching it, and dying with the pane —
+-- so a reused %N id after tmux restart/restore can't be mistaken for the old pane.
+local function new_uuid()
+  local f = io.open('/dev/urandom', 'rb')
+  if not f then
+    math.randomseed(os.time() + vim.fn.getpid())
+    return string.format('%08x%08x', math.random(0, 2 ^ 31 - 1), math.random(0, 2 ^ 31 - 1))
+  end
+  local bytes = f:read(16)
+  f:close()
+  return (bytes:gsub('.', function(c) return string.format('%02x', c:byte()) end))
+end
+
+local function pane_uuid(pane)
+  local existing = vim.fn.system({ 'tmux', 'display-message', '-p', '-t', pane, '#{@send-pane-uuid}' })
+  if vim.v.shell_error == 0 then
+    existing = vim.trim(existing)
+    if existing ~= '' then
+      return existing
+    end
+  end
+  local uuid = new_uuid()
+  vim.fn.system({ 'tmux', 'set-option', '-p', '-t', pane, '@send-pane-uuid', uuid })
+  return uuid
+end
+
+local function attach_pane(pane)
+  vim.g.SEND_PANE_ID = pane
+  vim.g.SEND_PANE_UUID = pane_uuid(pane)
+end
+
+local function detach_pane()
+  vim.g.SEND_PANE_ID = nil
+  vim.g.SEND_PANE_UUID = nil
+end
+
 local function open_pane_picker(on_pane)
   local panes = {}
   -- exclude the pane running this nvim: pasting into our own terminal is always a mistake
@@ -840,7 +890,7 @@ local function open_pane_picker(on_pane)
         local pane = sel[1]:match('(%%%S+)$')
         if pane then
           -- picking a pane attaches it: the next send skips the picker
-          vim.g.SEND_PANE_ID = pane
+          attach_pane(pane)
           on_pane(pane)
         end
       end,
@@ -882,16 +932,14 @@ end
 local function send_to_pane(text, submit)
   if vim.fn.empty(vim.fn.getenv('TMUX')) == 0 then
     local pane = vim.g.SEND_PANE_ID
+    local uuid = vim.g.SEND_PANE_UUID
     if pane then
-      local check = vim.fn.system({ 'tmux', 'display-message', '-p', '-t', pane, '#{pane_id}' })
-      if vim.v.shell_error ~= 0 or not check:find(pane, 1, true) then
-        vim.g.SEND_PANE_ID = nil
-        vim.notify('send-to-pane: attached pane is gone, detached', vim.log.levels.WARN)
-        pane = nil
+      local check = uuid and vim.fn.system({ 'tmux', 'display-message', '-p', '-t', pane, '#{@send-pane-uuid}' }) or ''
+      if uuid and vim.v.shell_error == 0 and check:find(uuid, 1, true) then
+        return tmux_send(pane, text, submit)
       end
-    end
-    if pane then
-      return tmux_send(pane, text, submit)
+      detach_pane()
+      vim.notify('send-to-pane: attached pane changed or is gone, detached', vim.log.levels.WARN)
     end
     return open_pane_picker(function(p) tmux_send(p, text, submit) end)
   end
@@ -908,13 +956,13 @@ vim.keymap.set('n', '<leader>sa', function()
     return
   end
   open_pane_picker(function(pane)
-    vim.g.SEND_PANE_ID = pane
+    attach_pane(pane)
     vim.notify('send-to-pane: attached ' .. pane)
   end)
 end, { desc = 'Attach pane' })
 vim.keymap.set('n', '<leader>sd', function()
   vim.notify('send-to-pane: detached ' .. (vim.g.SEND_PANE_ID or 'nothing'))
-  vim.g.SEND_PANE_ID = nil
+  detach_pane()
 end, { desc = 'Detach pane' })
 
 -- ,ss sends the visual selection / current line
