@@ -684,7 +684,7 @@ F5      Toggle the global terminal at the right (half width)
 
 F4 and F5 toggle the same global terminal — either key hides it while visible, and it reopens with job and scrollback intact in whatever tab you are in. F3 opens an extra terminal per invocation; the command runs as a job and the window stays open showing `[Process exited N]` afterwards.
 
-Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. `Alt+[` is a handier alternative that works in every mode (it is a no-op in normal mode and Esc-like elsewhere); `Ctrl+[` cannot be used: it IS the Esc byte, mapping it would steal Esc from programs inside the terminal. `Alt+h/j/k/l` jump between splits directly from terminal mode; when focus returns to a terminal window, terminal mode is restored automatically. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer. Terminal windows show no line numbers or whitespace markers.
+Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. `Alt+;` is a handier alternative that works in every mode (it is a no-op in normal mode and Esc-like elsewhere); `Ctrl+[` cannot be used: it IS the Esc byte, mapping it would steal Esc from programs inside the terminal. Related fix: `r` followed by a special key (such as `Alt+;`) aborts like `Esc` instead of inserting the key as the replacement character — this also applies inside multicursor.nvim sessions. `Alt+h/j/k/l` jump between splits directly from terminal mode; when focus returns to a terminal window, terminal mode is restored automatically. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer. Terminal windows show no line numbers or whitespace markers.
 
 #### 1.13 Send to pane (,s group)
 
@@ -692,7 +692,9 @@ Text goes to a tmux pane or, outside tmux, to the F4/F5 global terminal
 (auto-opened as a right split on first send). The first send opens an fzf pane
 picker and attaches the pick (persisted per project via shada); later sends go
 straight to the attached pane. The attached pane is marked `*` in the picker,
-the pane running nvim itself is excluded, and a vanished pane auto-detaches.
+the pane running nvim itself is excluded, and a pane that vanished or was
+replaced (e.g. a reused pane id after a tmux restart, detected via a uuid
+stored on the pane) auto-detaches.
 
 ```text
 ,ss     Paste the visual selection / current line into a tmux pane (fzf-lua)
