@@ -493,7 +493,6 @@ It should resolve to `getty@.service`.
 | [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | Snippet collection                                        |
 | [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git diff in sign column                                   |
 | [nvim-mini/mini-git](https://github.com/nvim-mini/mini-git)                             | Git integration (`:Git` passthrough + events)             |
-| [rmagatti/auto-session](https://github.com/rmagatti/auto-session)                       | Session management                                        |
 | [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | File explorer (replaces netrw)                            |
 | [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | Automatic ctags generation                                |
 | [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope integration                                        |
@@ -827,7 +826,7 @@ Notes on the custom identifiers (`i` / `L` / `B`) and Neovim 0.13:
 #### 1.18 Others
 
 ```text
-Leader+ws       Save session
+Leader+ws       Save session for the current project
 Leader+rs       Remove session (asks for confirmation)
 
 '.              Jump to last changes
@@ -1019,6 +1018,21 @@ gD      Jump to definition (Cstag)
 gR      Find callers (Cscope find c)
 g]      Jump to tag and open quickfix
 ```
+
+### 5. Sessions (native :mksession)
+
+```vim
+" Save session for the current project to ~/.local/share/nvim/sessions/
+Leader+ws
+
+" Delete the current session file (asks for confirmation)
+Leader+rs
+```
+
+The session is automatically re-written when Neovim exits (while a session is
+tracked) and restored on startup from `~/.local/share/nvim/sessions/`. Windows
+showing excluded filetypes/buftypes (oil, terminal) are cleaned before every
+write so they never end up in the saved session.
 
 ## Use git in Neovim
 
