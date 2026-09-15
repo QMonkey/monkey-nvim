@@ -83,17 +83,21 @@ local nav_specs = {
           height = 0.9,
           preview = { wrap = true },
         },
+        -- Preview scrolling must use `builtin` (neovim-side) binds with
+        -- *neovim* key notation: with the builtin previewer.
         keymap = {
-          builtin = { ['<F2>'] = 'hide' },
+          builtin = {
+            ['<F2>'] = 'hide',
+            ['<A-u>'] = 'preview-half-page-up',
+            ['<A-d>'] = 'preview-half-page-down',
+            ['<A-f>'] = 'preview-page-down',
+            ['<A-b>'] = 'preview-page-up',
+            ['<A-j>'] = 'preview-down',
+            ['<A-k>'] = 'preview-up',
+          },
           fzf = {
             ['ctrl-j'] = 'down',
             ['ctrl-k'] = 'up',
-            ['alt-u'] = 'preview-half-page-up',
-            ['alt-d'] = 'preview-half-page-down',
-            ['alt-f'] = 'preview-page-down',
-            ['alt-b'] = 'preview-page-up',
-            ['alt-j'] = 'preview-down',
-            ['alt-k'] = 'preview-up',
           },
         },
         git = {
@@ -363,17 +367,24 @@ local tools_specs = {
     config = function()
       local mc = require('multicursor-nvim')
       mc.setup({ hlsearch = true })
+      local function esc_handler()
+        if not mc.cursorsEnabled() then
+          mc.enableCursors()
+        else
+          mc.clearCursors()
+        end
+      end
       mc.addKeymapLayer(function(layer_set)
         layer_set({ 'n', 'x' }, '<c-n>', function() mc.matchAddCursor(1) end)
         layer_set({ 'n', 'x' }, '<c-p>', function() mc.matchAddCursor(-1) end)
         layer_set({ 'n', 'x' }, '<c-x>', function() mc.matchSkipCursor(1) end)
         layer_set({ 'n', 'x' }, '<c-q>', function() mc.matchSkipCursor(-1) end)
-        layer_set('n', '<esc>', function()
-          if not mc.cursorsEnabled() then
-            mc.enableCursors()
-          else
-            mc.clearCursors()
-          end
+        layer_set('n', '<esc>', esc_handler)
+        layer_set('n', '<A-;>', esc_handler)
+        -- VM insert/replace states run inside vim's insert mode; without this
+        -- the layer would let <M-;> through and VM would type it as text.
+        layer_set('i', '<A-;>', function()
+          vim.cmd('stopinsert')
         end)
       end)
     end,
@@ -769,11 +780,9 @@ vim.keymap.set({ 'n', 't' }, '<F5>', function() terminal_toggle(true) end,
   { silent = true, desc = 'Toggle the global terminal on the right' })
 vim.keymap.set('t', '<ScrollWheelUp>', '<C-\\><C-n><ScrollWheelUp>', { silent = true })
 vim.keymap.set('t', '<ScrollWheelDown>', '<C-\\><C-n><ScrollWheelDown>', { silent = true })
--- A-[ as a universal "back to normal mode": <C-\><C-n> is a no-op in normal
--- mode and Esc-like everywhere else, terminal mode included. C-[ itself IS
--- the Esc byte, so it can never be mapped without stealing Esc from programs
--- running inside the terminal.
-vim.keymap.set({ 'n', 'i', 'v', 'c', 'o', 't' }, '<A-[>', '<C-\\><C-n>', { silent = true })
+-- A-; as a universal "back to normal mode": <C-\><C-n> is a no-op in normal
+-- mode and Esc-like everywhere else, terminal mode included.
+vim.keymap.set({ 'n', 'i', 'v', 's', 'c', 'o', 't' }, '<A-;>', '<C-\\><C-n>', { silent = true })
 
 local term_group = vim.api.nvim_create_augroup('TerminalSettings', { clear = true })
 vim.api.nvim_create_autocmd('TermOpen', {
@@ -1448,9 +1457,18 @@ end, { silent = true })
 
 -- Split
 local function win_nav(dir)
+  -- Floating windows (fzf-lua, ...) and fzf buffers are modal UI: navigating
+  -- out of them breaks their layout, and their own Alt bindings must keep
+  -- working -- hand the full Alt+key back to the job instead. 'n' skips
+  -- mappings so the forwarded key cannot re-enter this function.
+  if vim.bo.buftype == 'terminal' and vim.api.nvim_buf_get_name(0):find('fzf')
+      or vim.api.nvim_win_get_config(0).relative ~= '' then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<M-' .. dir .. '>', true, false, true), 'n', false)
+    return
+  end
   vim.cmd('stopinsert')
   vim.cmd('wincmd ' .. dir)
-  if vim.bo.buftype == 'terminal' then
+  if vim.bo.buftype == 'terminal' and vim.api.nvim_buf_get_name(0):find('fzf') == nil then
     vim.schedule(function() vim.cmd('startinsert') end)
   end
 end
@@ -1482,7 +1500,7 @@ vim.keymap.set('n', 'cod', function()
 end, { silent = true })
 vim.keymap.set('n', 'cop', '<cmd>set invpaste<CR>', { silent = true })
 vim.keymap.set('n', 'col', '<cmd>set invlist<CR>', { silent = true })
-vim.keymap.set('n', 'con', '<cmd>set nohlsearch<CR>', { silent = true })
+vim.keymap.set('n', 'con', '<cmd>nohlsearch<CR>', { silent = true })
 vim.keymap.set('n', '<leader><Space>', '<cmd>%s/\\s\\+$//e<CR>', { silent = true })
 vim.keymap.set('n', '<leader><leader><Space>', '<cmd>%s/\\s\\+$//e<CR>:%s/\\r$//e<CR>', { silent = true })
 
