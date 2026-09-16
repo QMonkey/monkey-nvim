@@ -453,7 +453,7 @@ case ":$PATH:" in *":$HOME/.cargo/bin:"*) ;; *) export PATH="$HOME/.cargo/bin:$P
 
 setup_symlinks() {
 	info "Setting up configuration symlinks..."
-	ln -sfn "$INSTALL_DIR" "$HOME/.config/nvim"
+	ln -sf "$INSTALL_DIR" "$HOME/.config/nvim"
 	ok ".config/nvim → $INSTALL_DIR"
 
 	mkdir -p "$HOME/.local/state/nvim/swap"
@@ -469,7 +469,7 @@ setup_symlinks() {
 			info "efm-langserver config already exists — skipping."
 		else
 			mkdir -p "$HOME/.config"
-			ln -sfn "$INSTALL_DIR/configs/efm-langserver" "$HOME/.config/efm-langserver"
+			ln -sf "$INSTALL_DIR/configs/efm-langserver" "$HOME/.config/efm-langserver"
 			ok "efm-langserver config → $HOME/.config/efm-langserver"
 		fi
 	fi
