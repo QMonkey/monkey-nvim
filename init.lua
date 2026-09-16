@@ -15,6 +15,24 @@
 vim.g.mapleader = ','
 vim.g.maplocalleader = ','
 
+-- Project root
+-- Shared by Rooter, Shada, Session and gtags/cscope
+local root_patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
+
+local function project_root()
+  return vim.fs.root(0, root_patterns) or vim.fn.getcwd()
+end
+
+-- Flatten a project root into a single cache-friendly name ('/' and ':'
+-- become '-', ' ' becomes '_', leading and trailing separators stripped).
+local function path_to_name(path)
+  return (path:gsub('^/+', ''):gsub('[/:]', '-'):gsub(' ', '_'):gsub('[-_]+$', ''))
+end
+
+local function gtags_dbpath(root)
+  return vim.fs.normalize(vim.fn.stdpath('data') .. '/tags/' .. path_to_name(root))
+end
+
 -- Plugins
 vim.pack.add({ 'https://github.com/zuqini/zpack.nvim' })
 
@@ -86,18 +104,27 @@ local nav_specs = {
         -- Preview scrolling must use `builtin` (neovim-side) binds with
         -- *neovim* key notation: with the builtin previewer.
         keymap = {
+          -- [1]=true merges with fzf-lua defaults; without it the table
+          -- REPLACES them (losing shift-down/up, ctrl-f/b, alt-a, ...).
+          -- alt-f/alt-i/alt-h are reserved by fzf-lua built-in actions
+          -- (toggle_follow/ignore/hidden): their accept-binds are appended
+          -- after keymap binds and win, so never bind those keys here.
           builtin = {
+            [1] = true,
             ['<F2>'] = 'hide',
             ['<A-u>'] = 'preview-half-page-up',
             ['<A-d>'] = 'preview-half-page-down',
-            ['<A-f>'] = 'preview-page-down',
-            ['<A-b>'] = 'preview-page-up',
             ['<A-j>'] = 'preview-down',
             ['<A-k>'] = 'preview-up',
           },
           fzf = {
+            [1] = true,
             ['ctrl-j'] = 'down',
             ['ctrl-k'] = 'up',
+            ['alt-u'] = 'preview-half-page-up',
+            ['alt-d'] = 'preview-half-page-down',
+            ['alt-j'] = 'preview-down',
+            ['alt-k'] = 'preview-up',
           },
         },
         git = {
@@ -266,28 +293,11 @@ local git_specs = {
 local project_specs = {
   { src = 'https://github.com/stevearc/oil.nvim' },
   {
+    -- Plain globals instead of a spec `init`: zpack runs init hooks during
+    -- setup(), but gutentags lazy-loads on the first BufReadPre/BufNewFile,
+    -- so the globals set after send-to-pane are in place by load time.
     src = 'https://github.com/ludovicchabant/vim-gutentags',
-    init = function()
-      vim.g.gutentags_modules = { 'ctags' }
-      vim.g.gutentags_project_root = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
-      vim.g.gutentags_cache_dir = vim.fn.stdpath("data") .. '/tags/'
-      vim.g.gutentags_ctags_tagfile = '.tags'
-      vim.g.gutentags_ctags_auto_set_tags = 1
-      vim.g.gutentags_ctags_extra_args = {
-        '--fields=+liaS',
-        '--extras=+q',
-        '--langmap=c:.c.h,vim:.vim.vimrc',
-        '--c-kinds=+p',
-        '--c++-kinds=+p',
-        '--python-kinds=+i',
-      }
-      vim.g.gutentags_generate_on_missing = 1
-      vim.g.gutentags_generate_on_new = 0
-      vim.g.gutentags_generate_on_write = 1
-      vim.g.gutentags_background_update = 1
-      vim.g.gutentags_resolve_symlinks = 1
-      vim.g.gutentags_define_advanced_commands = 1
-    end,
+    event = { 'BufReadPre', 'BufNewFile' },
   },
   {
     src = 'https://github.com/dhananjaylatkar/cscope_maps.nvim',
@@ -305,9 +315,8 @@ local project_specs = {
       -- setup() resets vim.g.cscope_maps_db_file, so set it after setup for
       -- the current buffer's project; the GTags BufEnter autocmd keeps it in
       -- sync on project changes.
-      local root = vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
-      local dbpath = vim.fs.normalize(vim.fn['gutentags#get_cachefile'](root, ''))
-      vim.g.cscope_maps_db_file = dbpath .. '/GTAGS::' .. root
+      local root = project_root()
+      vim.g.cscope_maps_db_file = gtags_dbpath(root) .. '/GTAGS::' .. root
     end,
   },
 }
@@ -619,10 +628,8 @@ vim.api.nvim_create_autocmd({ 'FocusGained', 'BufWinEnter', 'WinEnter', 'CursorH
 })
 
 -- Rooter
-local patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
-
 local function cd_root()
-  local root = vim.fs.root(0, patterns)
+  local root = vim.fs.root(0, root_patterns)
   if root then
     vim.cmd('cd ' .. vim.fn.fnameescape(root))
   end
@@ -641,8 +648,8 @@ vim.api.nvim_create_autocmd('VimEnter', {
 -- pointing 'shadafile' at the project root (falls back to ~ outside a
 -- project). Neovim reads shada after init.lua, so this also affects the startup load.
 local function shada_path()
-  local root = vim.fs.root(vim.uv.cwd(), patterns) or vim.env.HOME
-  return vim.fn.stdpath('state') .. '/shada/' .. (root:gsub('^/', ''):gsub('/', '-')) .. '.shada'
+  local root = vim.fs.root(vim.uv.cwd(), root_patterns) or vim.env.HOME
+  return vim.fn.stdpath('state') .. '/shada/' .. path_to_name(root) .. '.shada'
 end
 
 vim.o.shadafile = shada_path()
@@ -664,8 +671,8 @@ local function is_session_excluded(bufnr)
 end
 
 local function session_file()
-  local root = vim.fs.root(vim.uv.cwd(), patterns) or vim.env.HOME
-  return vim.fn.stdpath('data') .. '/sessions/' .. (root:gsub('^/', ''):gsub('/', '-')) .. '-session.vim'
+  local root = vim.fs.root(vim.uv.cwd(), root_patterns) or vim.env.HOME
+  return vim.fn.stdpath('data') .. '/sessions/' .. path_to_name(root) .. '-session.vim'
 end
 
 local function dir_exists(path)
@@ -1053,6 +1060,27 @@ end, { desc = 'Send prompt to pane' })
 vim.keymap.set('n', '<leader>sm', function() send_to_pane('', true) end,
   { silent = true, desc = 'Submit (Enter) in pane' })
 
+-- gutentags
+vim.g.gutentags_modules = { 'ctags' }
+vim.g.gutentags_project_root = root_patterns
+vim.g.gutentags_cache_dir = vim.fn.stdpath('data') .. '/tags/'
+vim.g.gutentags_ctags_tagfile = '.tags'
+vim.g.gutentags_ctags_auto_set_tags = 1
+vim.g.gutentags_ctags_extra_args = {
+  '--fields=+liaS',
+  '--extras=+q',
+  '--langmap=c:.c.h,vim:.vim.vimrc',
+  '--c-kinds=+p',
+  '--c++-kinds=+p',
+  '--python-kinds=+i',
+}
+vim.g.gutentags_generate_on_missing = 1
+vim.g.gutentags_generate_on_new = 0
+vim.g.gutentags_generate_on_write = 1
+vim.g.gutentags_background_update = 1
+vim.g.gutentags_resolve_symlinks = 1
+vim.g.gutentags_define_advanced_commands = 1
+
 -- cscope_maps.nvim + gtags
 vim.env.GTAGSLABEL = 'native-pygments'
 
@@ -1084,14 +1112,6 @@ end
 
 -- Resolve the project root per buffer so files from other projects get
 -- their own gtags DB, branch tracking and cscope connection.
-local function project_root()
-  return vim.fs.root(0, vim.g.gutentags_project_root) or vim.fn.getcwd()
-end
-
-local function gtags_dbpath(root)
-  return vim.fs.normalize(vim.fn['gutentags#get_cachefile'](root, ''))
-end
-
 local function switch_cscope_conn(root)
   local dbpath = gtags_dbpath(root)
   -- gtags-cscope resolves the DB via env vars and ignores cscope_maps' -f/-P
@@ -2014,7 +2034,7 @@ vim.keymap.set('n', '-', function()
 end, { silent = true })
 
 vim.keymap.set('n', '~', function()
-  local root = vim.fs.root(0, patterns) or vim.fn.expand('~')
+  local root = vim.fs.root(0, root_patterns) or vim.fn.expand('~')
   require('oil').open(root)
 end, { silent = true })
 
