@@ -458,8 +458,10 @@ setup_symlinks() {
 	mkdir -p "$HOME/.local/state/nvim/swap"
 	ok "created $HOME/.local/state/nvim/swap"
 
-	mkdir -p "$HOME/.cache/sessions"
-	ok "created $HOME/.cache/sessions"
+	# Same dir init.lua writes project sessions to (stdpath('data')/sessions,
+	# also mkdir -p'd on first save — creating it here just pre-seeds it).
+	mkdir -p "$HOME/.local/share/nvim/sessions"
+	ok "created $HOME/.local/share/nvim/sessions"
 
 	if [ -d "$INSTALL_DIR/configs/efm-langserver" ]; then
 		if [ -e "$HOME/.config/efm-langserver" ] || [ -L "$HOME/.config/efm-langserver" ]; then
