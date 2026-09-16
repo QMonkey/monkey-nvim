@@ -24,9 +24,37 @@ monkey-nvim项目，旨在基于 Neovim 打造一个强大、快速的纯终端�
 
 ## 要求
 
-- Neovim 0.12+
+- Neovim 0.12+（一键安装脚本会在需要时从源码构建当前版本的 Neovim）
 
 ## 安装步骤
+
+两种方式任选其一：一键安装脚本，或手动安装。
+
+### 方式一：一键安装
+
+按需构建 Neovim，并自动安装 monkey-nvim 及其全部依赖和插件：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash
+```
+
+脚本按顺序执行：
+
+1. 安装 Neovim 构建依赖（CMake + Ninja + gettext；tree-sitter parser 编译所需的 C 编译器）
+2. 预授权一次 `sudo`——整个流程唯一一次密码输入——并为当前用户安装**临时** NOPASSWD sudoers drop-in，脚本退出时自动删除。Homebrew 每次运行都会重置 sudo 时间戳，WSL2 时钟跳变会使票据失效，而 NOPASSWD 让整个流程对两者完全免疫、与命令顺序无关。若 drop-in 安装失败，脚本回退为后台保活 + 惰性重认证
+3. 安装 Homebrew（Linuxbrew）作为兜底包管理器——即使 brew 已存在，也会把 shellenv 持久化到 shell rc 文件（带 PATH 去重保护）
+4. 克隆并从源码编译 Neovim（已安装 nvim >= 0.12 时跳过），然后 `make install`
+5. 克隆 monkey-nvim 到 `~/Documents/monkey-nvim`（已存在则更新）
+6. 通过 `checkhealth.sh --install` 安装必需工具 + 可选 LSP server（apt/zypper/dnf/pacman/brew、npm、pip、go install、rustup）。脚本会识别 WSL 注入的 Windows 路径 shim（`/mnt/...`），改为安装真正的 Linux 版本；fzf 优先用 Homebrew 以获得新版本而非发行版旧包
+7. 在 shell rc 文件中持久化 `~/go/bin`、`~/.cargo/bin`（以及 `/usr/local/bin`）
+8. 将 `~/.config/nvim` 软链到仓库，并链接 efm-langserver 配置；创建运行时目录
+9. 以 headless 模式启动 Neovim，通过 vim.pack 自动安装全部插件
+
+> 脚本会把 Neovim 源码保留在 `~/Documents/neovim`（不清理），方便日后 `git pull` + `make` 重新构建。
+>
+> PATH 修改只对之后新开的 shell 生效。脚本结束时会提示如何让当前终端立即生效（`source <rc 文件>` 或 `exec $SHELL`）。
+
+### 方式二：手动安装
 
 ### 1. clone到本地
 
@@ -235,6 +263,8 @@ Neovim 使用的 Unicode 字符（⎇, │, ▸, ·, ¬）无需额外字体即�
 ```bash
 ./checkhealth.sh --install
 ```
+
+脚本会识别 WSL 注入的 Windows 路径 shim（`/mnt/...`），改为安装真正的 Linux 版本；`sudo` 仅在确实需要时才会调用（Homebrew 每次运行都会重置 sudo 时间戳，因此可能带着说明文字重新请求一次密码）。
 
 也可运行 Neovim 内建的健康检查查看插件相关问题：
 
