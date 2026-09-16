@@ -24,9 +24,37 @@ Top-level workspace management (multiple sessions and terminals) is delegated to
 
 ## Requirements
 
-- Neovim 0.12+
+- Neovim 0.12+ (the one-click installer builds a current Neovim from source when needed)
 
 ## Installation
+
+Pick one of the two ways below: a one-click script, or manual setup.
+
+### Option 1: One-click install
+
+Build Neovim (if needed) and install monkey-nvim with all dependencies and plugins automatically:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash
+```
+
+What the script does, step by step:
+
+1. Install the Neovim build dependencies (CMake + Ninja + gettext; a C compiler for tree-sitter parsers)
+2. Pre-authorize `sudo` once — the only password entry of the whole run — and install a **temporary** NOPASSWD sudoers drop-in for the invoking user, removed automatically on exit. Homebrew resets the sudo timestamp on every `brew` invocation and WSL2 clock jumps invalidate tickets; NOPASSWD makes the run immune to both in any command order. If the drop-in cannot be installed, the script falls back to a background keepalive plus lazy re-authentication
+3. Install Homebrew (Linuxbrew) as the fallback package manager — its shellenv is persisted to your shell rc files (with PATH dedup guards) even when Homebrew already existed
+4. Clone and compile Neovim from source (skipped when an nvim >= 0.12 is already installed), then `make install`
+5. Clone monkey-nvim to `~/Documents/monkey-nvim` (or update it if already cloned)
+6. Install required tools + optional LSP servers via `checkhealth.sh --install` (apt/zypper/dnf/pacman/brew, npm, pip, go install, rustup). WSL Windows-PATH shims (`/mnt/...`) are detected and the real Linux packages get installed instead; fzf prefers Homebrew so you get a current version instead of the distro's
+7. Persist `~/go/bin`, `~/.cargo/bin` (and `/usr/local/bin`) in your shell rc files
+8. Symlink `~/.config/nvim` to the repo and the efm-langserver config; create runtime directories
+9. Bootstrap all plugins (vim.pack) with a headless Neovim launch
+
+> The script keeps the Neovim source tree at `~/Documents/neovim` (no cleanup), so you can rebuild later with `git pull` + `make`.
+>
+> PATH changes only apply to shells started after the install. When it finishes, the script prints how to apply them to the current terminal (`source <rc file>` or `exec $SHELL`).
+
+### Option 2: Manual installation
 
 ### 1. Git clone
 
@@ -235,6 +263,11 @@ Pass `--install` to automatically install missing dependencies (required tools +
 ```bash
 ./checkhealth.sh --install
 ```
+
+The script detects WSL Windows-PATH shims (`/mnt/...`) and installs the real
+Linux packages instead, and `sudo` is only invoked when actually needed
+(Homebrew resets the sudo timestamp on every run, so credentials may be
+re-requested with an explanatory prompt).
 
 You can also run Neovim's built-in health check for plugin-related diagnostics:
 
