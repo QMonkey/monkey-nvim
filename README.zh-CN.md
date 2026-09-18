@@ -311,7 +311,7 @@ export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # 默认值，显示
 
 ```bash
 cd monkey-nvim
-ln -sf $(pwd) ~/.config/nvim
+ln -sfn $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # 全局 clang-format 风格（可选）
 ln -sfn $(pwd)/configs/efm-langserver ~/.config/efm-langserver   # efm：markdown 格式化/检查（可选）
 nvim --headless -c 'ZPack sync' -c 'qa'   # 安装所有插件
