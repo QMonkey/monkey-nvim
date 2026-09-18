@@ -343,32 +343,32 @@ refresh_pkg() {
 }
 
 install_build_deps() {
-	# Neovim builds with CMake+Ninja; the parsers tree-sitter compiles at
+	# Neovim builds with CMake+make; the parsers tree-sitter compiles at
 	# runtime need a C compiler. Everything else (rg/ctags/fzf/node/...) is
 	# handled by checkhealth.sh --install (step 5).
 	info "Installing Neovim build dependencies..."
 	refresh_pkg
 	case "$OS" in
 	debian)
-		sudo_cmd apt-get install -y ninja-build gettext cmake curl build-essential git
+		sudo_cmd apt-get install -y gettext cmake curl build-essential git
 		;;
 	arch)
-		sudo_cmd pacman -S --needed --noconfirm base-devel git curl cmake ninja gettext
+		sudo_cmd pacman -S --needed --noconfirm base-devel git curl cmake gettext
 		;;
 	opensuse)
 		sudo_cmd zypper --non-interactive install -y -t pattern devel_basis
-		sudo_cmd zypper --non-interactive install -y git curl cmake ninja gettext
+		sudo_cmd zypper --non-interactive install -y git curl cmake gettext
 		;;
 	centos)
 		sudo_cmd dnf install -y epel-release || true
-		sudo_cmd dnf install -y gcc gcc-c++ make git curl cmake ninja-build gettext
+		sudo_cmd dnf install -y gcc gcc-c++ make git curl cmake gettext
 		;;
 	macos)
 		# Homebrew's neovim formula is current; these are only needed if the
 		# source build in build_neovim has to run on macOS. git is required
 		# regardless — build_neovim and clone_monkey_nvim both clone.
 		if have_native_cmd brew; then
-			brew install git ninja cmake gettext
+			brew install git cmake gettext
 		else
 			warn "Homebrew not found — cannot install neovim build deps. Install it first: https://brew.sh"
 		fi
@@ -489,18 +489,16 @@ build_neovim() {
 
 	pushd "$NVIM_SRC_DIR" >/dev/null
 
+	# Force the Unix Makefiles generator: the Makefile auto-picks Ninja
+	# when it finds ninja on PATH, and a hung deps download under Ninja is
+	# invisible (no progress, no timeout). make builds are slightly slower
+	# but every step is a visible process. BUILD.md's "no -j with ninja"
+	# does not apply — make NEEDS -j, and the jobserver propagates it into
+	# the deps build.
 	info "Compiling Neovim (RelWithDebInfo)..."
-	# BUILD.md: "Do not add a -j flag if ninja is installed!" — ninja
-	# parallelizes on its own; without it, parallelize make manually.
-	if have_native_cmd ninja; then
-		make CMAKE_BUILD_TYPE=RelWithDebInfo 2>&1 | tee /tmp/nvim-build.log || {
-			fail "Neovim build failed. Check /tmp/nvim-build.log"
-		}
-	else
-		make CMAKE_BUILD_TYPE=RelWithDebInfo -j"$JOBS" 2>&1 | tee /tmp/nvim-build.log || {
-			fail "Neovim build failed. Check /tmp/nvim-build.log"
-		}
-	fi
+	make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR="Unix Makefiles" -j"$JOBS" 2>&1 | tee /tmp/nvim-build.log || {
+		fail "Neovim build failed. Check /tmp/nvim-build.log"
+	}
 
 	info "Installing Neovim..."
 	sudo_cmd make install 2>&1 | tee /tmp/nvim-install.log || {
@@ -670,7 +668,7 @@ main() {
 	echo -e "  Plugins:  managed by vim.pack (see init.lua)"
 	echo ""
 	echo -e "  Run ${CYAN}nvim${NC} to start."
-	echo -e "  Update nvim: ${CYAN}cd $NVIM_SRC_DIR && git pull && make CMAKE_BUILD_TYPE=RelWithDebInfo && sudo make install${NC}"
+	echo -e "  Update nvim: ${CYAN}cd $NVIM_SRC_DIR && git pull && make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR="Unix Makefiles" && sudo make install${NC}"
 	echo -e "  Update monkey-nvim: ${CYAN}cd $INSTALL_DIR && git pull${NC}"
 	echo ""
 	# PATH exports were written to shell rc files, but they only apply to
