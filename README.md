@@ -316,7 +316,7 @@ Usage and keymaps: see §1.14.
 
 ```bash
 cd monkey-nvim
-ln -sf $(pwd) ~/.config/nvim
+ln -sfn $(pwd) ~/.config/nvim
 ln -sf $(pwd)/configs/.clang-format ~/.clang-format   # global clang-format style (optional)
 ln -sfn $(pwd)/configs/efm-langserver ~/.config/efm-langserver   # efm: markdown format/lint (optional)
 nvim --headless -c 'ZPack sync' -c 'qa'   # Install all plugins
