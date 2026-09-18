@@ -14,6 +14,7 @@ WARN="[${YELLOW}!${NC}]"
 
 ALL_PASSED=true
 INSTALL_MODE=false
+SKIP_CONFIG_CHECKS=false
 
 usage() {
 	cat <<EOF
@@ -23,6 +24,9 @@ Check and optionally install dependencies for monkey-nvim.
 
 OPTIONS
   -i, --install    Install missing dependencies
+  --skip-check-config
+                   Skip config-file checks (install.sh passes this: the
+                   config symlinks are linked after this script runs)
   -h, --help       Show this help
 
 Exit code: 1 if any required dependency is missing, 0 otherwise.
@@ -34,6 +38,7 @@ parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-i | --install) INSTALL_MODE=true ;;
+		--skip-check-config) SKIP_CONFIG_CHECKS=true ;;
 		-h | --help) usage ;;
 		*)
 			echo "Unknown option: $1"
@@ -234,6 +239,7 @@ install_pkg() {
 	# exists, falling back to the system manager on failure), everything
 	# else through the OS package manager as before.
 	local -a brew_pkgs=() rest=()
+	local _rc=0
 	local p
 	for p in "$@"; do
 		if [[ " ${BREW_FIRST[*]} " == *" $p "* ]] && have_native_cmd brew; then
@@ -248,15 +254,18 @@ install_pkg() {
 	# all sudo work before brew keeps the run at one password entry.
 	if ((${#rest[@]} > 0)); then
 		install_with_system_mgr "${rest[@]}" ||
-			brew install "${rest[@]}" # system manager failed — brew fallback
+			brew install "${rest[@]}" ||
+			_rc=1 # system manager failed — brew fallback
 	fi
 	if ((${#brew_pkgs[@]} > 0)); then
-		brew install "${brew_pkgs[@]}" || install_with_system_mgr "${brew_pkgs[@]}"
+		brew install "${brew_pkgs[@]}" || install_with_system_mgr "${brew_pkgs[@]}" || _rc=1
 	fi
 	# Freshly installed binaries may be shadowed by bash's per-process
 	# command hash cache (a /mnt shim executed earlier in this same run);
-	# re-scan PATH.
+	# re-scan PATH. Run AFTER capturing _rc — hash -r must not mask the
+	# install status.
 	hash -r
+	return "$_rc"
 }
 
 ensure_rust() {
@@ -299,7 +308,7 @@ ensure_npm() {
 	# Suggests), so npm must be installed explicitly.
 	have_native_cmd node && have_native_cmd npm && return 0
 	echo -e "  ${YELLOW}→ installing npm...${NC}"
-	install_pkg "$(pkg_name npm)"
+	install_pkg "$(pkg_name npm)" || true
 	# Verify the install actually put a native npm on PATH: install_pkg can
 	# return success ("already newest") while PATH still only resolves to a
 	# Windows shim — fail loudly instead of silently using the shim.
@@ -668,6 +677,21 @@ check_python3() {
 	echo ""
 }
 
+# The required checks, in ONE place: main runs them up front, and
+# install_missing_required re-runs them after installing — the install
+# changed the world, so the verdict (ALL_PASSED / MISSING_REQUIRED) is
+# always recomputed from here and never carried over stale.
+run_required_checks() {
+	ALL_PASSED=true
+	MISSING_REQUIRED=()
+	print_nvim_version
+	check_required_tools
+	check_python3
+	# check_bin records into MISSING_REQUIRED without poisoning — the
+	# verdict must also reflect what the checks recorded.
+	[[ ${#MISSING_REQUIRED[@]} -eq 0 ]] || ALL_PASSED=false
+}
+
 install_missing_required() {
 	if ! $INSTALL_MODE || [[ ${#MISSING_REQUIRED[@]} -eq 0 ]]; then
 		return 0
@@ -685,20 +709,12 @@ install_missing_required() {
 			npm_install_g tree-sitter-cli
 			;;
 		*)
-			install_pkg "$(pkg_name "$b")"
+			install_pkg "$(pkg_name "$b")" || true
 			;;
 		esac
 	done
-	# Re-verify after install
-	MISSING_REQUIRED=()
-	for bin in "${REQUIRED_BINS[@]}"; do
-		have_native_cmd "$bin" || MISSING_REQUIRED+=("$bin")
-	done
-	check_cc &>/dev/null || MISSING_REQUIRED+=("cc")
-	check_ts &>/dev/null || MISSING_REQUIRED+=("ts")
-	if [[ ${#MISSING_REQUIRED[@]} -eq 0 ]]; then
-		echo -e "${GREEN}All required tools now available.${NC}"
-	else
+	run_required_checks
+	if [[ ${#MISSING_REQUIRED[@]} -gt 0 ]]; then
 		echo -e "${RED}Run: $(get_install_hint "$(for b in "${MISSING_REQUIRED[@]}"; do pkg_name "$b"; done | tr '\n' ' ')")${NC}"
 	fi
 	echo ""
@@ -855,6 +871,14 @@ check_terminal_caps() {
 }
 
 check_config_files() {
+	# --skip-check-config (passed by install.sh): the config symlinks are
+	# linked AFTER this script runs, so judging them here would fail every
+	# chained run and burn all three retries. Standalone runs (the manual
+	# diagnosis entry point) still get the full check.
+	if $SKIP_CONFIG_CHECKS; then
+		echo -e "  ${WARN} config checks skipped (handled by the installer)"
+		return 0
+	fi
 	echo -e "${BOLD}Config files${NC}"
 	local nvim_dir="${HOME}/.config/nvim" swap_dir="${HOME}/.local/state/nvim/swap"
 	# init.lua saves project sessions to stdpath('data')/sessions and
@@ -867,7 +891,7 @@ check_config_files() {
 	elif [[ -d "$nvim_dir" ]]; then
 		echo -e "  ${WARN} ~/.config/nvim exists but is not a symlink"
 	else
-		echo -e "  ${FAIL} ~/.config/nvim not found (run: ln -sf $(pwd) ~/.config/nvim)"
+		echo -e "  ${FAIL} ~/.config/nvim not found (run: ln -sfn $(pwd) ~/.config/nvim)"
 		ALL_PASSED=false
 	fi
 
@@ -911,16 +935,9 @@ main() {
 	parse_args "$@"
 	OS=$(os_detect)
 	print_header
-	print_nvim_version
 	print_platform
-	check_required_tools
-	check_python3
+	run_required_checks
 	install_missing_required
-	# NOTE: bare `check_vim_version`/`check_cmd` failures abort the script
-	# via set -e before this point (pre-existing behavior, preserved).
-	if [[ ${#MISSING_REQUIRED[@]} -gt 0 ]]; then
-		ALL_PASSED=false
-	fi
 	check_recommended_tools
 	install_missing_recommended
 	install_clipboard
