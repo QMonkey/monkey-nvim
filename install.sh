@@ -513,6 +513,16 @@ build_neovim() {
 	build_make() {
 		timeout -k 60 1800 make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='"Unix Makefiles"' "$@"
 	}
+	# A CMake cache configured with a different generator (e.g. a plain
+	# `make` run, which auto-picks Ninja when it finds ninja on PATH) makes
+	# cmake abort with "Does not match the generator used previously".
+	# Clear it so the forced generator always applies.
+	for cache_dir in .deps build; do
+		if [ -f "$cache_dir/CMakeCache.txt" ] && ! grep -qx 'CMAKE_GENERATOR:INTERNAL=Unix Makefiles' "$cache_dir/CMakeCache.txt"; then
+			warn "stale $cache_dir/CMakeCache.txt with a different generator — clearing it"
+			rm -rf "$cache_dir"
+		fi
+	done
 	info "Compiling Neovim (RelWithDebInfo, parallel)..."
 	if build_make -j"$JOBS" 2>&1 | tee /tmp/nvim-build.log; then
 		:
