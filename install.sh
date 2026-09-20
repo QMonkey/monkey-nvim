@@ -495,10 +495,33 @@ build_neovim() {
 	# but every step is a visible process. BUILD.md's "no -j with ninja"
 	# does not apply — make NEEDS -j, and the jobserver propagates it into
 	# the deps build.
-	info "Compiling Neovim (RelWithDebInfo)..."
-	make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR="Unix Makefiles" -j"$JOBS" 2>&1 | tee /tmp/nvim-build.log || {
-		fail "Neovim build failed. Check /tmp/nvim-build.log"
+	#
+	# The quotes must be INSIDE the make variable value: the Makefile's own
+	# default embeds them ("$(shell ...)") and its recipes expand -G
+	# $(CMAKE_GENERATOR) unquoted. Passing CMAKE_GENERATOR="Unix Makefiles"
+	# from the shell strips the quotes at the shell level, so cmake receives
+	# "-G Unix" plus a stray "Makefiles" argument and aborts.
+	#
+	# The deps downloads have no timeout upstream, so a silently dropped
+	# connection (NAT expiry, middlebox) blocks make forever and would hang
+	# the whole install chain. Both attempts are wrapped in timeout; a
+	# timeout or failure falls back to a serial build — a hang caused by
+	# concurrent-connection pressure clears, while a genuinely stuck
+	# download is killed by the second timeout instead of hanging. Both
+	# attempts resume from ExternalProject stamps, so nothing already
+	# downloaded or built is redone.
+	build_make() {
+		timeout -k 60 1800 make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='"Unix Makefiles"' "$@"
 	}
+	info "Compiling Neovim (RelWithDebInfo, parallel)..."
+	if build_make -j"$JOBS" 2>&1 | tee /tmp/nvim-build.log; then
+		:
+	else
+		warn "parallel build timed out or failed — retrying serially..."
+		if ! build_make 2>&1 | tee /tmp/nvim-build.log; then
+			fail "Neovim build failed. Check /tmp/nvim-build.log"
+		fi
+	fi
 
 	info "Installing Neovim..."
 	sudo_cmd make install 2>&1 | tee /tmp/nvim-install.log || {
@@ -668,7 +691,7 @@ main() {
 	echo -e "  Plugins:  managed by vim.pack (see init.lua)"
 	echo ""
 	echo -e "  Run ${CYAN}nvim${NC} to start."
-	echo -e "  Update nvim: ${CYAN}cd $NVIM_SRC_DIR && git pull && make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR="Unix Makefiles" && sudo make install${NC}"
+	echo -e "  Update nvim: ${CYAN}cd $NVIM_SRC_DIR && git pull && make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='\"Unix Makefiles\"' && sudo make install${NC}"
 	echo -e "  Update monkey-nvim: ${CYAN}cd $INSTALL_DIR && git pull${NC}"
 	echo ""
 	# PATH exports were written to shell rc files, but they only apply to
