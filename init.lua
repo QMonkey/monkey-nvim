@@ -412,10 +412,18 @@ vim.list_extend(spec, tools_specs)
 require('zpack').setup({ spec = spec })
 
 -- Terminal type detection
--- Detect the outermost terminal type by walking up the real process
--- tree from the current Neovim (or its tmux client). Needed before the
--- color block because a tmux client running on a physical tty reports
--- $TERM = tmux-256color, hiding the 8/16-color console behind it.
+-- Detect the effective terminal by walking the real process tree from the
+-- current Neovim (or its tmux client). Needed before the color block because
+-- a tmux client running on a physical tty reports $TERM = tmux-256color,
+-- hiding the 8/16-color console behind it.
+-- The authoritative terminal is the FIRST (innermost) valid tty on the walk:
+-- the controlling terminal of the tmux client / of Neovim itself is where
+-- output is actually rendered. Walking further up may reach the graphical
+-- compositor's own tty (e.g. Hyprland launched from tty1), which must not
+-- classify as 'tty'. The walk continues past that point purely to look for
+-- kmscon/sshd/login markers. Judged from the process tree of the tmux
+-- client, not environment variables, which would reflect the tmux server's
+-- start environment instead.
 -- Return value: 'kmscon' | 'tty' | 'physical_console' | 'pseudo_terminal' | 'remote_ssh' | 'no_tty' | 'unknown'
 local function get_root_terminal_type()
   local pid = vim.fn.getpid()
@@ -449,7 +457,7 @@ local function get_root_terminal_type()
     if comm:match('^sshd') then
       saw_sshd = true
     end
-    if tty ~= '' and tty ~= '?' then
+    if tty ~= '' and tty ~= '?' and last_tty == '' then
       last_tty = tty
     end
     if ppid == '' or tonumber(ppid) <= 1 then
@@ -463,10 +471,14 @@ local function get_root_terminal_type()
   end
   local lower = uname:lower()
   if lower:find('linux') then
-    if last_tty:match('^tty%d+$') or saw_login then
+    if last_tty:match('^tty%d+$') then
       return 'tty'
     elseif last_tty:match('^pts/') then
       return saw_sshd and 'remote_ssh' or 'pseudo_terminal'
+    elseif last_tty == '' then
+      -- No controlling tty anywhere (e.g. shell spawned by a daemon), but a
+      -- console login is in the ancestry: assume the physical console.
+      return 'tty'
     end
   end
   if lower:find('darwin') then
