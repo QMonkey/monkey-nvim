@@ -6,19 +6,19 @@ set -euo pipefail
 # Usage: curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash
 # ──────────────────────────────────────────────────────────────
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m'
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly CYAN='\033[0;36m'
+readonly BOLD='\033[1m'
+readonly NC='\033[0m'
 
-INSTALL_DIR="${INSTALL_DIR:-$HOME/Documents/monkey-nvim}"
-NVIM_SRC_DIR="${NVIM_SRC_DIR:-$HOME/Documents/neovim}"
-JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
-SUDOERS_D_DIR="${SUDOERS_D_DIR:-/etc/sudoers.d}"
+readonly INSTALL_DIR="${INSTALL_DIR:-$HOME/Documents/monkey-nvim}"
+readonly NVIM_SRC_DIR="${NVIM_SRC_DIR:-$HOME/Documents/neovim}"
+readonly JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
+readonly SUDOERS_D_DIR="${SUDOERS_D_DIR:-/etc/sudoers.d}"
 SUDO_NOPASSWD=0
-NOPASSWD_DROPIN="$SUDOERS_D_DIR/zz-monkey-nvim-nopasswd"
+readonly NOPASSWD_DROPIN="$SUDOERS_D_DIR/zz-monkey-nvim-nopasswd"
 
 # Never let a missing HOME fail later under `set -u`.
 [ -n "${HOME:-}" ] || {
@@ -58,6 +58,15 @@ os_detect() {
 	esac
 }
 
+# True under WSL (1 or 2): both kernels carry "microsoft" in the release
+# string (WSL1 "...-Microsoft", WSL2 "...-microsoft-standard-WSL2").
+is_wsl() {
+	case "$(uname -r)" in
+	*[Mm]icrosoft*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
 # WSL interop appends the WINDOWS PATH to ours, so tools installed on the
 # Windows side (node, python, sudo.exe, ...) appear as /mnt/c/... shims.
 # They are not Linux binaries and root's secure_path cannot see them —
@@ -80,10 +89,11 @@ native_sudo() {
 }
 
 OS=$(os_detect)
+readonly OS
 
 # TIOCSTI injection right: a chaining wrapper may pre-set this to its
 # own name — then THIS script must not inject. Standalone runs self-claim.
-ACQUIRE_TIOCSTI="${ACQUIRE_TIOCSTI:-monkey-nvim}"
+readonly ACQUIRE_TIOCSTI="${ACQUIRE_TIOCSTI:-monkey-nvim}"
 
 sudo_cmd() {
 	# Lazy re-auth: Homebrew resets the sudo timestamp on EVERY invocation
@@ -227,19 +237,26 @@ refresh_path() {
 # ────────────────── sudo setup (auth + drop-ins + keepalive) ──────────────────
 
 SUDO_KEEPALIVE_PID=""
+SUDO_BIN=""
 
 cleanup_sudo() {
 	# Kill the keepalive (if running) and remove the temporary NOPASSWD
 	# drop-in. `sudo -n rm` works while NOPASSWD is still in place — the
-	# file grants it, so removal never needs a password.
+	# file grants it, so removal never needs a password. State flags are
+	# reset so a second call (explicit from main + the EXIT trap) is a
+	# no-op. The `|| true` guards matter under set -e: `wait` reports
+	# 128+SIGTERM for a killed keepalive and `kill` fails on an already
+	# dead one — either would abort the drop-in removal below.
 	if [ -n "$SUDO_KEEPALIVE_PID" ]; then
-		kill "$SUDO_KEEPALIVE_PID" 2>/dev/null
-		wait "$SUDO_KEEPALIVE_PID" 2>/dev/null
+		kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+		wait "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+		SUDO_KEEPALIVE_PID=""
 	fi
 	if [ "$SUDO_NOPASSWD" -eq 1 ] && [ -n "$SUDO_BIN" ]; then
 		"$SUDO_BIN" -n rm -f "$NOPASSWD_DROPIN" 2>/dev/null ||
 			warn "could not remove the NOPASSWD drop-in — remove it manually: sudo rm $NOPASSWD_DROPIN"
 	fi
+	SUDO_NOPASSWD=0
 }
 
 setup_sudo() {
@@ -316,9 +333,7 @@ setup_sudo() {
 	trap 'exit 143' TERM
 }
 
-# ────────────────── Step 1: Install build deps for Neovim ──────────────────
-
-# ────────────────── package index refresh ──────────────────
+# ────────────────── package index refresh & install ──────────────────
 # Refresh the package index before installing: a stale or missing index is
 # the usual cause of "Unable to locate package" on freshly provisioned
 # machines. Retried once for transient network failures; a failed refresh
@@ -341,6 +356,8 @@ refresh_pkg() {
 	done
 	return 0
 }
+
+# ────────────────── Step 1: Install build deps for Neovim ──────────────────
 
 install_build_deps() {
 	# Neovim builds with CMake+make; the parsers tree-sitter compiles at
@@ -552,6 +569,9 @@ clone_monkey_nvim() {
 	if [ -d "$INSTALL_DIR/.git" ]; then
 		info "monkey-nvim already exists at $INSTALL_DIR — pulling latest..."
 		git -C "$INSTALL_DIR" pull --ff-only || warn "git pull failed — keeping existing version."
+	elif [ -e "$INSTALL_DIR" ]; then
+		# Existing non-git dir is fine (e.g. git clone with .git removed).
+		warn "$INSTALL_DIR exists but is not a git repository — using it as-is."
 	else
 		info "Cloning monkey-nvim to $INSTALL_DIR..."
 		git clone https://github.com/QMonkey/monkey-nvim.git "$INSTALL_DIR"
