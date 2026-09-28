@@ -38,6 +38,8 @@ monkey-nvim项目，旨在基于 Neovim 打造一个强大、快速的纯终端�
 curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash
 ```
 
+> 这条一行命令除了 `curl` 本身还需要 `git`：安装脚本会先把本仓库 clone 到 `~/Documents/monkey-nvim`，然后才能开始安装。如果缺少 `git`，脚本会报错停止——用系统的包管理器安装 git 后，重新运行同一条命令即可。
+
 脚本按顺序执行：
 
 1. 安装 Neovim 构建依赖（CMake + Ninja + gettext；tree-sitter parser 编译所需的 C 编译器）
@@ -509,9 +511,10 @@ git subtree add -P scripts https://github.com/QMonkey/monkey-scripts.git master
 git subtree pull -P scripts --squash https://github.com/QMonkey/monkey-scripts.git master
 ```
 
-一键安装无需 subtree：`curl | bash` 路径会把**本仓库** clone 到临时目录
-（退出时删除）并运行其中的 `install.sh`，因此安装脚本与它加载的 `scripts/`
-必定来自同一版本。上面的 subtree 提交并推送后，正常 `git clone` 本仓库即已
+一键安装无需 subtree：`curl | bash` 路径会把**本仓库** clone 到安装目录
+（`~/Documents/monkey-nvim`）并运行其中的 `install.sh`，因此安装脚本与它加载
+的 `scripts/` 必定来自同一版本。如果该目录已存在但不是 git clone，安装程序会
+拒绝改动它并如实告知。上面的 subtree 提交并推送后，正常 `git clone` 本仓库即已
 包含 `scripts/` —— 无需再单独 clone 或 pull monkey-scripts，更新只需 `git pull`
 本仓库。只有早于该提交的旧 checkout 缺少 `scripts/`：`git pull`（或重新运行
 `install.sh`，它会在该 checkout 上直接 pull）即可修复。
