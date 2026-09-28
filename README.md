@@ -38,6 +38,8 @@ Build Neovim (if needed) and install monkey-nvim with all dependencies and plugi
 curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash
 ```
 
+> The one-liner needs `git` besides `curl` itself: the installer clones this repository into `~/Documents/monkey-nvim` before it can install anything. If `git` is missing, the script stops with an error — install it with your system's package manager and re-run the same command.
+
 What the script does, step by step:
 
 1. Install the Neovim build dependencies (CMake + Ninja + gettext; a C compiler for tree-sitter parsers)
@@ -717,9 +719,6 @@ m<Space>    Delete all marks in current buffer
 `] / `[     Jump by alphabetical order to next / previous mark
 m/          View all marks in Location List
 ```
-
-`:SignatureToggle` Show/hide marks without deleting them
-`:SignatureRefresh` Re-sync marks and signs if they go out of sync
 
 #### 1.11 Oil (File explorer, replaces netrw)
 
