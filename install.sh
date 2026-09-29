@@ -149,7 +149,7 @@ install_build_deps() {
 		# source build in build_neovim has to run on macOS. git is required
 		# regardless — build_neovim and clone_monkey_nvim both clone.
 		if have_native_cmd brew; then
-			brew install git cmake gettext
+			retry -t 1800 -s "brew install build deps" brew install git cmake gettext
 		else
 			warn "Homebrew not found — cannot install neovim build deps. Install it first: https://brew.sh"
 		fi
@@ -193,7 +193,7 @@ build_neovim() {
 		# every later attempt (and re-run) fail with "already exists" — clean
 		# it up before giving up, but only when git created it (.git inside)
 		# or it is empty, never when it holds pre-existing user data.
-		if ! retry -s "git clone neovim" git clone https://github.com/neovim/neovim.git "$NVIM_SRC_DIR"; then
+		if ! retry -t 1800 -s "git clone neovim" git clone https://github.com/neovim/neovim.git "$NVIM_SRC_DIR"; then
 			if [ -d "$NVIM_SRC_DIR" ] && { [ -z "$(ls -A "$NVIM_SRC_DIR")" ] || [ -d "$NVIM_SRC_DIR/.git" ]; }; then
 				rm -rf "$NVIM_SRC_DIR"
 			fi
@@ -269,7 +269,7 @@ install_plugins() {
 	# through to the success line below and the plugins were simply missing.
 	# vim.pack clones whatever is missing on the next launch, so a failure
 	# here is recoverable, but it must be visible.
-	if nvim --headless "+quit" 2>&1 | tee /tmp/nvim-plugins.log; then
+	if retry -t 3600 -s "headless plugin bootstrap" nvim --headless "+quit" 2>&1 | tee /tmp/nvim-plugins.log; then
 		ok "Plugins installed."
 	else
 		warn "Headless plugin bootstrap failed — see /tmp/nvim-plugins.log."
