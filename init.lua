@@ -412,18 +412,19 @@ vim.list_extend(spec, tools_specs)
 require('zpack').setup({ spec = spec })
 
 -- Terminal type detection
--- Detect the effective terminal by walking the real process tree from the
--- current Neovim (or its tmux client). Needed before the color block because
--- a tmux client running on a physical tty reports $TERM = tmux-256color,
--- hiding the 8/16-color console behind it.
--- The authoritative terminal is the FIRST (innermost) valid tty on the walk:
--- the controlling terminal of the tmux client / of Neovim itself is where
--- output is actually rendered. Walking further up may reach the graphical
--- compositor's own tty (e.g. Hyprland launched from tty1), which must not
--- classify as 'tty'. The walk continues past that point purely to look for
--- kmscon/sshd/login markers. Judged from the process tree of the tmux
--- client, not environment variables, which would reflect the tmux server's
--- start environment instead.
+-- Detects the real display by walking the process tree from the tmux client
+-- (or Neovim itself) up the ancestry. Needed because under tmux $TERM is
+-- tmux-256color even on a physical console, hiding the 8/16-color fallback.
+-- The FIRST (innermost) valid tty decides: it is where output is actually
+-- rendered. Compositor ttys further up (e.g. Hyprland from tty1) must never
+-- classify as 'tty'. kmscon is the display only when everything below it
+-- lives on the single pty it allocates; a second, distinct pty means it
+-- merely launched a graphical session (e.g. Hyprland). Under kmscon the
+-- innermost tty is always a pty. sshd in the ancestry outranks both: a
+-- remote pty renders on the remote side, not on any local display.
+-- The walk exists only to find kmscon/sshd/login markers, and reads the
+-- process tree, not environment variables (which would mirror the tmux
+-- server's start environment instead).
 -- Return value: 'kmscon' | 'tty' | 'physical_console' | 'pseudo_terminal' | 'remote_ssh' | 'no_tty' | 'unknown'
 local function get_root_terminal_type()
   local pid = vim.fn.getpid()
@@ -440,6 +441,7 @@ local function get_root_terminal_type()
   end
 
   local last_tty = ''
+  local two_ptys = false
   local saw_login = false
   local saw_sshd = false
   for _ = 1, 10 do
@@ -449,6 +451,12 @@ local function get_root_terminal_type()
       break
     end
     if comm == 'kmscon' then
+      if saw_sshd then
+        return 'remote_ssh'
+      end
+      if two_ptys then
+        return 'pseudo_terminal'
+      end
       return 'kmscon'
     end
     if comm == 'login' then
@@ -457,8 +465,13 @@ local function get_root_terminal_type()
     if comm:match('^sshd') then
       saw_sshd = true
     end
-    if tty ~= '' and tty ~= '?' and last_tty == '' then
-      last_tty = tty
+    if tty ~= '' and tty ~= '?' then
+      if last_tty == '' then
+        last_tty = tty
+      end
+      if last_tty:match('^pts/') and tty ~= last_tty then
+        two_ptys = true
+      end
     end
     if ppid == '' or tonumber(ppid) <= 1 then
       break
