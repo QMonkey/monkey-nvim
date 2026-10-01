@@ -263,13 +263,37 @@ install_efm_config() {
 # plugin — no output during the clones, spell out that the wait is normal
 # instead of looking like a hang.
 install_plugins() {
+	# Re-preseed PATH: checkhealth --install runs as a SUBPROCESS, and the
+	# tools it installs (tree-sitter-cli via npm → ~/.npm-global/bin, go/cargo
+	# tools) only export PATH inside that child. Without this, the parser
+	# builds below resolve no `tree-sitter` and every parser fails with
+	# ENOENT while the CLI sits installed on disk (observed on Arch: all 17
+	# parsers dead). _preseed_path is idempotent and skips missing
+	# directories.
+	_preseed_path
 	info "Installing plugins (vim.pack) — no output below until done, may take a few minutes..."
 	# stderr goes to a log, not /dev/null: a hidden failure (e.g. a GitHub
 	# clone error — every plugin download crosses the network) used to fall
 	# through to the success line below and the plugins were simply missing.
 	# vim.pack clones whatever is missing on the next launch, so a failure
 	# here is recoverable, but it must be visible.
-	if retry -t 3600 -s "headless plugin bootstrap" nvim --headless "+quit" 2>&1 | tee /tmp/nvim-plugins.log; then
+	#
+	# The success gate lives INSIDE the retried command, on purpose: nvim
+	# --headless exits 0 even when init.lua died with a Lua error (E5113 —
+	# plugin clone timeout; observed on CentOS: error printed,
+	# rc 0, retry never fired, "[ OK ] Plugins installed." printed anyway).
+	# The child shell turns BOTH signals — nvim's own exit code and an
+	# error line in the log — into a non-zero exit, so retry treats it as
+	# a failed attempt and re-runs. vim.pack is idempotent (clones only
+	# what is missing), so a re-attempt continues where the last one died.
+	# The log must come up error-free for the success line.
+	if retry -t 3600 -s "headless plugin bootstrap" bash -c '
+		nvim --headless "+quit" 2>&1 | tee /tmp/nvim-plugins.log
+		rc=${PIPESTATUS[0]}
+		if [ "$rc" -ne 0 ] || grep -q "Error in" /tmp/nvim-plugins.log; then
+			exit 1
+		fi
+	'; then
 		ok "Plugins installed."
 	else
 		warn "Headless plugin bootstrap failed — see /tmp/nvim-plugins.log."
