@@ -25,30 +25,30 @@ INSTALL_DIR="${INSTALL_DIR:-$HOME/Documents/monkey-nvim}"
 # commit (pull it in and carry on) or `curl | bash`, which has no checkout
 # at all. The latter clones THIS project and runs the install.sh from that
 # checkout, so installer and scripts/ always come from the same revision.
+# No scripts/ next to this file: either a checkout predating the subtree
+# commit (pull it in and carry on), a .git-less directory (zip/tarball),
+# or `curl | bash`, which has no checkout at all. The latter two bootstrap
+# through INSTALL_DIR and run the install.sh from that checkout, so
+# installer and scripts/ always come from the same revision.
 _monkey_scripts="$(dirname "${BASH_SOURCE[0]:-$0}")/scripts"
 if [ ! -f "$_monkey_scripts/install.sh" ]; then
 	_monkey_self="${BASH_SOURCE[0]:-$0}"
 	_monkey_dir="$(dirname "$_monkey_self")"
 	if [ -f "$_monkey_self" ] && [ -d "$_monkey_dir/.git" ]; then
+		# Outdated checkout: update it in place and keep running from it.
 		git -C "$_monkey_dir" pull --ff-only || true
-		_monkey_scripts="$_monkey_dir/scripts"
-		if [ ! -f "$_monkey_scripts/install.sh" ]; then
+		if [ ! -f "$_monkey_dir/scripts/install.sh" ]; then
 			echo "monkey-scripts missing from $_monkey_dir (no scripts/ subtree)." >&2
 			echo "  git -C $_monkey_dir pull    # outdated checkout — or the repo never added the subtree" >&2
 			exit 1
 		fi
+		_monkey_scripts="$_monkey_dir/scripts"
 	else
-		# curl|bash: no checkout at all. Get one that carries scripts/ and
-		# hand over to its installer, so install.sh and scripts/ can never be
-		# different revisions. clone_monkey_project cannot do this job — it
-		# lives in the very scripts/ being fetched. INSTALL_DIR is where the
-		# framework's clone step would have put the checkout too, so that step
-		# only confirms it.
-
-		if ! command -v git >/dev/null 2>&1; then
-			echo "git is required to clone $PROJECT — install it first (e.g. sudo apt-get install git), then re-run." >&2
-			exit 1
-		fi
+		# curl|bash or a .git-less directory: the only path to a
+		# same-revision scripts/ is the INSTALL_DIR checkout.
+		# clone_monkey_project cannot do this job — it lives in the very
+		# scripts/ being fetched. INSTALL_DIR is where the framework's clone
+		# step would have put the checkout too, so that step only confirms it.
 		if [ -d "$INSTALL_DIR/.git" ]; then
 			# An install already lives here: update it, then run that one.
 			git -C "$INSTALL_DIR" pull --ff-only || true
@@ -58,12 +58,19 @@ if [ ! -f "$_monkey_scripts/install.sh" ]; then
 			echo "  move it aside, delete it, or set INSTALL_DIR elsewhere." >&2
 			exit 1
 		else
+			# Fresh clone — the ONLY sub-branch where git is hard-required:
+			# the pull sub-branch above degrades gracefully without it, and
+			# a zip/tarball must not fail here just for a missing git.
+			if ! command -v git >/dev/null 2>&1; then
+				echo "git is required to clone $PROJECT — install it first (e.g. sudo apt-get install git), then re-run." >&2
+				exit 1
+			fi
 			# No retry() available yet — the framework loads only after this
-			# clone succeeds — so inline the standard 3 attempts. A failed clone
-			# leaves a partial directory behind; remove it so the next attempt
-			# cannot trip over "already exists". This branch only runs on a
-			# fresh install (INSTALL_DIR did not exist or was empty), so the rm
-			# can never delete pre-existing data.
+			# clone succeeds — so inline the standard 3 attempts. A failed
+			# clone leaves a partial directory behind; remove it so the next
+			# attempt cannot trip over "already exists". This branch only
+			# runs on a fresh install (INSTALL_DIR did not exist or was
+			# empty), so the rm can never delete pre-existing data.
 			_monkey_rc=1
 			for _monkey_attempt in 1 2 3; do
 				if git clone "$PROJECT_REPO" "$INSTALL_DIR"; then
@@ -118,49 +125,13 @@ SUMMARY_LINES=(
 
 # ──────────────────────── project steps ────────────────────────
 
-install_build_deps() {
-	# Neovim builds with CMake+make; the parsers tree-sitter compiles at
-	# runtime need a C compiler. Everything else (rg/ctags/fzf/node/...) is
-	# handled by checkhealth.sh --install (step 5).
-	info "Installing Neovim build dependencies..."
-	refresh_pkg
-	case "$OS" in
-	debian | ubuntu)
-		sudo_cmd apt-get install -y gettext cmake curl build-essential git
-		;;
-	arch)
-		sudo_cmd pacman -S --needed --noconfirm base-devel git curl cmake gettext
-		;;
-	opensuse)
-		sudo_cmd zypper --non-interactive install -y -t pattern devel_basis
-		sudo_cmd zypper --non-interactive install -y git curl cmake gettext
-		;;
-	centos)
-		# Some tools come from EPEL on RHEL rebuilds.
-		sudo_cmd dnf install -y epel-release || true
-		sudo_cmd dnf install -y gcc gcc-c++ make git curl cmake gettext
-		;;
-	fedora)
-		# No EPEL on Fedora — the same names ship in the base repos.
-		sudo_cmd dnf install -y gcc gcc-c++ make git curl cmake gettext
-		;;
-	macos)
-		# Homebrew's neovim formula is current; these are only needed if the
-		# source build in build_neovim has to run on macOS. git is required
-		# regardless — build_neovim and clone_monkey_nvim both clone.
-		if have_native_cmd brew; then
-			retry -t 1800 -s "brew install build deps" brew install git cmake gettext
-		else
-			warn "Homebrew not found — cannot install neovim build deps. Install it first: https://brew.sh"
-		fi
-		;;
-	*)
-		warn "Unknown OS ($OS). Attempting to continue with whatever is available."
-		;;
-	esac
-	hash -r # re-scan PATH: fresh binaries must not be shadowed by cached shim paths
-	ok "Build dependencies installed."
-}
+# Build dependencies come from the shared install_build_deps (pkg.sh):
+# toolchain covers the compiler/make set per distro (base-devel on arch
+# also pulls autoconf/bison/gettext/pkgconf), vcs adds git+curl, cmake and
+# gettext complete the CMake build. The old per-distro case lived here;
+# the parsers tree-sitter compiles at runtime need only a C compiler —
+# everything else (rg/ctags/fzf/node/...) is handled by checkhealth.sh
+# --install (step 5).
 
 nvim_at_least() {
 	have_native_cmd nvim || return 1
@@ -268,9 +239,9 @@ install_plugins() {
 	# tools) only export PATH inside that child. Without this, the parser
 	# builds below resolve no `tree-sitter` and every parser fails with
 	# ENOENT while the CLI sits installed on disk (observed on Arch: all 17
-	# parsers dead). _preseed_path is idempotent and skips missing
+	# parsers dead). preseed_path is idempotent and skips missing
 	# directories.
-	_preseed_path
+	preseed_path
 	info "Installing plugins (vim.pack) — no output below until done, may take a few minutes..."
 	# stderr goes to a log, not /dev/null: a hidden failure (e.g. a GitHub
 	# clone error — every plugin download crosses the network) used to fall
@@ -308,7 +279,7 @@ install_step_prepare() {
 	# time — on a sessionless WSL (root default user) that fails with a
 	# misleading Lua load error. See README 'Precautions' → WSL2.
 	ensure_xdg_runtime_dir
-	install_build_deps
+	install_build_deps toolchain vcs cmake gettext
 	echo ""
 	install_linuxbrew
 	echo ""
