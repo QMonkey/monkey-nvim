@@ -155,22 +155,8 @@ build_neovim() {
 	warn "Neovim 0.12+ not found or below requirement — building from source."
 
 	info "Building Neovim from source (this may take a few minutes)..."
-	if [ -d "$NVIM_SRC_DIR/.git" ]; then
-		info "Neovim source already exists at $NVIM_SRC_DIR — pulling latest..."
-		retry -s "git pull" git -C "$NVIM_SRC_DIR" pull --ff-only ||
-			warn "git pull failed — building from existing source."
-	else
-		# A failed clone leaves a partial directory behind, which would make
-		# every later attempt (and re-run) fail with "already exists" — clean
-		# it up before giving up, but only when git created it (.git inside)
-		# or it is empty, never when it holds pre-existing user data.
-		if ! retry -t 1800 -s "git clone neovim" git clone https://github.com/neovim/neovim.git "$NVIM_SRC_DIR"; then
-			if [ -d "$NVIM_SRC_DIR" ] && { [ -z "$(ls -A "$NVIM_SRC_DIR")" ] || [ -d "$NVIM_SRC_DIR/.git" ]; }; then
-				rm -rf "$NVIM_SRC_DIR"
-			fi
-			fail "neovim source clone failed after 3 attempts."
-		fi
-	fi
+	clone_repo https://github.com/neovim/neovim.git "$NVIM_SRC_DIR" ||
+		fail "neovim source clone failed."
 
 	pushd "$NVIM_SRC_DIR" >/dev/null
 
@@ -180,9 +166,14 @@ build_neovim() {
 	# does not apply — make NEEDS -j, and the jobserver propagates it into
 	# the deps build. The quotes must be INSIDE the make variable value.
 	# The deps downloads have no timeout upstream, so both attempts are
-	# wrapped in timeout; a timeout or failure falls back to a serial build.
+	# wrapped in a timeout; a timeout or failure falls back to a serial
+	# build. retry owns the timeout instead of a hand-rolled `timeout -k 60
+	# 1800`: macOS has no timeout binary (only gtimeout via coreutils), so
+	# the raw call died with command-not-found there. retry -n 1 keeps the
+	# caller's parallel→serial fallback exactly as it was (one attempt per
+	# call, 1800s budget, TERM+KILL escalation via RETRY_KILL_AFTER).
 	build_make() {
-		timeout -k 60 1800 make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='"Unix Makefiles"' "$@"
+		retry -n 1 -t 1800 -s "make CMake build" make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='"Unix Makefiles"' "$@"
 	}
 	info "Compiling Neovim (RelWithDebInfo, parallel)..."
 	if build_make -j"$JOBS" 2>&1 | tee /tmp/nvim-build.log; then
@@ -242,6 +233,20 @@ install_plugins() {
 	# parsers dead). preseed_path is idempotent and skips missing
 	# directories.
 	preseed_path
+	# An interrupted clone leaves a plugin directory holding .git but no
+	# HEAD — vim.pack's lock repair then dies with "fatal: ambiguous
+	# argument 'HEAD'" and the E5113 takes the whole headless run (and ALL
+	# other plugins) down with it, on every retry (observed on openSUSE:
+	# one clone timeout, 34 plugins dead). Sweep the plugin tree via the
+	# shared repair_broken_clone (clone.sh) before every attempt: a
+	# directory without a readable HEAD cannot resume — remove it so the
+	# attempt re-clones from scratch.
+	# vim.pack clones into site/pack/core/opt (zpack's pack group is "core").
+	local pack_root="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/pack/core"
+	local d
+	for d in "$pack_root"/opt/* "$pack_root"/start/*; do
+		repair_broken_clone "$d"
+	done
 	info "Installing plugins (vim.pack) — no output below until done, may take a few minutes..."
 	# stderr goes to a log, not /dev/null: a hidden failure (e.g. a GitHub
 	# clone error — every plugin download crosses the network) used to fall
@@ -258,7 +263,15 @@ install_plugins() {
 	# a failed attempt and re-runs. vim.pack is idempotent (clones only
 	# what is missing), so a re-attempt continues where the last one died.
 	# The log must come up error-free for the success line.
+	# The retried child re-runs the SAME sweep silently: attempt 1 itself
+	# can leave a fresh .git-only directory (clone timeout), and later
+	# attempts must not inherit it. repair_broken_clone crosses into the
+	# child via export -f (warn comes along — the repair reports there too).
+	export -f repair_broken_clone warn
 	if retry -t 3600 -s "headless plugin bootstrap" bash -c '
+		for d in '"$pack_root"'/opt/* '"$pack_root"'/start/*; do
+			repair_broken_clone "$d"
+		done
 		nvim --headless "+quit" 2>&1 | tee /tmp/nvim-plugins.log
 		rc=${PIPESTATUS[0]}
 		if [ "$rc" -ne 0 ] || grep -q "Error in" /tmp/nvim-plugins.log; then
