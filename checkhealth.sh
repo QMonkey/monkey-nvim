@@ -62,7 +62,7 @@ check_ts() {
 # ──────────────────────── recommended ────────────────────────
 # fzf ships far newer via Homebrew than most distro repos — prefer brew
 # when it exists (install_pkg splits the batch on these names).
-BREW_FIRST=(fzf)
+BREW_FIRST=(fzf zig zls)
 RECOMMENDED_NOTE="(Missing won't block monkey-nvim, but will degrade gtags experience)"
 RECOMMENDED_CHECKS=(
 	"global|bin|global (GNU Global, for gtags)|pkg"
@@ -90,8 +90,8 @@ OPTIONAL_CHECKS=(
 	"python3|bin|python3|pkg||||Python"
 	"pylsp|bin|pylsp|pkg,pip:python-lsp-server||||Python"
 	"black|bin|black|pkg,pip:black||||Python"
-	"zig|bin|zig|brew:zig,pkg||||Zig"
-	"zls|bin|zls|brew:zls,pkg||||Zig"
+	"zig|bin|zig|pkg||||Zig"
+	"zls|bin|zls|pkg||||Zig"
 	"cargo|bin|cargo|rustup||||Rust"
 	"rust-analyzer|bin|rust-analyzer|rustup-component:rust-analyzer||||Rust"
 	"lua-language-server|bin|lua-language-server|pkg,brew:lua-language-server||||Lua"
@@ -248,12 +248,6 @@ install_optional_bin() {
 		;;
 	markdownlint-cli2)
 		npm_install_g markdownlint-cli2
-		;;
-	zig)
-		retry -t 3600 -s "brew install zig" brew install zig || install_pkg "$(pkg_name "$bin")" || ok=false
-		;;
-	zls)
-		retry -t 3600 -s "brew install zls" brew install zls || install_pkg "$(pkg_name "$bin")" || ok=false
 		;;
 	*)
 		install_pkg "$(pkg_name "$bin")" || ok=false
