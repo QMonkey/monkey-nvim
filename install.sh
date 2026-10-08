@@ -101,9 +101,14 @@ INSTALL_INFO=(
 )
 
 # src|dst — init.lua writes project sessions to stdpath('data')/sessions and
-# mkdir -p's them on first save; swap/ is created on first nvim launch.
+# mkdir -p's them on first save; swap/ is created on first nvim launch. The
+# "keep" mode covers the repo-side extra configs (.clang-format, the
+# efm-langserver config dir): an existing target is skipped with an info
+# line, a missing source is skipped silently.
 SYMLINKS=(
 	"$INSTALL_DIR|$HOME/.config/nvim"
+	"$INSTALL_DIR/configs/.clang-format|$HOME/.clang-format|keep"
+	"$INSTALL_DIR/configs/efm-langserver|$HOME/.config/efm-langserver|keep"
 )
 ENSURE_DIRS=(
 	"$HOME/.local/state/nvim/swap"
@@ -207,20 +212,6 @@ build_neovim() {
 	fi
 }
 
-# efm-langserver ships a repo-side config dir: link it once, and never touch
-# an existing target (the repo may not even ship the source).
-install_efm_config() {
-	if [ -d "$INSTALL_DIR/configs/efm-langserver" ]; then
-		if [ -e "$HOME/.config/efm-langserver" ] || [ -L "$HOME/.config/efm-langserver" ]; then
-			info "efm-langserver config already exists — skipping."
-		else
-			mkdir -p "$HOME/.config"
-			ln -sfn "$INSTALL_DIR/configs/efm-langserver" "$HOME/.config/efm-langserver"
-			ok "efm-langserver config → $HOME/.config/efm-langserver"
-		fi
-	fi
-}
-
 # First headless launch: init.lua runs and zpack (vim.pack) clones every
 # plugin — no output during the clones, spell out that the wait is normal
 # instead of looking like a hang.
@@ -300,9 +291,6 @@ install_step_prepare() {
 install_step_tool() {
 	build_neovim
 	echo ""
-}
-install_step_symlinks() {
-	install_efm_config
 }
 install_step_after() {
 	install_plugins
