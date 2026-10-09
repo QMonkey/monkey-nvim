@@ -22,10 +22,6 @@ PROJECT_REPO=https://github.com/QMonkey/monkey-nvim.git
 INSTALL_DIR="${INSTALL_DIR:-$HOME/Documents/monkey-nvim}"
 
 # No scripts/ next to this file: either a checkout predating the subtree
-# commit (pull it in and carry on) or `curl | bash`, which has no checkout
-# at all. The latter clones THIS project and runs the install.sh from that
-# checkout, so installer and scripts/ always come from the same revision.
-# No scripts/ next to this file: either a checkout predating the subtree
 # commit (pull it in and carry on), a .git-less directory (zip/tarball),
 # or `curl | bash`, which has no checkout at all. The latter two bootstrap
 # through INSTALL_DIR and run the install.sh from that checkout, so
@@ -94,7 +90,6 @@ fi
 
 # ──────────────────────── layout & data ────────────────────────
 NVIM_SRC_DIR="${NVIM_SRC_DIR:-$HOME/Documents/neovim}" # kept for future updates
-JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
 ACQUIRE_TIOCSTI="${ACQUIRE_TIOCSTI:-monkey-nvim}"
 INSTALL_INFO=(
 	"neovim source: ${CYAN}${NVIM_SRC_DIR}${NC} (kept for future updates)"
@@ -139,12 +134,7 @@ SUMMARY_LINES=(
 # --install (step 5).
 
 nvim_at_least() {
-	have_native_cmd nvim || return 1
-	local ver
-	ver=$(nvim --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' || true)
-	[[ -z "$ver" ]] && return 1
-	local major=${ver%%.*} minor=${ver#*.}
-	((major > 0 || (major == 0 && minor >= 12)))
+	bin_at_least nvim 0.12
 }
 
 build_neovim() {
@@ -276,6 +266,7 @@ install_plugins() {
 	fi
 }
 
+# ──────────────────────── hooks ────────────────────────
 # A hook prints its own trailing blank line when it produced output.
 install_step_prepare() {
 	# First: make $XDG_RUNTIME_DIR usable. The headless nvim in
