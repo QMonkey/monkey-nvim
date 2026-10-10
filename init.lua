@@ -1731,10 +1731,14 @@ vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
   command = 'setfiletype gotmpl',
 })
 
+-- BufNewFile also fires when a virtual buffer (gitsigns://, git://,
+-- fugitive://) is opened by name and has no file on disk; templating those
+-- would poison the diff view that gitsigns later reuses as-is.
 vim.api.nvim_create_autocmd('BufNewFile', {
   group = filetype_group,
   pattern = '*.sh',
   callback = function()
+    if vim.bo.buftype ~= '' or vim.api.nvim_buf_get_name(0):find('://') then return end
     vim.api.nvim_buf_set_lines(0, 0, 0, false, { '#!/usr/bin/env bash', '' })
   end,
 })
@@ -1742,6 +1746,7 @@ vim.api.nvim_create_autocmd('BufNewFile', {
   group = filetype_group,
   pattern = '*.py',
   callback = function()
+    if vim.bo.buftype ~= '' or vim.api.nvim_buf_get_name(0):find('://') then return end
     vim.api.nvim_buf_set_lines(0, 0, 0, false, { '#!/usr/bin/env python3', '', '' })
   end,
 })
@@ -1851,7 +1856,12 @@ local function close_gitsigns_diff()
     if vim.fn.bufname(vim.api.nvim_win_get_buf(win)):match('^gitsigns:') then
       -- The buffer is acwrite and may be marked modified (e.g. stray edits);
       -- it is an ephemeral view regenerated from git, so discard and close.
+      -- Delete the buffer too: gitsigns reuses any existing buffer with the
+      -- same gitsigns:// name without refreshing it, so a survivor would
+      -- show stale content in the next diff.
+      local buf = vim.api.nvim_win_get_buf(win)
       vim.api.nvim_win_close(win, true)
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
       return true
     end
   end
