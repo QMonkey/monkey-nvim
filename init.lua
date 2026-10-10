@@ -166,10 +166,6 @@ local nav_specs = {
     event = 'VeryLazy',
     cmd = { 'UfoEnable', 'UfoDisable', 'UfoInspect', 'UfoAttach', 'UfoDetach', 'UfoEnableFold', 'UfoDisableFold' },
     config = function()
-      vim.opt.foldcolumn = '0'
-      vim.opt.foldlevel = 99
-      vim.opt.foldlevelstart = 99
-      vim.opt.foldenable = true
       require('ufo').setup({
         provider_selector = function(_, _, _)
           return { 'treesitter', 'indent' }
@@ -1551,6 +1547,17 @@ vim.api.nvim_create_autocmd({ 'WinEnter', 'BufWinEnter', 'FileType' }, {
 vim.opt.scrolloff = 7
 vim.opt.sidescrolloff = 15
 vim.opt.sidescroll = 1
+
+-- Fold
+-- Top-level scope is the only hard requirement: they must be applied before VimEnter,
+-- when the session restore opens windows while ufo has not loaded yet (VeryLazy), and
+-- 'foldlevel' is window-local — setting them in ufo's config would unfold
+-- only the focused window and leave the rest collapsed. 'foldlevelstart'
+-- applies as each restored window loads its buffer, so all of them start unfolded.
+vim.opt.foldcolumn = '0'
+vim.opt.foldlevel = 99
+vim.opt.foldlevelstart = 99
+vim.opt.foldenable = true
 
 -- Misc
 vim.opt.backspace = 'indent,eol,start'
