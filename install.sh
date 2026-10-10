@@ -15,7 +15,7 @@ set -euo pipefail
 
 # ──────────────────────── repository identity ────────────────────────
 # Declared before the framework is sourced: the bootstrap below needs both
-# values, and clones into the very directory clone_monkey_project would
+# values, and clones into the very directory clone_project would
 # have used — one clone per run, not two.
 PROJECT=monkey-nvim
 PROJECT_REPO=https://github.com/QMonkey/monkey-nvim.git
@@ -42,7 +42,7 @@ if [ ! -f "$_monkey_scripts/install.sh" ]; then
 	else
 		# curl|bash or a .git-less directory: the only path to a
 		# same-revision scripts/ is the INSTALL_DIR checkout.
-		# clone_monkey_project cannot do this job — it lives in the very
+		# clone_project cannot do this job — it lives in the very
 		# scripts/ being fetched. INSTALL_DIR is where the framework's clone
 		# step would have put the checkout too, so that step only confirms it.
 		if [ -d "$INSTALL_DIR/.git" ]; then
@@ -211,9 +211,9 @@ install_plugins() {
 	# tools) only export PATH inside that child. Without this, the parser
 	# builds below resolve no `tree-sitter` and every parser fails with
 	# ENOENT while the CLI sits installed on disk (observed on Arch: all 17
-	# parsers dead). preseed_path is idempotent and skips missing
+	# parsers dead). export_path is idempotent and skips missing
 	# directories.
-	preseed_path
+	export_path
 	# An interrupted clone leaves a plugin directory holding .git but no
 	# HEAD — vim.pack's lock repair then dies with "fatal: ambiguous
 	# argument 'HEAD'" and the E5113 takes the whole headless run (and ALL
