@@ -1,7 +1,8 @@
 {
-    "runtime.version": "LuaJIT",
-    "workspace.checkThirdParty": false,
-    "diagnostics.globals": [
-        "vim"
-    ]
+  "runtime.version": "LuaJIT",
+  "workspace.checkThirdParty": false,
+  "diagnostics.globals": [
+    "vim",
+    "MiniGit"
+  ]
 }
