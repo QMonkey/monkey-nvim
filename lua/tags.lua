@@ -88,7 +88,7 @@ M.config = function()
   if vim.env.GTAGSCONF and vim.env.GTAGSCONF ~= '' and not vim.list_contains(candidates, vim.env.GTAGSCONF) then
     table.insert(candidates, 1, vim.env.GTAGSCONF)
   end
-  local function set_gtags_conf(conf, content)
+  local function patch_gtags_conf(conf, content)
     -- gtags's plugin parser measures lines with strlen(), so a NUL byte in
     -- parser output truncates the line and the rest leaks into the next read
     -- ("gtags: unexpected type string"). The stock config maps binary gettext
@@ -114,24 +114,20 @@ M.config = function()
         out[#out + 1] = line
       end
     end
-    if not has_mo then
-      vim.env.GTAGSCONF = conf
-      return
-    end
-    if not changed then
-      vim.notify('gtags.conf: could not strip the .mo langmap from ' .. conf, vim.log.levels.WARN)
-      vim.env.GTAGSCONF = conf
-      return
+    if not has_mo or not changed then
+      if has_mo then
+        vim.notify('gtags.conf: could not strip the .mo langmap from ' .. conf, vim.log.levels.WARN)
+      end
+      return conf
     end
     local patched = vim.fn.stdpath('data') .. '/gtags.conf'
     local f = io.open(patched, 'w')
-    if f then
-      f:write(table.concat(out, '\n'))
-      f:close()
-      vim.env.GTAGSCONF = patched
-    else
-      vim.env.GTAGSCONF = conf
+    if not f then
+      return conf
     end
+    f:write(table.concat(out, '\n'))
+    f:close()
+    return patched
   end
 
   for _, conf in ipairs(candidates) do
@@ -140,7 +136,7 @@ M.config = function()
       local content = f:read('*a')
       f:close()
       if content:find('native%-pygments:') then
-        set_gtags_conf(conf, content)
+        vim.env.GTAGSCONF = patch_gtags_conf(conf, content)
         break
       end
     end
