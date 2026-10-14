@@ -59,26 +59,88 @@ M.config = function()
   vim.env.GTAGSLABEL = 'native-pygments'
 
   local candidates = {
-    '/usr/local/etc/gtags.conf',
     '/etc/gtags.conf',
     '/etc/gtags/gtags.conf',
     '/usr/share/gtags/gtags.conf',
+    '/usr/local/etc/gtags.conf',
     '/usr/local/share/gtags/gtags.conf',
+    '/home/linuxbrew/.linuxbrew/etc/gtags.conf',
+    '/home/linuxbrew/.linuxbrew/share/gtags/gtags.conf',
     '/usr/local/opt/global/share/gtags/gtags.conf',
     '/opt/homebrew/etc/gtags.conf',
     '/opt/homebrew/share/gtags/gtags.conf',
     '/opt/homebrew/opt/global/share/gtags/gtags.conf',
   }
-  if vim.env.GTAGSCONF and vim.env.GTAGSCONF ~= '' then
+  -- Derive more candidates from the `global` binary's location so custom
+  -- install prefixes (HOMEBREW_PREFIX overrides, user-local builds) are covered as well.
+  local global_path = vim.fn.exepath('global')
+  if global_path ~= '' then
+    local prefix = global_path:match('^(.*)/bin/global$')
+    if prefix then
+      for _, suffix in ipairs({ '/etc/gtags.conf', '/share/gtags/gtags.conf' }) do
+        local conf = prefix .. suffix
+        if not vim.list_contains(candidates, conf) then
+          candidates[#candidates + 1] = conf
+        end
+      end
+    end
+  end
+  if vim.env.GTAGSCONF and vim.env.GTAGSCONF ~= '' and not vim.list_contains(candidates, vim.env.GTAGSCONF) then
     table.insert(candidates, 1, vim.env.GTAGSCONF)
   end
+  local function set_gtags_conf(conf, content)
+    -- gtags's plugin parser measures lines with strlen(), so a NUL byte in
+    -- parser output truncates the line and the rest leaks into the next read
+    -- ("gtags: unexpected type string"). The stock config maps binary gettext
+    -- .mo files to the Modelica lexer, which produces exactly such bytes.
+    -- Strip every langmap mapping of .mo so the lexer never sees such files.
+    local has_mo = false  -- a langmap maps .mo at all (any line format)
+    local changed = false -- at least one mapping was successfully stripped
+    local out = {}
+    for line in (content .. '\n'):gmatch('([^\n]*)\n') do
+      local indent, lang, exts, cont = line:match('^([\t ]*):langmap=([%w-]+)\\:([^:]-):(\\)$')
+      if lang and (exts:match('%.mo%.') or exts:match('%.mo$')) then
+        has_mo, changed = true, true
+        local rest = exts:gsub('%.mo%.', '.', 1):gsub('%.mo$', '', 1)
+        if rest ~= '' then
+          out[#out + 1] = indent .. ':langmap=' .. lang .. '\\:' .. rest .. ':' .. cont
+        end
+      else
+        -- .mo mapped in an unrecognized format: token-boundary check
+        -- (.mo but not .mod/.moo/.monkey); flags the warn path below
+        if line:find(':langmap=') and (line:find('%.mo[^%w]') or line:find('%.mo$')) then
+          has_mo = true
+        end
+        out[#out + 1] = line
+      end
+    end
+    if not has_mo then
+      vim.env.GTAGSCONF = conf
+      return
+    end
+    if not changed then
+      vim.notify('gtags.conf: could not strip the .mo langmap from ' .. conf, vim.log.levels.WARN)
+      vim.env.GTAGSCONF = conf
+      return
+    end
+    local patched = vim.fn.stdpath('data') .. '/gtags.conf'
+    local f = io.open(patched, 'w')
+    if f then
+      f:write(table.concat(out, '\n'))
+      f:close()
+      vim.env.GTAGSCONF = patched
+    else
+      vim.env.GTAGSCONF = conf
+    end
+  end
+
   for _, conf in ipairs(candidates) do
     local f = io.open(conf, 'r')
     if f then
       local content = f:read('*a')
       f:close()
       if content:find('native%-pygments:') then
-        vim.env.GTAGSCONF = conf
+        set_gtags_conf(conf, content)
         break
       end
     end
@@ -196,10 +258,11 @@ M.config = function()
   end
 
   local function tags_branch_identity(root)
-    local branch = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(root) .. ' branch --show-current'))
-    local head = vim.fn.trim(vim.fn.system('git -C ' .. vim.fn.shellescape(root) .. ' rev-parse HEAD'))
-    if head == '' then return nil end
-    return { branch = branch, head = head }
+    local branch = vim.fn.system('git -C ' .. vim.fn.shellescape(root) .. ' branch --show-current')
+    if vim.v.shell_error ~= 0 then return nil end
+    local head = vim.fn.system('git -C ' .. vim.fn.shellescape(root) .. ' rev-parse HEAD')
+    if vim.v.shell_error ~= 0 then return nil end
+    return { branch = vim.fn.trim(branch), head = vim.fn.trim(head) }
   end
 
   local function tags_update_ctags(root)
@@ -284,17 +347,16 @@ M.config = function()
 
   local function tags_rebuild()
     local root = util.project_root()
-    local info = tags_branch_identity(root)
-    if not info then
-      vim.notify('TagsRebuild: cannot determine project root', vim.log.levels.ERROR)
-      return
-    end
     if not tags_do_rebuild(root) then
       vim.notify('TagsRebuild: gtags job already running for ' .. root, vim.log.levels.WARN)
       return
     end
-    tags_save_head(root, info.head)
-    tags_branch_baseline[root] = info
+    -- Non-git roots have no (branch, HEAD) identity; rebuild without baseline.
+    local info = tags_branch_identity(root)
+    if info then
+      tags_save_head(root, info.head)
+      tags_branch_baseline[root] = info
+    end
   end
 
   vim.api.nvim_create_user_command('TagsRebuild', tags_rebuild, {})
