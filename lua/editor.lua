@@ -1,7 +1,6 @@
 local M = {}
 
--- Generic editor options, keymaps and autocmds + text-editing plugins
--- (mini.*, autopairs, substitute, marks, matchup, multicursor)
+-- Generic editor options, keymaps and autocmds + text-editing plugins (mini.*, autopairs, substitute, marks, matchup, multicursor)
 M.spec = {
   {
     src = 'https://github.com/nvim-mini/mini.ai',
