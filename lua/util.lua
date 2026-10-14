@@ -2,7 +2,10 @@ local M = {}
 
 -- Project root
 -- Shared by Rooter, Shada, Session and gtags/cscope
-M.root_patterns = { '.root', '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout' }
+-- NOTE: vim.fs.root() searches the whole upward tree per marker in list
+-- order, so a stray outer .root would shadow deeper VCS roots. Keep .root
+-- last: repos always win, .root only marks repos-less dirs (loose scripts).
+M.root_patterns = { '.git', '.hg', '.svn', '.bzr', '_darcs', '_FOSSIL_', '.fslckout', '.root' }
 
 function M.project_root()
   return vim.fs.root(0, M.root_patterns) or vim.fn.getcwd()
