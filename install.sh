@@ -217,16 +217,20 @@ install_plugins() {
 	# An interrupted clone leaves a plugin directory holding .git but no
 	# HEAD — vim.pack's lock repair then dies with "fatal: ambiguous
 	# argument 'HEAD'" and the E5113 takes the whole headless run (and ALL
-	# other plugins) down with it, on every retry (observed on openSUSE:
-	# one clone timeout, 34 plugins dead). Sweep the plugin tree via the
-	# shared repair_broken_clone (clone.sh) before every attempt: a
-	# directory without a readable HEAD cannot resume — remove it so the
-	# attempt re-clones from scratch.
+	# other plugins) down with it on every retry. A clone interrupted during
+	# CHECKOUT is subtler: valid HEAD (the pack landed) but an empty
+	# worktree — `module 'x' not found` despite the dir looking installed
+	# (observed on Ubuntu: lualine.nvim). Sweep the plugin tree via the
+	# shared repair_broken_clone --strict (clone.sh) before every attempt:
+	# a dir without a readable HEAD is removed (re-clone from scratch); an
+	# incomplete checkout is repaired OFFLINE (reset --hard — the objects
+	# are all local). Plugin trees are never user-edited, so strict is safe
+	# here; INSTALL_DIR keeps the conservative non-strict check.
 	# vim.pack clones into site/pack/core/opt (zpack's pack group is "core").
 	local pack_root="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/pack/core"
 	local d
 	for d in "$pack_root"/opt/* "$pack_root"/start/*; do
-		repair_broken_clone "$d"
+		repair_broken_clone --strict "$d"
 	done
 	info "Installing plugins (vim.pack) — no output below until done, may take a few minutes..."
 	# stderr goes to a log, not /dev/null: a hidden failure (e.g. a GitHub
@@ -247,11 +251,12 @@ install_plugins() {
 	# The retried child re-runs the SAME sweep silently: attempt 1 itself
 	# can leave a fresh .git-only directory (clone timeout), and later
 	# attempts must not inherit it. repair_broken_clone crosses into the
-	# child via export -f (warn comes along — the repair reports there too).
-	export -f repair_broken_clone warn
+	# child via export -f (warn and info come along — the repair reports
+	# there too).
+	export -f repair_broken_clone warn info
 	if retry -t 3600 -s "headless plugin bootstrap" bash -c '
 		for d in '"$pack_root"'/opt/* '"$pack_root"'/start/*; do
-			repair_broken_clone "$d"
+			repair_broken_clone --strict "$d"
 		done
 		nvim --headless "+quit" 2>&1 | tee /tmp/nvim-plugins.log
 		rc=${PIPESTATUS[0]}
