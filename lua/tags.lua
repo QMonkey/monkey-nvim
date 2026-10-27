@@ -170,7 +170,8 @@ M.config = function()
       vim.schedule(function()
         gtags_building[root] = nil
         if obj.code ~= 0 then
-          vim.notify('gtags: build failed in ' .. root, vim.log.levels.ERROR)
+          -- ErrorMsg red without vim.notify(ERROR)'s err=true, which aborts inputsecret().
+          vim.api.nvim_echo({ { 'gtags: build failed in ' .. root, 'ErrorMsg' } }, true, {})
         end
       end)
     end)
@@ -189,7 +190,8 @@ M.config = function()
       vim.schedule(function()
         gtags_building[root] = nil
         if obj.code ~= 0 then
-          vim.notify('gtags: update failed in ' .. root, vim.log.levels.ERROR)
+          -- ErrorMsg red without vim.notify(ERROR)'s err=true, which aborts inputsecret().
+          vim.api.nvim_echo({ { 'gtags: update failed in ' .. root, 'ErrorMsg' } }, true, {})
         end
       end)
     end)
