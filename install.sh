@@ -168,7 +168,7 @@ build_neovim() {
 	# caller's parallel→serial fallback exactly as it was (one attempt per
 	# call, 1800s budget, TERM+KILL escalation via RETRY_KILL_AFTER).
 	build_make() {
-		retry -n 1 -t 1800 -s "make CMake build" make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='"Unix Makefiles"' "$@"
+		retry -n 1 -t "$RETRY_T_NET" -s "make CMake build" make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='"Unix Makefiles"' "$@"
 	}
 	info "Compiling Neovim (RelWithDebInfo, parallel)..."
 	if build_make -j"$JOBS" 2>&1 | tee /tmp/nvim-build.log; then
@@ -254,7 +254,7 @@ install_plugins() {
 	# child via export -f (warn and info come along — the repair reports
 	# there too).
 	export -f repair_broken_clone warn info
-	if retry -t 3600 -s "headless plugin bootstrap" bash -c '
+	if retry -t "$RETRY_T_HEAVY" -s "headless plugin bootstrap" bash -c '
 		for d in '"$pack_root"'/opt/* '"$pack_root"'/start/*; do
 			repair_broken_clone --strict "$d"
 		done
