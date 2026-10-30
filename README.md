@@ -35,7 +35,7 @@ Pick one of the two ways below: a one-click script, or manual setup.
 Build Neovim (if needed) and install monkey-nvim with all dependencies and plugins automatically:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash 2>&1 | tee monkey-nvim-install.log
 ```
 
 > The one-liner needs `git` besides `curl` itself: the installer clones this repository into `~/Documents/monkey-nvim` before it can install anything. If `git` is missing, the script stops with an error — install it with your system's package manager and re-run the same command.
