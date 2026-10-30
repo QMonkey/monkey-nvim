@@ -35,7 +35,7 @@ monkey-nvim项目，旨在基于 Neovim 打造一个强大、快速的纯终端�
 按需构建 Neovim，并自动安装 monkey-nvim 及其全部依赖和插件：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash 2>&1 | tee monkey-nvim-install.log
 ```
 
 > 这条一行命令除了 `curl` 本身还需要 `git`：安装脚本会先把本仓库 clone 到 `~/Documents/monkey-nvim`，然后才能开始安装。如果缺少 `git`，脚本会报错停止——用系统的包管理器安装 git 后，重新运行同一条命令即可。
