@@ -281,7 +281,7 @@ install_step_prepare() {
 	ensure_xdg_runtime_dir
 	install_build_deps toolchain vcs cmake gettext
 	echo ""
-	install_linuxbrew
+	ensure_homebrew
 	echo ""
 }
 install_step_tool() {
