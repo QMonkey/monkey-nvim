@@ -30,7 +30,9 @@ REQUIRED_CHECKS=(
 	"git|bin|git"
 	"rg|bin|ripgrep"
 	"ctags|bin|universal-ctags"
-	"fzf|bin|fzf"
+	# Homebrew first: most distro repos ship fzf far older. The order lives
+	# in this row's strategy now, not in a global list.
+	"fzf|bin|fzf|brew,pkg"
 	"cc|anyof:gcc clang cc|C compiler|pkg:gcc"
 	"tree-sitter|bin|tree-sitter-cli|npm:tree-sitter-cli"
 	"@header|python3${NC} (TIOCSTI injection)"
@@ -38,9 +40,6 @@ REQUIRED_CHECKS=(
 )
 
 # ──────────────────────── recommended ────────────────────────
-# fzf ships far newer via Homebrew than most distro repos — prefer brew
-# when it exists (install_pkg splits the batch on these names).
-BREW_FIRST=(fzf zig zls)
 RECOMMENDED_NOTE="(Missing won't block monkey-nvim, but will degrade gtags experience)"
 RECOMMENDED_CHECKS=(
 	"global|bin|global (GNU Global, for gtags)|pkg"
@@ -72,7 +71,7 @@ OPTIONAL_CHECKS=(
 	# (checked by import); without it the pylsp `black = { enabled = true }`
 	# setting silently does nothing.
 	"python-lsp-black|py:pylsp_black|pylsp-black (pylsp plugin for black)|pkg,pip:python-lsp-black||||Python"
-	"zig|bin|zig|pkg||||Zig"
+	"zig|bin|zig|brew,pkg||||Zig"
 	# match:zig — zls refuses to serve a zig whose major.minor differs
 	# (zls 0.16 vs zig 0.17 = hard exit). Probe version AGREEMENT. The
 	# pair strategy leads: a plain `pkg` (brew zls) drags in plain zig@
