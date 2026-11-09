@@ -317,11 +317,11 @@ export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # 显示名，同时
 nvim 启动的每个进程的环境——minuet 那套只是安装器当前播种进去的内容。安装前
 export 过的话，安装过程会把它们持久化：全部键写入该文件（0600，放在家族共用的
 env 文件目录里），各 shell profile 只加一行带 marker 守卫的 source
-（路径按 `$NVIM_ENV_FILE` 解析后写死，该值跟随 `$XDG_CONFIG_HOME`）——
+（路径取自 `$NVIM_ENV_FILE`，跟随 `$XDG_CONFIG_HOME`；文件在 `$HOME` 下时写成 `~/` 相对形式，否则写绝对路径）——
 
 ```bash
 # [normal] nvim env (remove these lines to disable)
-[[ -f "$HOME/.config/env/nvim.env" ]] && { set -a; source "$HOME/.config/env/nvim.env"; set +a; }
+[[ -f ~/.config/env/nvim.env ]] && { set -a; source ~/.config/env/nvim.env; set +a; }
 ```
 
 该块的规则（文件与变量名都是 monkey-nvim 自己的，不读写任何其他项目的凭据存储
