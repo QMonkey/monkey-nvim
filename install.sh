@@ -34,8 +34,8 @@ if [ ! -f "$_monkey_scripts/install.sh" ]; then
 		# Outdated checkout: update it in place and keep running from it.
 		git -C "$_monkey_dir" pull --ff-only || true
 		if [ ! -f "$_monkey_dir/scripts/install.sh" ]; then
-			echo "monkey-scripts missing from $_monkey_dir (no scripts/ subtree)." >&2
-			echo "  git -C $_monkey_dir pull    # outdated checkout — or the repo never added the subtree" >&2
+			printf '%s\n' "monkey-scripts missing from $_monkey_dir (no scripts/ subtree)." >&2
+			printf '%s\n' "  git -C $_monkey_dir pull    # outdated checkout — or the repo never added the subtree" >&2
 			exit 1
 		fi
 		_monkey_scripts="$_monkey_dir/scripts"
@@ -50,19 +50,19 @@ if [ ! -f "$_monkey_scripts/install.sh" ]; then
 			git -C "$INSTALL_DIR" pull --ff-only || true
 		elif [ -d "$INSTALL_DIR" ] && [ -n "$(ls -A "$INSTALL_DIR")" ]; then
 			# git clone would refuse too, so say why in our own words.
-			echo "$INSTALL_DIR is not empty and is not a git clone." >&2
-			echo "  move it aside, delete it, or set INSTALL_DIR elsewhere." >&2
+			printf '%s\n' "$INSTALL_DIR is not empty and is not a git clone." >&2
+			printf '%s\n' "  move it aside, delete it, or set INSTALL_DIR elsewhere." >&2
 			exit 1
 		else
 			# Fresh clone — the ONLY sub-branch where git is hard-required:
 			# the pull sub-branch above degrades gracefully without it, and
 			# a zip/tarball must not fail here just for a missing git.
 			if ! command -v git >/dev/null 2>&1; then
-				echo "git is required to clone $PROJECT — install it first (e.g. sudo apt-get install git), then re-run." >&2
+				printf '%s\n' "git is required to clone $PROJECT — install it first (e.g. sudo apt-get install git), then re-run." >&2
 				exit 1
 			fi
 			# No retry() available yet — the framework loads only after this
-			# clone succeeds — so inline the standard 3 attempts. A failed
+			# clone succeeds — so inline 3 attempts. A failed
 			# clone leaves a partial directory behind; remove it so the next
 			# attempt cannot trip over "already exists". This branch only
 			# runs on a fresh install (INSTALL_DIR did not exist or was
@@ -89,14 +89,27 @@ fi
 . "$_monkey_scripts/install.sh"
 
 # ──────────────────────── layout & data ────────────────────────
-NVIM_SRC_DIR="${NVIM_SRC_DIR:-$HOME/Documents/neovim}" # kept for future updates
+NVIM_SRC_DIR="${NVIM_SRC_DIR:-$HOME/Documents/neovim}" # the clone build_neovim compiles
 ACQUIRE_TIOCSTI="${ACQUIRE_TIOCSTI:-monkey-nvim}"
+# nvim's environment file, persisted at install time (see persist_nvim_env
+# below). Declared here because SUMMARY_LINES renders it.
+# ~/.config/env/ is a directory the family shares: one file per project, named
+# after that project, not after any plugin it happens to configure — the
+# profiles source it with `set -a`, so everything in it reaches
+# nvim and every process nvim starts.
+NVIM_ENV_FILE="${NVIM_ENV_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/env/nvim.env}"
+# The keys the installer seeds today: exactly the ones lua/ai.lua reads. All
+# of them are written; a preset registers only when its own set is non-empty.
+# Any other nvim-scoped variable belongs in the same file, added by hand —
+# render_fill leaves the lines it was not handed untouched.
+NVIM_ENV_KEYS="NVIM_MINUET_PRESET NVIM_MINUET_API_KEY NVIM_MINUET_BASE_URL NVIM_MINUET_MODEL NVIM_MINUET_NAME NVIM_MINUET_LOCAL_BASE_URL NVIM_MINUET_LOCAL_MODEL NVIM_MINUET_LOCAL_NAME"
 INSTALL_INFO=(
-	"neovim source: ${CYAN}${NVIM_SRC_DIR}${NC} (kept for future updates)"
+	"neovim source: ${CYAN}${NVIM_SRC_DIR}${NC} (cloned here; built when the installed nvim is below 0.12)"
 )
 
 # src|dst — init.lua writes project sessions to stdpath('data')/sessions and
-# mkdir -p's them on first save; swap/ is created on first nvim launch. The
+# mkdir -p's them on first save; nvim's swap dir is stdpath('data')/swap
+# (lua/editor.lua), which the ENSURE_DIRS below create at install time. The
 # "keep" mode covers the repo-side extra configs (.clang-format, the
 # efm-langserver config dir): an existing target is skipped with an info
 # line, a missing source is skipped silently.
@@ -106,32 +119,32 @@ SYMLINKS=(
 	"$INSTALL_DIR/configs/efm-langserver|$HOME/.config/efm-langserver|keep"
 )
 ENSURE_DIRS=(
-	"$HOME/.local/state/nvim/swap"
+	"$HOME/.local/share/nvim/swap"
 	"$HOME/.local/share/nvim/sessions"
 )
 
 # PATH exports land in the profile but only apply to shells started later —
-# the original installer persists them BEFORE linking (same output block).
+# this installer persists them BEFORE linking (same output block).
 PERSIST_PATH=1
 PERSIST_POS=before_links
 SUMMARY_LINES=(
 	"  Config:   ${CYAN}$INSTALL_DIR${NC} → ${CYAN}~/.config/nvim${NC}"
+	"  Env:      ${CYAN}${NVIM_ENV_FILE#"$HOME"/}${NC} (nvim environment; NVIM_MINUET_* always written, empty = unset)"
 	"  Plugins:  managed by vim.pack (see init.lua)"
 	""
 	"  Run ${CYAN}nvim${NC} to start."
-	"  Update nvim: ${CYAN}cd $NVIM_SRC_DIR && git pull && make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='\"Unix Makefiles\"' && sudo make install${NC}"
+	"  Update nvim: ${CYAN}cd $NVIM_SRC_DIR && git pull && make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='\"Unix Makefiles\"' && sudo make install CMAKE_GENERATOR='\"Unix Makefiles\"'${NC}"
 	"  Update monkey-nvim: ${CYAN}cd $INSTALL_DIR && git pull${NC}"
 )
 
 # ──────────────────────── project steps ────────────────────────
 
-# Build dependencies come from the shared install_build_deps (pkg.sh):
+# Build dependencies come from the shared install_build_deps (distro.sh):
 # toolchain covers the compiler/make set per distro (base-devel on arch
 # also pulls autoconf/bison/gettext/pkgconf), vcs adds git+curl, cmake and
-# gettext complete the CMake build. The old per-distro case lived here;
-# the parsers tree-sitter compiles at runtime need only a C compiler —
-# everything else (rg/ctags/fzf/node/...) is handled by checkhealth.sh
-# --install (step 5).
+# gettext complete the CMake build. The parsers tree-sitter compiles at
+# runtime need only a C compiler — everything else (rg/ctags/fzf/node/...)
+# is handled by checkhealth.sh --install.
 
 nvim_at_least() {
 	bin_at_least nvim 0.12
@@ -162,11 +175,10 @@ build_neovim() {
 	# the deps build. The quotes must be INSIDE the make variable value.
 	# The deps downloads have no timeout upstream, so both attempts are
 	# wrapped in a timeout; a timeout or failure falls back to a serial
-	# build. retry owns the timeout instead of a hand-rolled `timeout -k 60
-	# 1800`: macOS has no timeout binary (only gtimeout via coreutils), so
-	# the raw call died with command-not-found there. retry -n 1 keeps the
-	# caller's parallel→serial fallback exactly as it was (one attempt per
-	# call, 1800s budget, TERM+KILL escalation via RETRY_KILL_AFTER).
+	# build. retry owns that timeout: macOS has no timeout binary (only
+	# gtimeout via coreutils), so a raw call is not portable. retry -n 1
+	# gives one attempt per call, keeping the caller's parallel→serial
+	# fallback intact (TERM+KILL escalation via RETRY_KILL_AFTER).
 	build_make() {
 		retry -n 1 -t "$RETRY_T_NET" -s "make CMake build" make CMAKE_BUILD_TYPE=RelWithDebInfo CMAKE_GENERATOR='"Unix Makefiles"' "$@"
 	}
@@ -210,8 +222,8 @@ install_plugins() {
 	# tools it installs (tree-sitter-cli via npm → ~/.npm-global/bin, go/cargo
 	# tools) only export PATH inside that child. Without this, the parser
 	# builds below resolve no `tree-sitter` and every parser fails with
-	# ENOENT while the CLI sits installed on disk (observed on Arch: all 17
-	# parsers dead). export_path is idempotent and skips missing
+	# ENOENT while the CLI sits installed on disk (observed on Arch: every
+	# parser dead). export_path is idempotent and skips missing
 	# directories.
 	export_path
 	# An interrupted clone leaves a plugin directory holding .git but no
@@ -233,16 +245,14 @@ install_plugins() {
 		repair_broken_clone --strict "$d"
 	done
 	info "Installing plugins (vim.pack) — no output below until done, may take a few minutes..."
-	# stderr goes to a log, not /dev/null: a hidden failure (e.g. a GitHub
-	# clone error — every plugin download crosses the network) used to fall
-	# through to the success line below and the plugins were simply missing.
-	# vim.pack clones whatever is missing on the next launch, so a failure
-	# here is recoverable, but it must be visible.
+	# stderr goes to a log, not /dev/null: every plugin download crosses the
+	# network, so a GitHub clone error is the normal failure mode here and
+	# must stay visible. vim.pack clones whatever is missing on the next
+	# launch, so a failure here is recoverable.
 	#
 	# The success gate lives INSIDE the retried command, on purpose: nvim
 	# --headless exits 0 even when init.lua died with a Lua error (E5113 —
-	# plugin clone timeout; observed on CentOS: error printed,
-	# rc 0, retry never fired, "[ OK ] Plugins installed." printed anyway).
+	# plugin clone timeout; observed on CentOS: error printed, rc 0).
 	# The child shell turns BOTH signals — nvim's own exit code and an
 	# error line in the log — into a non-zero exit, so retry treats it as
 	# a failed attempt and re-runs. vim.pack is idempotent (clones only
@@ -271,6 +281,61 @@ install_plugins() {
 	fi
 }
 
+# ──────────────────────── nvim environment ────────────────────────
+# NVIM_ENV_FILE is nvim's own environment file: the profiles source it with
+# `set -a`, so whatever it holds reaches nvim and every process nvim starts.
+# What the installer seeds today is minuet-ai.nvim's provider configuration —
+# lua/ai.lua reads those variables at startup and registers a preset only when
+# every variable of that preset is set. There are no code-side defaults, so
+# every key is written and an empty one means "unset" — a variable nvim.env
+# exports as empty reaches lua/ai.lua as nil.
+#
+# The seeded names are exactly the ones lua/ai.lua reads, so nothing new is
+# invented here — and nothing is shared: this owns no other project's credential
+# store, reads no other project's variables, and re-running any other installer
+# cannot change nvim's completion.
+#
+# Shape follows the family's env-file convention (values exported BEFORE the
+# install land in a 0600 file under ~/.config/env/, the profiles get one
+# marker-guarded line that sources it). The mechanism comes from scripts/
+# (render_fill + append_env_block), the data stays nvim's own.
+persist_nvim_env() {
+	local preset="${NVIM_MINUET_PRESET:-}" k need="" missing=""
+	case "$preset" in
+	local_fim) need="NVIM_MINUET_LOCAL_NAME NVIM_MINUET_LOCAL_BASE_URL NVIM_MINUET_LOCAL_MODEL" ;;
+	openai) need="NVIM_MINUET_API_KEY NVIM_MINUET_BASE_URL NVIM_MINUET_MODEL NVIM_MINUET_NAME" ;;
+	"")
+		info "NVIM_MINUET_PRESET is unset — minuet stays disabled (lua/ai.lua skips its setup) until one preset's keys are all non-empty. Writing every key empty for you to fill in."
+		;;
+	*)
+		warn "NVIM_MINUET_PRESET=$preset is neither local_fim nor openai — lua/ai.lua registers no such preset, so minuet stays disabled (its keymaps are not bound either). Writing every key anyway."
+		;;
+	esac
+	# A startup preset that is not registered skips the whole setup (keymaps
+	# included), so an incomplete set is reported even though the file is
+	# written — it is the hand-fill entry point for exactly this case.
+	for k in $need; do
+		[ -n "${!k:-}" ] || missing="$missing ${k#NVIM_MINUET_}"
+	done
+	[ -z "$missing" ] ||
+		warn "NVIM_MINUET_PRESET=$preset but incomplete (missing$missing) — the preset will not register and minuet is never set up. Export all of them and re-run, or fill the lines in ${NVIM_ENV_FILE#"$HOME"/} by hand."
+	# render_fill runs on python3, which checkhealth installs as a required
+	# tool earlier in the chain; without it the file cannot be merged, and an
+	# unsourced profile block would be worse than no block at all.
+	have_native_cmd python3 || {
+		warn "python3 not found — cannot write ${NVIM_ENV_FILE##*/} (render_fill needs it). nvim env not persisted; re-run after the dependency pass."
+		return 0
+	}
+	# Every key, not only the exported ones: render_fill keeps an existing
+	# non-empty value over this run's environment either way, and the keys with
+	# no value land as empty placeholders that lua/ai.lua reads as unset.
+	render_fill "$INSTALL_DIR/nvim.env.template" "$NVIM_ENV_FILE" $NVIM_ENV_KEYS || return 0
+	append_env_block "nvim env (remove these lines to disable)" "$(env_source_line "$NVIM_ENV_FILE")"
+	info "nvim env: NVIM_MINUET_* persisted to ${NVIM_ENV_FILE#"$HOME"/} (0600), empty = unset."
+	info "nvim env: a value already in that file wins over this run's export — edit the file to change one."
+	printf '\n'
+}
+
 # ──────────────────────── hooks ────────────────────────
 # A hook prints its own trailing blank line when it produced output.
 install_step_prepare() {
@@ -280,17 +345,21 @@ install_step_prepare() {
 	# misleading Lua load error. See README 'Precautions' → WSL2.
 	ensure_xdg_runtime_dir
 	install_build_deps toolchain vcs cmake gettext
-	echo ""
+	printf '\n'
 	brew_ensure
-	echo ""
+	printf '\n'
 }
 install_step_tool() {
 	build_neovim
-	echo ""
+	printf '\n'
 }
 install_step_after() {
 	install_plugins
-	echo ""
+	# Last: the profiles already carry the family's PATH and credential blocks,
+	# so the nvim env block lands among them, and the dependency pass that
+	# brings python3 (render_fill's engine) has already run.
+	persist_nvim_env
+	printf '\n'
 }
 
 install_main "$@"
