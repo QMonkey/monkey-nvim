@@ -10,3 +10,6 @@ tags
 # Session
 *.vim
 !init.lua
+
+# vim.pack lockfile
+nvim-pack-lock.json
