@@ -20,7 +20,7 @@ M.spec = {
     src = 'https://github.com/nvim-treesitter/nvim-treesitter-context',
     config = function()
       require('treesitter-context').setup()
-      vim.keymap.set('n', '[c', function() require('treesitter-context').go_to_context() end,
+      vim.keymap.set('n', '[o', function() require('treesitter-context').go_to_context() end,
         { silent = true, desc = 'Jump to context' })
     end,
   },
