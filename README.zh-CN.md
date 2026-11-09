@@ -315,9 +315,9 @@ export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # 显示名，同时
 **`~/.config/env/nvim.env` 就是 nvim 自己的环境变量文件，这些变量不必由你手工
 写进 profile。** profile 用 `set -a` source 它，所以文件里的东西都会进 nvim 以及
 nvim 启动的每个进程的环境——minuet 那套只是安装器当前播种进去的内容。安装前
-export 过的话，安装过程会把它们持久化：全部键写入该文件（0600，家族的 env
-文件目录，`agent.env` 也在这里），各 shell profile 只加一行带 marker 守卫的
-source（路径按 `$NVIM_ENV_FILE` 解析后写死，该值跟随 `$XDG_CONFIG_HOME`）——
+export 过的话，安装过程会把它们持久化：全部键写入该文件（0600，放在家族共用的
+env 文件目录里），各 shell profile 只加一行带 marker 守卫的 source
+（路径按 `$NVIM_ENV_FILE` 解析后写死，该值跟随 `$XDG_CONFIG_HOME`）——
 
 ```bash
 # [normal] nvim env (remove these lines to disable)
