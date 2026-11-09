@@ -154,7 +154,9 @@ M.config = function()
         plugins = {
           black = { enabled = true },
           pylint = { enabled = false },
-          -- jedi is prefix-only by default: typing a mid-word fragment like
+          -- jedi completes by prefix only unless pylsp passes fuzzy (its default is off),
+          -- so a mid-word fragment like `res` for `user_response` matches nothing;
+          -- fuzzy restores it at the cost of a longer list.
           jedi_completion = { fuzzy = true },
           pycodestyle = {
             enabled = true,
