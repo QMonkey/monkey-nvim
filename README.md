@@ -38,23 +38,26 @@ Build Neovim (if needed) and install monkey-nvim with all dependencies and plugi
 curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.sh | bash 2>&1 | tee monkey-nvim-install.log
 ```
 
-> The one-liner needs `git` besides `curl` itself: the installer clones this repository into `~/Documents/monkey-nvim` before it can install anything. If `git` is missing, the script stops with an error — install it with your system's package manager and re-run the same command.
+> The one-liner needs `git` besides `curl` itself: the installer clones this repository into `~/Documents/monkey-nvim` before it can install anything. On a fresh run that clone is the one hard `git` requirement — without `git` the script stops with an error, so install it with your system's package manager and re-run the same command. (A run that finds an existing `~/Documents/monkey-nvim` checkout only tries to `git pull` it and carries on with that checkout even when the pull fails.)
 
 What the script does, step by step:
 
-1. Install the Neovim build dependencies (CMake + Ninja + gettext; a C compiler for tree-sitter parsers)
-2. Pre-authorize `sudo` once — the only password entry of the whole run — and install a **temporary** NOPASSWD sudoers drop-in for the invoking user, removed automatically on exit. Homebrew resets the sudo timestamp on every `brew` invocation and WSL2 clock jumps invalidate tickets; NOPASSWD makes the run immune to both in any command order. If the drop-in cannot be installed, the script falls back to a background keepalive plus lazy re-authentication
-3. Install Homebrew (Linuxbrew) as the fallback package manager — its shellenv is persisted to your shell rc files (with PATH dedup guards) even when Homebrew already existed
+1. Pre-authorize `sudo` once — the only password entry of the whole run — and install a **temporary** NOPASSWD sudoers drop-in for the invoking user, removed automatically on exit. Homebrew resets the sudo timestamp on every `brew` invocation and WSL2 clock jumps invalidate tickets; NOPASSWD makes the run immune to both in any command order. If the drop-in cannot be installed, or is written but not parsed, the run falls back to the sudo timestamp: one re-authentication on a long run, and a privileged step that cannot prompt fails and is reported instead
+2. Install the Neovim build dependencies (CMake + gettext + a C compiler for the tree-sitter parsers; the build is pinned to the Unix Makefiles generator, so Ninja is deliberately not installed — under Ninja a hung dependency download shows no progress and no timeout)
+3. Install Homebrew (Linuxbrew) as the fallback package manager — its `bin`/`sbin` PATH insert is persisted to the profile files (as idempotent `case ":$PATH:"` guards, not a `brew shellenv` line) even when Homebrew already existed
 4. Clone and compile Neovim from source (skipped when an nvim >= 0.12 is already installed), then `make install`
 5. Clone monkey-nvim to `~/Documents/monkey-nvim` (or update it if already cloned)
-6. Install required tools + optional LSP servers via `checkhealth.sh --install` (apt/zypper/dnf/pacman/brew, npm, pip, go install, rustup). WSL Windows-PATH shims (`/mnt/...`) are detected and the real Linux packages get installed instead; fzf prefers Homebrew so you get a current version instead of the distro's
-7. Persist `~/go/bin`, `~/.cargo/bin` (and `/usr/local/bin`) in your shell rc files
-8. Symlink `~/.config/nvim` to the repo and the efm-langserver config; create runtime directories
+6. Install required tools + optional LSP servers via `checkhealth.sh --install` (apt/zypper/dnf/pacman/brew, npm, pip, go install, rustup; on Arch the AUR via `paru` sits between pacman and Homebrew). WSL Windows-PATH shims (`/mnt/...`) are detected and the real Linux packages get installed instead; fzf prefers Homebrew so you get a current version instead of the distro's
+7. Persist one PATH block in your profile files, before the config links: the framework bin dirs (`~/.local/bin`, `${CARGO_HOME:-~/.cargo}/bin`, `GOBIN`/every `GOPATH` entry's bin, `~/.npm-global/bin`) plus the Homebrew `bin`/`sbin`. Both tiers are idempotent PATH inserts and the Homebrew tier is rendered first in the block, which on macOS (a plain prepend there) leaves it just below the framework bin dirs and above `/usr/local/bin`; on Linux/WSL Homebrew is inserted positionally instead — ahead of the WSL `/mnt` shims only, never ahead of the system paths (`/usr/local` itself is never seeded as a "brew dir")
+8. Symlink `~/.config/nvim` to the repo, the global `.clang-format` style and the efm-langserver config; create runtime directories (`~/.local/share/nvim/swap`, `~/.local/share/nvim/sessions`). The two extra configs are linked in "keep" mode: an existing target is left alone, a missing source is skipped silently
 9. Bootstrap all plugins (vim.pack) with a headless Neovim launch
+10. Write `~/.config/env/nvim.env` (0600) with every `NVIM_MINUET_*` key it seeds — values you exported before the run included, the rest left empty — plus one marker-guarded `source` line in your login profile (see _AI completion setup_ below)
 
 > The script keeps the Neovim source tree at `~/Documents/neovim` (no cleanup), so you can rebuild later with `git pull` + `make`.
 >
 > PATH changes only apply to shells started after the install. When it finishes, the script prints how to apply them to the current terminal (`source <rc file>` or `exec $SHELL`).
+>
+> Three paths are overridable from the environment, each with its own default: `INSTALL_DIR` (`~/Documents/monkey-nvim`, where the repo is cloned and from where the configs are linked), `NVIM_SRC_DIR` (`~/Documents/neovim`, the Neovim source tree) and `NVIM_ENV_FILE` (`~/.config/env/nvim.env`, which follows `$XDG_CONFIG_HOME`). `install.sh` itself takes no options; `checkhealth.sh` does — see _Health check_ below.
 
 ### Option 2: Manual installation
 
@@ -68,17 +71,18 @@ git clone https://github.com/QMonkey/monkey-nvim.git
 
 #### 2.1 Common tools
 
-| Tool                                                          | Purpose                                                                                     | Required                |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------- |
-| git                                                           | Plugin management via `vim.pack`                                                            | Yes                     |
-| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep)         | fzf-lua live grep backend                                                                   | Yes                     |
-| [fzf](https://github.com/junegunn/fzf)                        | fzf-lua fuzzy finder backend                                                                | Yes                     |
-| universal-ctags                                               | gutentags tag generation                                                                    | Yes                     |
-| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags (GTAGS) generation & navigation                                             | Recommended             |
-| [Pygments](https://pygments.org/)                             | gtags parser for non-C/C++ languages                                                        | Recommended             |
-| C compiler (gcc/clang)                                        | Build tree-sitter parser native modules                                                     | Yes (compile-time only) |
-| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | Build tree-sitter parser modules                                                            | Yes (compile-time only) |
-| [Homebrew](https://brew.sh/)                                  | Fallback package manager for tools not in system repos (lua-language-server, marksman, fzf) | Required                |
+| Tool                                                          | Purpose                                                                                                                | Required                |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| git                                                           | Plugin management via `vim.pack`                                                                                       | Yes                     |
+| [ripgrep (rg)](https://github.com/BurntSushi/ripgrep)         | fzf-lua live grep backend                                                                                              | Yes                     |
+| [fzf](https://github.com/junegunn/fzf)                        | fzf-lua fuzzy finder backend                                                                                           | Yes                     |
+| universal-ctags                                               | gutentags tag generation                                                                                               | Yes                     |
+| [GNU Global](https://www.gnu.org/software/global/) (`global`) | gutentags gtags (GTAGS) generation & navigation                                                                        | Recommended             |
+| [Pygments](https://pygments.org/)                             | gtags parser for non-C/C++ languages (needs an unversioned `python` on PATH)                                           | Recommended             |
+| C compiler (gcc/clang)                                        | Build tree-sitter parser native modules                                                                                | Yes (compile-time only) |
+| [tree-sitter-cli](https://github.com/tree-sitter/tree-sitter) | Build tree-sitter parser modules                                                                                       | Yes (compile-time only) |
+| python3                                                       | `render_fill` engine that writes `nvim.env`; TIOCSTI injection at the end of the install (perl is that one's fallback) | Yes                     |
+| [Homebrew](https://brew.sh/)                                  | Fallback package manager for tools not in system repos (lua-language-server, marksman, fzf)                            | Required                |
 
 ```bash
 # Install Homebrew (all Linux distros — required for tools not in system repos)
@@ -99,6 +103,9 @@ npm install -g tree-sitter-cli
 # CentOS (enable EPEL for ripgrep/fzf/universal-ctags)
 sudo dnf install epel-release
 sudo dnf install git ripgrep fzf universal-ctags global global-ctags python3-pygments gcc nodejs npm
+# Fedora: the same names, except that the package is plain `ctags` there
+# (Fedora ships Universal Ctags under that name) and EPEL is not needed — the
+# base repos carry all of the above.
 # tree-sitter-cli is installed via npm:
 npm install -g tree-sitter-cli
 
@@ -136,14 +143,14 @@ monkey-nvim uses Neovim's built-in LSP client with `vim.lsp.config`. Install the
 
 Some LSP servers offload formatting/linting to **external tools** that must be installed separately. Without them the feature silently degrades (falls back to built-in diagnostics or skips the tool):
 
-| Language | Tool              | Role                                   | Install                                                                                                                                              |
-| -------- | ----------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C/C++    | clang-tidy        | linter (via `clangd --clang-tidy`)     | `sudo apt-get install clang-tidy`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
-| Go       | staticcheck       | linter (via `gopls` `staticcheck`)     | `go install honnef.co/go/tools/cmd/staticcheck@latest`                                                                                               |
-| Shell    | shfmt             | formatter (via `bash-language-server`) | `go install mvdan.cc/sh/v3/cmd/shfmt@latest`                                                                                                         |
-| Python   | black             | formatter (via `pylsp` black plugin)   | `pip3 install black`                                                                                                                                 |
-| Markdown | prettier          | formatter (via `efm-langserver`)       | `npm install -g prettier`                                                                                                                            |
-| Markdown | markdownlint-cli2 | linter (via `efm-langserver`)          | `npm install -g markdownlint-cli2`                                                                                                                   |
+| Language | Tool              | Role                                                    | Install                                                                                                                                              |
+| -------- | ----------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C/C++    | clang-tidy        | linter (via `clangd --clang-tidy`)                      | `sudo apt-get install clang-tidy`, `sudo zypper install clang`, `sudo dnf install clang-tools-extra`, `sudo pacman -S clang`, or `brew install llvm` |
+| Go       | staticcheck       | linter (via `gopls` `staticcheck`)                      | `go install honnef.co/go/tools/cmd/staticcheck@latest`                                                                                               |
+| Shell    | shfmt             | formatter (via `bash-language-server`)                  | `go install mvdan.cc/sh/v3/cmd/shfmt@latest`                                                                                                         |
+| Python   | black             | formatter (via the `pylsp` black plugin, `pylsp-black`) | `pip3 install black python-lsp-black`                                                                                                                |
+| Markdown | prettier          | formatter (via `efm-langserver`)                        | `npm install -g prettier`                                                                                                                            |
+| Markdown | markdownlint-cli2 | linter (via `efm-langserver`)                           | `npm install -g markdownlint-cli2`                                                                                                                   |
 
 #### 2.3 C/C++
 
@@ -178,8 +185,10 @@ go install honnef.co/go/tools/cmd/staticcheck@latest
 ```bash
 # Python 3 is required (install via system package manager if not present)
 pip3 install python-lsp-server
-# Optional: formatters/linters (black is used by the pylsp black plugin)
-pip3 install black autopep8 flake8 pylint
+# Optional: formatters/linters (pylsp runs black through the pylsp-black
+# plugin, so install that plugin alongside black; `lua/lsp.lua` turns the
+# pylint plugin off, so installing pylint changes nothing here)
+pip3 install black python-lsp-black autopep8 flake8 pylint
 ```
 
 #### 2.6 JavaScript / TypeScript
@@ -260,7 +269,7 @@ Verify that all required dependencies and optional LSP servers are available:
 ./checkhealth.sh
 ```
 
-Pass `--install` to automatically install missing dependencies (required tools + optional LSP servers). Supports apt/zypper/dnf/pacman/brew, npm, pip, go install, and rustup:
+Pass `--install` to automatically install missing dependencies (required tools + optional LSP servers). Supports apt/zypper/dnf/pacman (plus the Arch AUR through `paru`)/brew, npm, pip, go install, and rustup:
 
 ```bash
 ./checkhealth.sh --install
@@ -270,6 +279,15 @@ The script detects WSL Windows-PATH shims (`/mnt/...`) and installs the real
 Linux packages instead, and `sudo` is only invoked when actually needed
 (Homebrew resets the sudo timestamp on every run, so credentials may be
 re-requested with an explanatory prompt).
+
+The full option set is `-i`/`--install`, `--skip-check-config` (skip the
+config-link checks — `install.sh` passes it, because the config symlinks are
+created after this script runs), and `-h`/`--help` (usage, exit 0); an unknown
+option prints the usage with exit 2. Otherwise the exit status is 1 when any
+required dependency is missing, 0 when all of them are there. A plain
+`--install` run authenticates `sudo` once up front and rides the timestamp;
+`SUDO_DROPIN=1` switches it to the temporary NOPASSWD drop-in instead (what
+`install.sh` uses).
 
 You can also run Neovim's built-in health check for plugin-related diagnostics:
 
@@ -282,8 +300,10 @@ nvim --headless -c 'checkhealth' -c 'qa'
 minuet-ai.nvim is configured via environment variables, read at startup. Set
 `NVIM_MINUET_PRESET` to select the active preset — `local_fim` or `openai`;
 when it is empty or unset, minuet's setup is skipped entirely (AI completion is
-disabled). Add the exports to your login shell config (`~/.zprofile` for zsh,
-`~/.profile` or `~/.bash_profile` for bash):
+disabled and none of its keymaps are bound). A preset registers only when every
+variable of that preset is set: `lua/ai.lua` carries no defaults, so a
+half-filled set is a preset that does not exist. Add the exports to your login
+shell config (`~/.zprofile` for zsh, `~/.profile` or `~/.bash_profile` for bash):
 
 ```bash
 # Master switch: local_fim | openai (empty/unset = minuet disabled)
@@ -295,20 +315,58 @@ export NVIM_MINUET_BASE_URL="https://host/provider"         # prefix; /v1/chat/c
 export NVIM_MINUET_MODEL="model-id"
 export NVIM_MINUET_NAME="DeepSeek"                          # display name
 
-# Local preset, optional overrides (defaults target llama.cpp)
-export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:8080"   # default (llama-server), /v1/completions is appended
-export NVIM_MINUET_LOCAL_MODEL="qwen2.5-coder:7b"           # default
-export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # default, display name
+# Local FIM preset, all three required
+export NVIM_MINUET_LOCAL_BASE_URL="http://localhost:8080"   # prefix; /v1/completions is appended
+export NVIM_MINUET_LOCAL_MODEL="qwen2.5-coder:7b"           # id as that server expects it
+export NVIM_MINUET_LOCAL_NAME="llama.cpp"                   # display name, and the request shape
 
-# Note: when NVIM_MINUET_LOCAL_NAME is "llama.cpp", requests are rewritten to
-# llama.cpp's /infill endpoint (required for correct FIM infill). For other
-# servers (e.g. Ollama) just set a different name and the rewrite is skipped
-# automatically.
+# Note: NVIM_MINUET_LOCAL_NAME decides the request shape. Only "llama.cpp"
+# rewrites the call to llama.cpp's /infill endpoint (required for correct FIM
+# infill); every other server — Ollama, vLLM, LM Studio — keeps the plain
+# /v1/completions request, so name it after what the server actually is.
 ```
 
-The `local_fim` preset is always registered with built-in defaults; `openai` is
-only registered when all four `NVIM_MINUET_*` variables above are set. A preset
-that is not registered (e.g. `openai` without its variables) falls back to "disabled" at startup.
+**`~/.config/env/nvim.env` is nvim's environment file, and these variables do
+not have to live in your profile by hand.** The profiles source it with
+`set -a`, so everything in it reaches nvim and every process nvim starts —
+minuet's provider set is just what the installer seeds there today. If you
+export those variables before running the installer, the install persists them:
+every key lands in that file (0600, in the family's env-file directory —
+`agent.env` lives there too) and every shell profile gets one marker-guarded
+line that sources it (the path is written resolved, from `$NVIM_ENV_FILE`, which
+follows `$XDG_CONFIG_HOME`):
+
+```bash
+# [normal] nvim env (remove these lines to disable)
+[[ -f "$HOME/.config/env/nvim.env" ]] && { set -a; source "$HOME/.config/env/nvim.env"; set +a; }
+```
+
+Rules of that block (the file and the variable names are monkey-nvim's own —
+no other project's credential store or variables are read or written):
+
+- `NVIM_MINUET_PRESET` unset, or anything other than `local_fim` / `openai` →
+  minuet stays disabled; the installer still writes the file and the profile
+  line with every key empty, so filling one preset in by hand needs no re-run.
+- All eight seeded keys are in the file; the ones you did not export stay empty,
+  and empty reads as unset — a variable `nvim.env` exports as empty reaches
+  `lua/ai.lua` as `nil`. That is what makes the file a hand-fill entry point
+  instead of a half-configured preset.
+- Your own variables survive: `render_fill` rewrites only the keys it was
+  handed, so anything else you add to the file — including variables unrelated
+  to minuet — passes through byte for byte.
+- A value already in `nvim.env` wins over this run's export (fill-empty
+  semantics): re-running the installer never clobbers a hand-edit, and to
+  change a value you edit that file. Re-runs also never duplicate the block.
+- If the selected preset's variables are incomplete, the installer names the
+  missing ones and warns that the preset will not register — the file is still
+  written, so filling those lines by hand needs no re-run.
+- The file is rendered from the repo's `nvim.env.template`: that template's
+  comments and key list are what a fresh `nvim.env` starts with, and the keys
+  the installer hands to it are the `NVIM_ENV_KEYS` list in `install.sh`
+  (`render_fill` runs on python3, which the dependency pass installs as a
+  required tool — without it the file is not written and the run says so).
+  Keep `nvim.env.template` next to `install.sh`: it is a required installer
+  input, and it is the file to edit when the seeded variable list changes.
 
 Usage and keymaps: see §1.14.
 
@@ -364,7 +422,7 @@ meson install -C builddir/
 
 Building from source automatically compiles and installs the kmscon terminfo entry via `tic`, so nvim can detect terminal capabilities correctly without any `TERM` workaround. The default prefix is `/usr/local`; append `--prefix=/usr` to the meson setup command to install system-wide.
 
-On older systems, dependencies like `libtsm` may be too old to satisfy the build requirements. In that case, use the package manager version and apply the `TERM` workaround in section 6.3.
+On older systems, dependencies like `libtsm` may be too old to satisfy the build requirements. In that case, use the package manager version and apply the `TERM` workaround in section 7.3.
 
 #### 7.2 Replace tty with kmscon (permanent)
 
@@ -431,7 +489,7 @@ So:
 - `systemctl enable kmsconvt@tty1.service` → only tty1 (instance alias `autovt@tty1.service`).
 - `systemctl enable kmsconvt@.service` (template, no ttyN) → **every VT**, because it creates `/etc/systemd/system/autovt@.service -> kmsconvt@.service`.
 
-The `ln -s ... kmsconvt@tty1.service` + `start` flow above therefore affects only tty1. If tty2–tty6 unexpectedly become kmscon, check for a leftover alias (see 6.5 to revert).
+The `ln -s ... kmsconvt@tty1.service` + `start` flow above therefore affects only tty1. If tty2–tty6 unexpectedly become kmscon, check for a leftover alias (see 7.5 to revert).
 
 #### 7.3 True color support
 
@@ -449,7 +507,7 @@ The `COLORTERM=truecolor` is required so nvim still detects true color support w
 
 If you run tmux inside kmscon, tmux overrides `$TERM` with `tmux` / `tmux-256color`. This is expected and correct — do **not** change it back. tmux derives its internal `TERM` from the outer terminal and exposes its own accurate capabilities, so nvim and other ncurses programs work correctly. Only the **outer** `$TERM` (before entering tmux) matters: keep it as `kmscon` on 10.0.0+ or `xterm-256color` on 9.x.
 
-The Linux framebuffer console (tty1–tty63, `TERM=linux`) only exposes 8/16 colors (`&t_Co < 256`), which triggers sonokai's guard (`&t_Co < 256 -> finish`) and leaves Neovim's built-in 8/16-color highlighting, so code stays readable. sonokai itself does not require true color — it renders fine with the `cterm` palette on any 256-color terminal — but it does refuse to load when fewer than 256 colors are available. monkey-nvim therefore falls back to the built-in `unokai` theme on a bare tty. For the full sonokai scheme on a physical console, replace tty with kmscon (section 6.2) or use any 256-color/true-color terminal.
+The Linux framebuffer console (tty1–tty63, `TERM=linux`) only exposes 8/16 colors (`&t_Co < 256`), which triggers sonokai's guard (`&t_Co < 256 -> finish`) and leaves Neovim's built-in 8/16-color highlighting, so code stays readable. sonokai itself does not require true color — it renders fine with the `cterm` palette on any 256-color terminal — but it does refuse to load when fewer than 256 colors are available. monkey-nvim therefore falls back to the built-in `unokai` theme on a bare tty. For the full sonokai scheme on a physical console, replace tty with kmscon (section 7.2) or use any 256-color/true-color terminal.
 
 If you run tmux on a bare tty (not kmscon), tmux defaults to `default-terminal=tmux-256color`, which advertises 256 colors and xterm-style key sequences to every program inside it — even though the underlying console only has 8/16 colors. monkey-nvim already detects this (it walks the process tree to see the real tty behind the tmux client) and falls back to the built-in highlighting, so nvim itself stays correct regardless. Other programs, however, do not get that protection and may render 256-color escapes the console cannot show. To keep them correct, set tmux's terminal type to match the 8-color console:
 
@@ -473,7 +531,7 @@ To hand the virtual consoles back to agetty:
 # Stop the kmscon instance
 sudo systemctl stop kmsconvt@tty1.service
 
-# Remove the tty1 wants link created in section 6.2
+# Remove the tty1 wants link created in section 7.2
 sudo rm -f /etc/systemd/system/getty.target.wants/kmsconvt@tty1.service
 
 # Restore getty on tty1
@@ -531,35 +589,59 @@ fixes it.
 
 ## Plugin list
 
-| Plugin                                                                                  | Purpose                                                   |
-| --------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                               | Lazy-loading plugin manager on top of built-in `vim.pack` |
-| [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                   | Colorscheme                                               |
-| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)               | Status line                                               |
-| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                         | Extra mini.nvim modules (ai specs)                        |
-| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                               | Text objects                                              |
-| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)                   | Surround text with parens/quotes/etc                      |
-| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                     | Comment toggling                                          |
-| [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                         | Extended % matching                                       |
-| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                       | Auto-close brackets/parens                                |
-| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                     | Substitute with clipboard                                 |
-| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim)                         | Visual marks                                              |
-| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua)                                 | Fuzzy file/buffer/tag finder                              |
-| [folke/flash.nvim](https://github.com/folke/flash.nvim)                                 | Easy motion                                               |
-| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                       | Folding                                                   |
-| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)             | Async library (ufo dependency)                            |
-| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)   | Syntax highlighting & parsing                             |
-| [saghen/blink.cmp](https://github.com/saghen/blink.cmp)                                 | Completion engine (LSP/buffer/path/cmdline/snippets)      |
-| [saghen/blink.lib](https://github.com/saghen/blink.lib)                                 | Shared library (blink.cmp dependency)                     |
-| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)         | Snippet collection                                        |
-| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                   | Git diff in sign column                                   |
-| [nvim-mini/mini-git](https://github.com/nvim-mini/mini-git)                             | Git integration (`:Git` passthrough + events)             |
-| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                               | File explorer (replaces netrw)                            |
-| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)         | Automatic ctags generation                                |
-| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim) | Cscope integration                                        |
-| [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                       | Better quickfix window (preview, filter, fzf)             |
-| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)       | Multiple cursors                                          |
-| [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)           | AI inline completion (virtual text, remote + local FIM)   |
+| Plugin                                                                                                        | Purpose                                                   |
+| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [zuqini/zpack.nvim](https://github.com/zuqini/zpack.nvim)                                                     | Lazy-loading plugin manager on top of built-in `vim.pack` |
+| [sainnhe/sonokai](https://github.com/sainnhe/sonokai)                                                         | Colorscheme                                               |
+| [nvim-lualine/lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)                                     | Status line                                               |
+| [nvim-mini/mini.extra](https://github.com/nvim-mini/mini.extra)                                               | Extra mini.nvim modules (ai specs)                        |
+| [nvim-mini/mini.ai](https://github.com/nvim-mini/mini.ai)                                                     | Text objects                                              |
+| [nvim-mini/mini.surround](https://github.com/nvim-mini/mini.surround)                                         | Surround text with parens/quotes/etc                      |
+| [nvim-mini/mini.comment](https://github.com/nvim-mini/mini.comment)                                           | Comment toggling                                          |
+| [andymass/vim-matchup](https://github.com/andymass/vim-matchup)                                               | Extended % matching                                       |
+| [windwp/nvim-autopairs](https://github.com/windwp/nvim-autopairs)                                             | Auto-close brackets/parens                                |
+| [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim)                                           | Substitute with clipboard                                 |
+| [chentoast/marks.nvim](https://github.com/chentoast/marks.nvim)                                               | Visual marks                                              |
+| [ibhagwan/fzf-lua](https://github.com/ibhagwan/fzf-lua)                                                       | Fuzzy file/buffer/tag finder                              |
+| [folke/flash.nvim](https://github.com/folke/flash.nvim)                                                       | Easy motion                                               |
+| [kevinhwang91/nvim-ufo](https://github.com/kevinhwang91/nvim-ufo)                                             | Folding                                                   |
+| [kevinhwang91/promise-async](https://github.com/kevinhwang91/promise-async)                                   | Async library (ufo dependency)                            |
+| [nvim-treesitter/nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)                         | Syntax highlighting & parsing                             |
+| [nvim-treesitter/nvim-treesitter-context](https://github.com/nvim-treesitter/nvim-treesitter-context)         | Sticky context line at the top of the window              |
+| [nvim-treesitter/nvim-treesitter-textobjects](https://github.com/nvim-treesitter/nvim-treesitter-textobjects) | Treesitter text objects, motions and swap                 |
+| [saghen/blink.cmp](https://github.com/saghen/blink.cmp)                                                       | Completion engine (LSP/buffer/path/cmdline/snippets)      |
+| [saghen/blink.lib](https://github.com/saghen/blink.lib)                                                       | Shared library (blink.cmp dependency)                     |
+| [rafamadriz/friendly-snippets](https://github.com/rafamadriz/friendly-snippets)                               | Snippet collection                                        |
+| [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim)                                         | Git diff in sign column                                   |
+| [nvim-mini/mini-git](https://github.com/nvim-mini/mini-git)                                                   | Git integration (`:Git` passthrough + events)             |
+| [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim)                                                     | File explorer (replaces netrw)                            |
+| [ludovicchabant/vim-gutentags](https://github.com/ludovicchabant/vim-gutentags)                               | Automatic ctags generation                                |
+| [dhananjaylatkar/cscope_maps.nvim](https://github.com/dhananjaylatkar/cscope_maps.nvim)                       | Cscope integration                                        |
+| [kevinhwang91/nvim-bqf](https://github.com/kevinhwang91/nvim-bqf)                                             | Better quickfix window (preview, filter, fzf)             |
+| [junegunn/fzf](https://github.com/junegunn/fzf)                                                               | fzf runtime files (nvim-bqf dependency)                   |
+| [jake-stewart/multicursor.nvim](https://github.com/jake-stewart/multicursor.nvim)                             | Multiple cursors                                          |
+| [milanglacier/minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)                                 | AI inline completion (virtual text, remote + local FIM)   |
+
+### Plugin revisions (the lockfile)
+
+Every plugin above is pinned by `nvim-pack-lock.json` in the repo root. It is
+Neovim's own `vim.pack` lockfile, not a monkey-nvim artifact: its path comes
+from `'packlockfile'`, whose default is `$XDG_CONFIG_HOME/nvim/nvim-pack-lock.json`,
+and since `~/.config/nvim` is a symlink to this repository the file lands here
+(see `INSTALL_DIR` → `~/.config/nvim` in `install.sh`). Neovim writes it during
+the installer's headless bootstrap and on every `:ZPack update`/`:ZPack sync`,
+and reads it back on the first `vim.pack` call of the next start — with the
+lockfile present, every plugin in it is installed at once at the recorded
+revision instead of the branch tip `version` would give. `:ZPack restore`
+re-checks the plugins out to those revisions
+(`vim.pack.update({target = 'lockfile'})`).
+
+Do not hand-edit it; corrupted entries for installed plugins are repaired by
+`vim.pack` itself. Keep it committed: that is what makes a fresh machine on
+another OS reproduce this exact plugin set, and `git diff -- nvim-pack-lock.json`
+is the reviewable summary of what an update actually moved. Every applied update
+is also logged in an `nvim-pack.log` file under the `log` standard path
+(`:echo stdpath('log')`).
 
 ## Keyboard shortcut
 
@@ -572,8 +654,8 @@ The "Leader" key below means comma key.
 #### 1.1 Remap
 
 ```text
-x       Replace a motion/text object with clipboard content (see §1.7)
-X       Replace from cursor to end of line with clipboard content (see §1.7)
+x       Replace a motion/text object with clipboard content (see §1.6)
+X       Replace from cursor to end of line with clipboard content (see §1.6)
 Y       Copy from the cursor position to the end of the line, same as y$
 H       To the first non-blank character of the line, same as ^
 L       To the last character of the line, same as $
@@ -663,7 +745,15 @@ X           Replace from cursor to end of line with clipboard content
 ```text
 K (gh)              Hover documentation for symbol under cursor (LSP filetypes)
 K                   `:Man` for other filetypes, `:help` in Vim/help files
+```
 
+`K` is the filetype's `keywordprg`, set in `lua/docset.lua`: `:LspHover` (the
+user command that wraps `vim.lsp.buf.hover()`) for the LSP filetypes, `:Man`
+with a custom `MANSECT` order for C (so clangd does not steal `K`), `:help!` in
+Vim/help buffers. `gh` is the LSP hover mapping and works everywhere an LSP is
+attached, C included.
+
+```text
 gd                  Go to definition (falls back to tag jump when no LSP)
 gc                  Go to declaration
 gt                  Go to type definition
@@ -703,21 +793,33 @@ zR      Open all folds
 zM      Close all folds
 ```
 
+These are Vim's native fold commands — `lua/navigation.lua` only configures ufo's
+providers and the fold-open text, it maps no fold keys. `lua/editor.lua` sets
+`foldcolumn='0'`, `foldlevel=99` and `foldlevelstart=99` before `VimEnter`, so
+restored sessions start fully unfolded. ufo itself is lazy-loaded on `VeryLazy`
+(`event` in its spec) and provides the `:UfoEnable`/`:UfoDisable`/`:UfoInspect`/
+`:UfoAttach`/`:UfoDetach` commands.
+
 #### 1.10 Marks (marks.nvim)
 
 ```text
-m[a-zA-Z]   Toggle mark
+m[a-zA-Z]   Set mark
 m,          Place the next available mark
-m.          If no mark on line, place the next available mark. Otherwise, remove (first) existing mark
+m;          Toggle the next available mark at the current line
 
 dm[a-zA-Z]  Delete mark[a-zA-Z]
-m-          Delete all marks in current line
-m<Space>    Delete all marks in current buffer
+dm-         Delete all marks in current line
+dm<Space>   Delete all marks in current buffer
 
 '[a-zA-Z]   Jump to the mark
-]` / [`     Jump to next / previous mark
-`] / `[     Jump by alphabetical order to next / previous mark
-m/          View all marks in Location List
+m] / m[     Jump to next / previous mark
+m} / m{     Jump to next / previous bookmark of the same group (across buffers)
+m:          Preview a mark (<CR> previews the next one)
+m[0-9] / dm[0-9]   Add / delete the bookmark of group [0-9]
+dm=         Delete the bookmark under the cursor
+
+:MarksListBuf / :MarksListAll / :MarksListGlobal   Fill the location list with the
+                   marks of the current buffer / all open buffers / all global marks
 ```
 
 #### 1.11 Oil (File explorer, replaces netrw)
@@ -741,7 +843,7 @@ F5      Toggle the global terminal at the right (half width)
 
 F4 and F5 toggle the same global terminal — either key hides it while visible, and it reopens with job and scrollback intact in whatever tab you are in. F3 opens an extra terminal per invocation; the command runs as a job and the window stays open showing `[Process exited N]` afterwards.
 
-Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. `Alt+;` is a handier alternative that works in every mode (it is a no-op in normal mode and Esc-like elsewhere); `Ctrl+[` cannot be used: it IS the Esc byte, mapping it would steal Esc from programs inside the terminal. Related fix: `r` followed by a special key (such as `Alt+;`) aborts like `Esc` instead of inserting the key as the replacement character — this also applies inside multicursor.nvim sessions. `Alt+h/j/k/l` jump between splits directly from terminal mode; when focus returns to a terminal window, terminal mode is restored automatically. In normal mode, `<ScrollWheelUp>` and `<ScrollWheelDown>` scroll the terminal buffer. Terminal windows show no line numbers or whitespace markers.
+Use `<Ctrl-\><Ctrl-n>` to switch from terminal mode to normal mode. `Alt+;` is a handier alternative that works in every mode (it is a no-op in normal mode and Esc-like elsewhere); `Ctrl+[` cannot be used: it IS the Esc byte, mapping it would steal Esc from programs inside the terminal. Related fix: `r` followed by a special key (such as `Alt+;`) aborts like `Esc` instead of inserting the key as the replacement character — this also applies inside multicursor.nvim sessions. `Alt+h/j/k/l` jump between splits directly from terminal mode; when focus returns to a terminal window, terminal mode is restored automatically. Inside a terminal window the wheel is mapped in terminal mode: `<ScrollWheelUp>`/`<ScrollWheelDown>` send `<C-\><C-n>` first and then scroll, so the buffer scrolls instead of the program receiving mouse escapes. Terminal windows show no line numbers or whitespace markers.
 
 #### 1.13 Send to pane (,s group)
 
@@ -771,7 +873,11 @@ variables: a remote OpenAI-compatible chat endpoint and a local FIM server
 (Ollama, llama.cpp, vLLM, LM Studio, ...). The active preset is chosen at
 startup with `NVIM_MINUET_PRESET` (Installation §4); switch presets later with
 `,ia` or `:Minuet change_preset openai|local_fim`. If `NVIM_MINUET_PRESET` is
-empty or unset, minuet is not set up and none of the keymaps below are bound.
+empty or unset, minuet is not set up and none of the keymaps below are bound;
+a preset that is not registered cannot be switched to either, and `,ia` cycles
+only over the registered ones. Auto-trigger fires in every filetype except
+`help`, `markdown`, `text`, `gitcommit`, `gitrebase`, `qf`, `TelescopePrompt`,
+`DressingInput` and `terminal`.
 
 Normal mode:
 
@@ -797,7 +903,13 @@ Insert mode (shown while a suggestion is displayed):
 sa+textobj+surroundA        Add surround A for the region of textobj
 sd+surroundA                Delete surround A (2sd" deletes the 2nd nesting level)
 sr+surroundA+surroundB      Change surround A to B
+sf / sF                     Find the next / previous surround (moves the cursor onto it)
+sh                          Highlight the surround under the cursor
 ```
+
+Bare `s` is mapped to `<Nop>` in normal and visual mode (`lua/editor.lua`): mini.surround
+binds `sa`/`sd`/`sf`/`sF`/`sh`/`sr`, never bare `s`, so a timed-out `s` would otherwise
+fall through to Vim's native substitute (`cl`) and delete the character under the cursor.
 
 #### 1.16 Operators
 
@@ -824,9 +936,9 @@ sd{char}            Delete surround    [count] = nesting level, e.g. 2sd"
 sr{old}{new}        Replace surround   [count] = nesting level
 ```
 
-#### 1.17 Text objects (mini.ai / vim-matchup / flash.nvim)
+#### 1.17 Text objects (mini.ai / nvim-treesitter-textobjects / vim-matchup / flash.nvim)
 
-All text objects work with every operator (§1.16). mini.ai takes over the `a` / `i` prefix in operator-pending and visual mode, waits for a single identifier character, and falls back to native behavior for unknown identifiers. Consecutive application (e.g. `a(` twice in visual mode) expands the selection.
+All text objects work with every operator (§1.16). mini.ai takes over the `a` / `i` prefix in operator-pending and visual mode, waits for a single identifier character, and falls back to native behavior for unknown identifiers. Consecutive application (e.g. `a(` twice in visual mode) expands the selection. The nvim-treesitter-textobjects pairs below are full `a`/`i`+identifier mappings, so they take precedence over mini.ai's prefix for the same keys (`af`/`if`, `ac`/`ic`, `aL`/`iL`, …).
 
 ```text
 # Native Vim (unknown identifiers fall back to these)
@@ -837,18 +949,35 @@ i" a" i' a' i` a`   Quotes
 it / at         HTML/XML tag
 gn / gN         Last search pattern match
 
-# mini.ai (enhanced search; treesitter-backed specs)
+# mini.ai (enhanced search; default specs plus the custom ones from lua/editor.lua)
 ( ) [ ] { } < >     Balanced brackets (open and close forms)
 b               Auto-detect any of ) ] }
 " ' `           Balanced quotes
 q               Auto-detect any of " ' `
 t               Tag (balanced)
-f               Function call (treesitter)
-a               Argument (treesitter)
+f               Function call (pattern-based, not treesitter)
+a               Argument (pattern-based: `,` separated inside ) ] })
 i               Indent block: `ii` inner / `ai` around (e.g. dii, dai, yii)
-L               Line: `iL` without indent / `aL` whole line (2aL spans two lines)
+e               Line: `ie` without indent / `ae` whole line (2ae spans two lines)
 B               Buffer: `aB` all lines / `iB` without leading/trailing blank lines
 ?               User prompt (type two separator characters)
+
+# nvim-treesitter-textobjects (lua/treesitter.lua)
+af / if         Function outer / inner        (visual + operator-pending)
+ac / ic         Class outer / inner
+aP / iP         Parameter outer / inner
+aL / iL         Loop outer / inner
+ad / id         Conditional outer / inner
+aC / iC         Comment outer / inner
+]f / [f         Next / previous function start      ]F / [F   ... function end
+]c / [c         Next / previous class start          ]C / [C   ... class end
+]P / [P         Next / previous parameter start      ]L / [L   ... loop start
+                (all motions: normal, visual and operator-pending)
+Leader+x        Swap the parameter under the cursor with the next one
+Leader+X        ... with the previous one
+
+# nvim-treesitter-context (lua/treesitter.lua)
+[o              Move the cursor into the sticky context line
 
 # vim-matchup (keyword blocks)
 i% / a%         Inside / around if...endif, function...endfunction, etc.
@@ -868,18 +997,25 @@ mini.ai         Brackets / quotes / tags: count = nesting level (2a( = one level
 vim-matchup     Count = the count-th surrounding block
 ```
 
-Notes on the custom identifiers (`i` / `L` / `B`) and Neovim 0.13:
+Notes on these identifiers (`i` / `e` / `B`) and Neovim 0.13:
 
 - Lowercase `l` is not usable as an identifier: mini.ai's default `al` / `il`
   extended mappings (around/inside-last, i.e. search previous occurrence)
   shadow it. That is intentional upstream: Neovim 0.13 ships native `il`/`al`,
-  and mini.ai keeps shadowing them for backwards compatibility.
+  and mini.ai keeps shadowing them for backwards compatibility. Uppercase `L`
+  is taken as well — `aL`/`iL` are the treesitter loop textobjects above — so
+  the line object is registered under `e` (`lua/editor.lua`).
 - The native 0.13 `il` ("inner line") strips leading AND trailing whitespace
-  and fails on blank lines; our `iL` strips only the indent and keeps trailing
+  and fails on blank lines; our `ie` strips only the indent and keeps trailing
   whitespace.
-- The native 0.13 `al` means "all lines" (whole buffer, linewise); our `aL`
+- The native 0.13 `al` means "all lines" (whole buffer, linewise); our `ae`
   means the current line (charwise) and `aB` is the buffer. Side effect: the
   native `{}` block alias `aB` is shadowed — use `a{` / `a}` instead.
+- mini.ai's other extended mappings keep their upstream defaults too: `an`/`in`
+  (around/inside-next) deliberately override Neovim 0.12+'s built-in
+  incremental-selection `an`/`in`. Its `g[`/`g]` "move to the edge of the `a`
+  textobject" pair is disabled here (`lua/editor.lua`), which is what keeps `g]`
+  the ctags handler of _Useful command §4_.
 
 #### 1.18 Others
 
@@ -927,10 +1063,20 @@ Leader+gc           Git commits -L for selected lines
 
 Inside fzf-lua pickers (preview scrolling):
 A-u / A-d           Half page up / down
-A-f / A-b           Full page down / up
 A-j / A-k           Line down / up
+S-down / S-up       Full page down / up (fzf-lua default)
 F3                  Toggle preview line wrap (on by default)
 Git status: ctrl-h / ctrl-l = stage / unstage
+`A-f` / `A-i` / `A-h` are deliberately left alone: fzf-lua reserves them for
+its toggle-follow / ignore / hidden file actions.
+
+Multicursor (multicursor.nvim):
+Ctrl+n              Add a cursor on the next match — also the key that starts
+                    a session from normal or visual mode
+Inside a session (the plugin's keymap layer takes these over):
+Ctrl+n / Ctrl+p     Add a cursor on the next / previous match
+Ctrl+x / Ctrl+q     Skip the current match / un-skip the last one
+Esc or Alt+;        Clear all extra cursors, or bring back disabled ones
 
 SudoWrite           Save file with sudo
 ```
@@ -976,7 +1122,8 @@ CR          Confirm completion (select selected item)
 #### 3.1 Remap
 
 ```text
-s       Replace selected text with clipboard content
+x       Replace selected text with clipboard content (bare `s` is mapped to
+        <Nop>, see §1.15)
 ;       Enter command line mode, same as :
 <       Decrease indent, keep selection
 >       Increase indent, keep selection
@@ -1056,25 +1203,34 @@ Ctrl+e  Jump to the end of the command line
 :vert Git log --oneline --follow -- %
 ```
 
+`:G` is a thin alias for `:Git` (`lua/git.lua`): it forwards modifiers, `!` and
+arguments, and delegates `<Tab>` completion to `:Git`, so `:G log --<Tab>`
+completes exactly like `:Git log --<Tab>`.
+
 ### 4. Gutentags
 
 ```vim
-" Generate tags for current file
+" Generate ctags for current file
 :GutentagsUpdate
 
-" Generate tags for current project
+" Generate ctags for current project
 :GutentagsUpdate!
+
+" Force a full gtags + ctags rebuild for the current project
+:TagsRebuild
 ```
 
-If GNU Global (`gtags`/`global`) and Pygments (`pygmentize`) are installed, gutentags also generates the `GTAGS`/`GRTAGS`/`GPATH` databases alongside ctags. GTAGS are auto-built on first BufEnter and incrementally updated on save.
+If GNU Global (`gtags`/`global`) and Pygments (`pygmentize`) are installed, the GTAGS/GRTAGS/GPATH databases are built next to ctags — automatically on first `BufEnter` when they are missing, incrementally on save, and fully rebuilt when the branch/HEAD identity changes (or on demand with `:TagsRebuild`). The gtags database lives in `~/.local/share/nvim/tags/<project-root-flattened>/`, not in the project tree.
 
-Cscope keybindings (via cscope_maps.nvim):
+Cscope keybindings — `lua/tags.lua` binds them onto cscope_maps.nvim's commands
+with the plugin's own default mappings disabled (`disable_maps = true`,
+`cscope.tag.keymap = false`):
 
 ```text
 gs      Find symbol under cursor (Cscope find s)
 gD      Jump to definition (Cstag)
 gR      Find callers (Cscope find c)
-g]      Jump to tag and open quickfix
+g]      Jump to tag and open quickfix (lua/tags.lua's own ctags handler, not cscope)
 ```
 
 ### 5. Sessions (native :mksession)
@@ -1088,9 +1244,13 @@ Leader+rs
 ```
 
 The session is automatically re-written when Neovim exits (while a session is
-tracked) and restored on startup from `~/.local/share/nvim/sessions/`. Windows
+tracked, i.e. `v:this_session` is set) and restored on startup from
+`~/.local/share/nvim/sessions/` — but only when Neovim was started without file
+arguments (`argc() == 0`), so `nvim somefile` opens that file instead of the
+saved layout. The file itself is `<project-root-flattened>-session.vim`. Windows
 showing excluded filetypes/buftypes (oil, terminal) are cleaned before every
-write so they never end up in the saved session.
+write so they never end up in the saved session, and `cd`/`lcd` lines pointing
+at directories that no longer exist are dropped from the written file.
 
 ## Use git in Neovim
 
@@ -1186,17 +1346,17 @@ Notes: `su - <USERNAME>` from a root session does **not** fix this — `su` open
 
 - **Indentation convention** — monkey-nvim applies indent settings per filetype:
 
-| Filetype                                          | Style                    | Width |
-| ------------------------------------------------- | ------------------------ | ----- |
-| `c`, `cpp`, `go`, `sh`, `vim`, `sql`              | Hard tab (`noexpandtab`) | 4     |
-| `zig`, `rust`, `python`, `markdown`               | Spaces (`expandtab`)     | 4     |
-| `javascript`, `typescript`, `lua`, `yaml`, `json` | Spaces (`expandtab`)     | 2     |
+| Filetype                                                   | Style                    | Width |
+| ---------------------------------------------------------- | ------------------------ | ----- |
+| `c`, `cpp`, `go`, `sh`, `vim`, `sql`                       | Hard tab (`noexpandtab`) | 4     |
+| `zig`, `rust`, `python`, `markdown`                        | Spaces (`expandtab`)     | 4     |
+| `javascript`, `typescript`, `lua`, `yaml`, `json`, `jsonc` | Spaces (`expandtab`)     | 2     |
 
 The global default is 4-width hard tabs.
 
 - Neovim clipboard integration
 
-monkey-nvim sets `clipboard=unnamed,unnamedplus` when a display server is detected, so yank/delete automatically syncs to the system clipboard.
+monkey-nvim sets `clipboard=unnamed,unnamedplus` when a display server is detected, so yank/delete automatically syncs to the system clipboard. The same happens in two more situations: over SSH (the OSC 52 provider is selected so yanks reach the _local_ clipboard — inside a remote tmux only when that tmux has `set-clipboard` on, otherwise the tmux provider), and inside tmux without any display server (the tmux provider). On a physical console with no display server, no clipboard integration is configured at all.
 
 If you use a standalone clipboard manager (optional):
 
