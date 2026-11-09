@@ -331,10 +331,9 @@ not have to live in your profile by hand.** The profiles source it with
 `set -a`, so everything in it reaches nvim and every process nvim starts —
 minuet's provider set is just what the installer seeds there today. If you
 export those variables before running the installer, the install persists them:
-every key lands in that file (0600, in the family's env-file directory —
-`agent.env` lives there too) and every shell profile gets one marker-guarded
-line that sources it (the path is written resolved, from `$NVIM_ENV_FILE`, which
-follows `$XDG_CONFIG_HOME`):
+every key lands in that file (0600, in the family's shared env-file directory)
+and every shell profile gets one marker-guarded line that sources it (the path
+is written resolved, from `$NVIM_ENV_FILE`, which follows `$XDG_CONFIG_HOME`):
 
 ```bash
 # [normal] nvim env (remove these lines to disable)
