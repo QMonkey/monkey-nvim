@@ -9,8 +9,8 @@ set -euo pipefail
 # ──────────────────────────────────────────────────────────────
 
 . "$(dirname "${BASH_SOURCE[0]:-$0}")/scripts/checkhealth.sh" || {
-	echo "monkey-scripts not found — update this checkout (git pull / re-clone)," >&2
-	echo "or run install.sh, which bootstraps monkey-scripts itself." >&2
+	printf '%s\n' "monkey-scripts not found — update this checkout (git pull / re-clone)," >&2
+	printf '%s\n' "or run install.sh, which bootstraps monkey-scripts itself." >&2
 	exit 1
 }
 
@@ -30,8 +30,7 @@ REQUIRED_CHECKS=(
 	"git|bin|git"
 	"rg|bin|ripgrep"
 	"ctags|bin|universal-ctags"
-	# Homebrew first: most distro repos ship fzf far older. The order lives
-	# in this row's strategy now, not in a global list.
+	# Homebrew first: most distro repos ship fzf far older.
 	"fzf|bin|fzf|brew,pkg"
 	"cc|anyof:gcc clang cc|C compiler|pkg:gcc"
 	"tree-sitter|bin|tree-sitter-cli|npm:tree-sitter-cli"
@@ -49,7 +48,7 @@ RECOMMENDED_CHECKS=(
 
 # ──────────────────────── optional: LSP servers & language tools ─────────────
 # Grouped by language (8th spec field); each entry's install field lists the
-# fallback chain (system package first, brew/go/npm/pip after).
+# fallback chain.
 OPTIONAL_SECTION_TITLE="Optional: LSP servers & language tools"
 OPTIONAL_INSTALL_TITLE="Installing optional LSP servers & tools"
 OPTIONAL_SECTION_NOTE="(Install only what you need; missing servers won't block monkey-nvim)"
@@ -105,13 +104,13 @@ OPTIONAL_CHECKS=(
 
 # ──────────────────────── config ────────────────────────
 # src|dst|desc|mode|name — init.lua saves sessions to stdpath('data')/sessions
-# and mkdir -p's them on first write; swap/ is created on first nvim launch.
+# and mkdir -p's them on first write; nvim's swap dir is stdpath('data')/swap.
 CONFIG_LINKS=(
 	"$(pwd)|$HOME/.config/nvim|nvim dir||~/.config/nvim"
 )
 # type|params|ok|incomplete|missing
 CONFIG_HINTS=(
-	"path|$HOME/.local/state/nvim/swap|swap/ dir exists||swap/ dir not found (auto-created on first nvim launch)"
+	"path|$HOME/.local/share/nvim/swap|swap/ dir exists||swap/ dir not found (created by install.sh)"
 	"any|$HOME/.config/efm-langserver $HOME/.config/efm-langserver/config.yaml !$(pwd)/configs/efm-langserver|efm-langserver config|efm-langserver config not linked (run: ln -sfn $(pwd)/configs/efm-langserver ~/.config/efm-langserver)|"
 	"path|$HOME/.local/share/nvim/sessions|sessions/ dir exists||sessions/ dir not found (auto-created on first session save)"
 )
