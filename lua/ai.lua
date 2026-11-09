@@ -9,50 +9,55 @@ M.spec = {
       local minuet_preset_order = {}
       local minuet_current_preset = vim.env.NVIM_MINUET_PRESET
 
-      local local_fim_name = vim.env.NVIM_MINUET_LOCAL_NAME or 'llama.cpp'
-      local local_fim_options = {
-        api_key = 'TERM',
-        name = local_fim_name,
-        end_point = (vim.env.NVIM_MINUET_LOCAL_BASE_URL or 'http://localhost:8080') .. '/v1/completions',
-        model = vim.env.NVIM_MINUET_LOCAL_MODEL or 'qwen2.5-coder:7b',
-        stream = false,
-        optional = {
-          max_tokens = 64,
-          top_p = 0.9,
-        },
-      }
+      if vim.env.NVIM_MINUET_LOCAL_NAME
+          and vim.env.NVIM_MINUET_LOCAL_BASE_URL
+          and vim.env.NVIM_MINUET_LOCAL_MODEL
+      then
+        local local_fim_name = vim.env.NVIM_MINUET_LOCAL_NAME
+        local local_fim_options = {
+          api_key = 'TERM',
+          name = local_fim_name,
+          end_point = vim.env.NVIM_MINUET_LOCAL_BASE_URL .. '/v1/completions',
+          model = vim.env.NVIM_MINUET_LOCAL_MODEL,
+          stream = false,
+          optional = {
+            max_tokens = 64,
+            top_p = 0.9,
+          },
+        }
 
-      if local_fim_name == 'llama.cpp' then
-        local_fim_options.get_text_fn = {
-          no_stream = function(json)
-            return json.content
-          end,
+        if local_fim_name == 'llama.cpp' then
+          local_fim_options.get_text_fn = {
+            no_stream = function(json)
+              return json.content
+            end,
+          }
+          local_fim_options.transform = {
+            function(data)
+              -- llama.cpp /infill: prompt/suffix -> input_prefix/input_suffix
+              data.end_point = data.end_point:gsub('/v1/completions$', '/infill')
+              data.body.input_prefix = data.body.prompt
+              data.body.input_suffix = data.body.suffix or ''
+              data.body.prompt = nil
+              data.body.suffix = nil
+              return data
+            end,
+          }
+        end
+
+        minuet_presets.local_fim = {
+          n_completions = 1,
+          context_window = 4096,
+          request_timeout = 30,
+          throttle = 1000,
+          debounce = 300,
+          provider = 'openai_fim_compatible',
+          provider_options = {
+            openai_fim_compatible = local_fim_options,
+          },
         }
-        local_fim_options.transform = {
-          function(data)
-            -- llama.cpp /infill: prompt/suffix -> input_prefix/input_suffix
-            data.end_point = data.end_point:gsub('/v1/completions$', '/infill')
-            data.body.input_prefix = data.body.prompt
-            data.body.input_suffix = data.body.suffix or ''
-            data.body.prompt = nil
-            data.body.suffix = nil
-            return data
-          end,
-        }
+        minuet_preset_order[#minuet_preset_order + 1] = 'local_fim'
       end
-
-      minuet_presets.local_fim = {
-        n_completions = 1,
-        context_window = 4096,
-        request_timeout = 30,
-        throttle = 1000,
-        debounce = 300,
-        provider = 'openai_fim_compatible',
-        provider_options = {
-          openai_fim_compatible = local_fim_options,
-        },
-      }
-      minuet_preset_order[#minuet_preset_order + 1] = 'local_fim'
 
       if vim.env.NVIM_MINUET_API_KEY
           and vim.env.NVIM_MINUET_BASE_URL
