@@ -98,11 +98,13 @@ ACQUIRE_TIOCSTI="${ACQUIRE_TIOCSTI:-monkey-nvim}"
 # profiles source it with `set -a`, so everything in it reaches
 # nvim and every process nvim starts.
 NVIM_ENV_FILE="${NVIM_ENV_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/env/nvim.env}"
-# The keys the installer seeds today: exactly the ones lua/ai.lua reads. All
-# of them are written; a preset registers only when its own set is non-empty.
+# The keys the installer seeds today: the NVIM_MINUET_* set that lua/ai.lua
+# reads, plus the family proxy trio — those are read not by lua but by the
+# HTTP client minuet spawns. All of them are written; a preset registers only
+# when its own set is non-empty, and the proxy keys stay inert while empty.
 # Any other nvim-scoped variable belongs in the same file, added by hand —
 # render_fill leaves the lines it was not handed untouched.
-NVIM_ENV_KEYS="NVIM_MINUET_PRESET NVIM_MINUET_API_KEY NVIM_MINUET_BASE_URL NVIM_MINUET_MODEL NVIM_MINUET_NAME NVIM_MINUET_LOCAL_BASE_URL NVIM_MINUET_LOCAL_MODEL NVIM_MINUET_LOCAL_NAME"
+NVIM_ENV_KEYS="NVIM_MINUET_PRESET NVIM_MINUET_API_KEY NVIM_MINUET_BASE_URL NVIM_MINUET_MODEL NVIM_MINUET_NAME NVIM_MINUET_LOCAL_BASE_URL NVIM_MINUET_LOCAL_MODEL NVIM_MINUET_LOCAL_NAME $PROXY_ENV_KEYS"
 INSTALL_INFO=(
 	"neovim source: ${CYAN}${NVIM_SRC_DIR}${NC} (cloned here; built when the installed nvim is below 0.12)"
 )
@@ -129,7 +131,7 @@ PERSIST_PATH=1
 PERSIST_POS=before_links
 SUMMARY_LINES=(
 	"  Config:   ${CYAN}$INSTALL_DIR${NC} → ${CYAN}~/.config/nvim${NC}"
-	"  Env:      ${CYAN}${NVIM_ENV_FILE#"$HOME"/}${NC} (nvim environment; NVIM_MINUET_* always written, empty = unset)"
+	"  Env:      ${CYAN}${NVIM_ENV_FILE#"$HOME"/}${NC} (nvim environment; NVIM_MINUET_* and HTTPS_PROXY/HTTP_PROXY/NO_PROXY always written, empty = unset)"
 	"  Plugins:  managed by vim.pack (see init.lua)"
 	""
 	"  Run ${CYAN}nvim${NC} to start."
@@ -329,9 +331,14 @@ persist_nvim_env() {
 	# Every key, not only the exported ones: render_fill keeps an existing
 	# non-empty value over this run's environment either way, and the keys with
 	# no value land as empty placeholders that lua/ai.lua reads as unset.
+	# NO_PROXY is the one key never left empty by this run: the loopback floor
+	# (lib/env.sh no_proxy_floor) is merged into whatever was exported first,
+	# because the local FIM preset dials http://127.0.0.1 and minuet's curl
+	# would otherwise route it through the gateway proxy.
+	export NO_PROXY="$(no_proxy_floor)"
 	render_fill "$INSTALL_DIR/nvim.env.template" "$NVIM_ENV_FILE" $NVIM_ENV_KEYS || return 0
 	append_env_block "nvim env (remove these lines to disable)" "$(env_source_line "$NVIM_ENV_FILE")"
-	info "nvim env: NVIM_MINUET_* persisted to ${NVIM_ENV_FILE#"$HOME"/} (0600), empty = unset."
+	info "nvim env: NVIM_MINUET_* and the proxy trio persisted to ${NVIM_ENV_FILE#"$HOME"/} (0600), empty = unset."
 	info "nvim env: a value already in that file wins over this run's export — edit the file to change one."
 	printf '\n'
 }
