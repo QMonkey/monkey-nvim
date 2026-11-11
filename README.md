@@ -51,7 +51,7 @@ What the script does, step by step:
 7. Persist one PATH block in your profile files, before the config links: the framework bin dirs (`~/.local/bin`, `${CARGO_HOME:-~/.cargo}/bin`, `GOBIN`/every `GOPATH` entry's bin, `~/.npm-global/bin`) plus the Homebrew `bin`/`sbin`. Both tiers are idempotent PATH inserts and the Homebrew tier is rendered first in the block, which on macOS (a plain prepend there) leaves it just below the framework bin dirs and above `/usr/local/bin`; on Linux/WSL Homebrew is inserted positionally instead — ahead of the WSL `/mnt` shims only, never ahead of the system paths (`/usr/local` itself is never seeded as a "brew dir")
 8. Symlink `~/.config/nvim` to the repo, the global `.clang-format` style and the efm-langserver config; create runtime directories (`~/.local/share/nvim/swap`, `~/.local/share/nvim/sessions`). The two extra configs are linked in "keep" mode: an existing target is left alone, a missing source is skipped silently
 9. Bootstrap all plugins (vim.pack) with a headless Neovim launch
-10. Write `~/.config/env/nvim.env` (0600) with every `NVIM_MINUET_*` key it seeds — values you exported before the run included, the rest left empty — plus one marker-guarded `source` line in your login profile (see _AI completion setup_ below)
+10. Write `~/.config/env/nvim.env` (0600) with every `NVIM_MINUET_*` key it seeds plus the proxy trio (`HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`) — values you exported before the run included, the rest left empty — plus one marker-guarded `source` line in your login profile (see _AI completion setup_ below)
 
 > The script keeps the Neovim source tree at `~/Documents/neovim` (no cleanup), so you can rebuild later with `git pull` + `make`.
 >
@@ -347,7 +347,7 @@ no other project's credential store or variables are read or written):
 - `NVIM_MINUET_PRESET` unset, or anything other than `local_fim` / `openai` →
   minuet stays disabled; the installer still writes the file and the profile
   line with every key empty, so filling one preset in by hand needs no re-run.
-- All eight seeded keys are in the file; the ones you did not export stay empty,
+- Every seeded key is in the file; the ones you did not export stay empty,
   and empty reads as unset — a variable `nvim.env` exports as empty reaches
   `lua/ai.lua` as `nil`. That is what makes the file a hand-fill entry point
   instead of a half-configured preset.
@@ -357,6 +357,12 @@ no other project's credential store or variables are read or written):
 - A value already in `nvim.env` wins over this run's export (fill-empty
   semantics): re-running the installer never clobbers a hand-edit, and to
   change a value you edit that file. Re-runs also never duplicate the block.
+  For the proxy trio that rule spans files: the same host-level names may be
+  filled in another project's env file too, and nothing updates a non-empty
+  line, so rotating a proxy means editing each file that carries them. An
+  empty trio line here is not neutral either — this file is sourced after the
+  others, and an empty assignment blanks the inherited value for nvim and
+  everything it starts.
 - If the selected preset's variables are incomplete, the installer names the
   missing ones and warns that the preset will not register — the file is still
   written, so filling those lines by hand needs no re-run.
