@@ -51,7 +51,7 @@ curl -fsSL https://raw.githubusercontent.com/QMonkey/monkey-nvim/master/install.
 7. 在 profile 文件里持久化一个 PATH 块（位置在配置软链之前）：框架 bin 目录（`~/.local/bin`、`${CARGO_HOME:-~/.cargo}/bin`、`GOBIN` 或每个 `GOPATH` 条目的 bin、`~/.npm-global/bin`）加 Homebrew 的 `bin`/`sbin`。两层都是幂等的 PATH 插入，且 Homebrew 那一层在块里先渲染——macOS 上（那里就是普通前置）因此它落在框架 bin 目录之后、`/usr/local/bin` 之前；Linux/WSL 上则按位序插入，只排在 WSL `/mnt` shim 之前，不会前置到系统路径之上（`/usr/local` 本身不会被当作 brew 目录写入）
 8. 将 `~/.config/nvim` 软链到仓库，并链接全局 `.clang-format` 风格与 efm-langserver 配置；创建运行时目录（`~/.local/share/nvim/swap`、`~/.local/share/nvim/sessions`）。两个额外配置用 "keep" 模式链接：目标已存在就原样保留，源缺失就静默跳过
 9. 以 headless 模式启动 Neovim，通过 vim.pack 自动安装全部插件
-10. 写入 `~/.config/env/nvim.env`（0600），本次播种的每个 `NVIM_MINUET_*` 键都在其中——运行前已 export 的值一并写入，其余留空——并在登录 profile 里加一行带 marker 守卫的 `source`（见下文「AI 补全配置」）
+10. 写入 `~/.config/env/nvim.env`（0600），本次播种的每个 `NVIM_MINUET_*` 键与代理三键（`HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`）都在其中——运行前已 export 的值一并写入，其余留空——并在登录 profile 里加一行带 marker 守卫的 `source`（见下文「AI 补全配置」）
 
 > 脚本会把 Neovim 源码保留在 `~/Documents/neovim`（不清理），方便日后 `git pull` + `make` 重新构建。
 >
@@ -329,12 +329,16 @@ env 文件目录里），各 shell profile 只加一行带 marker 守卫的 sour
 
 - `NVIM_MINUET_PRESET` 未设置，或不是 `local_fim` / `openai` → minuet 禁用；
   安装器照样写文件与 profile 行，全部键留空，手工补齐即可，不必重跑安装。
-- 播种的八个键都在文件里；本次没 export 的键留空，而空值读作未设置（`nvim.env`
+- 播种的键全部在文件里；本次没 export 的键留空，而空值读作未设置（`nvim.env`
   里导出为空值的变量，到达 `lua/ai.lua` 时是 `nil`）。所以该文件是手工填值的入口，
   而不是一套半配置。
 - 你加的其他变量不会被冲掉：`render_fill` 只改写它拿到手的键，其余行原样透传。
 - 文件里已有的值优先于本次 export（fill-empty 语义）：重跑安装不会覆盖手工
   编辑，改值直接编辑该文件；重跑也不会重复写块。
+- 代理三键是这条规则的跨文件例外：它们是本机的键，同名键可能
+  在别的项目 env 文件里也填过，而非空行永不改写，所以轮换代理要逐个
+  文件改；反过来，这里留空行也不是中性的——本文件在别的那些之后被
+  source，空赋值会把继承来的值清掉。
 - 所选 preset 的变量不齐时，安装器会点出缺哪几个并告警"该 preset 不会注册"——
   文件照写，手工补齐那几行即可，不必重跑安装。
 - 该文件由仓库里的 `nvim.env.template` 渲染而来：新建 `nvim.env` 时的注释和键
