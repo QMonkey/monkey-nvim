@@ -353,7 +353,7 @@ install_step_prepare() {
 	ensure_xdg_runtime_dir
 	install_build_deps toolchain vcs cmake gettext
 	printf '\n'
-	brew_ensure
+	brew_ensure || true
 	printf '\n'
 }
 install_step_tool() {
