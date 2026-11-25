@@ -1044,7 +1044,7 @@ SudoWrite           使用 root 权限保存文件
 - `q` — 关闭窗口
 - nvim-bqf：浮窗实时预览（treesitter 高亮），`<Tab>`/`<S-Tab>` 标记条目后 `zn`/`zN` 过滤成新列表，`zf` 进入 fzf 过滤，`<C-t>`/`T` 在新 tab 打开
 
-`gdefault` 已设置，`:s` 默认执行全局替换。`jumpoptions+=stack` 使跳转列表行为类似标签栈。
+`gdefault` 已设置，`:s` 默认执行全局替换。`jumpoptions+=stack` 使跳转列表行为类似标签栈。`diffopt` 使用 `algorithm:histogram`；gitsigns 的 hunk 判定算法同样从 `diffopt` 派生，所以签名栏与 `:Gitsigns diffthis` 并排视图一并生效。
 
 Viminfo 的对应物 shada 按工程隔离：命令/搜索历史、寄存器和 file marks 保存到 `~/.local/state/nvim/shada/<工程根目录扁平化>.shada`（从启动目录向上查找 `.git`/`.root`/`.hg`/... 标记定位工程根，找不到时回退到 `~`），各工程的历史互不干扰。与 Vim 的 viminfo 不同，Neovim 的 shada 不持久化跳转列表。
 
