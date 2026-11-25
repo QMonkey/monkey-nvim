@@ -252,6 +252,11 @@ M.config = function()
   -- Split
   vim.opt.splitright = true
 
+  -- Diff
+  -- gitsigns derives its hunk algorithm from 'diffopt', so this moves both the
+  -- gutter hunks and the side-by-side view :Gitsigns diffthis opens.
+  vim.opt.diffopt:append({ algorithm = 'histogram' })
+
   -- Timing
   vim.opt.timeout = true
   vim.opt.timeoutlen = 1000
