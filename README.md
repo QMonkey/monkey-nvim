@@ -1093,7 +1093,7 @@ In quickfix/location windows:
 - `q` — Close window
 - nvim-bqf: live floating preview with treesitter highlighting, `<Tab>`/`<S-Tab>` sign items then `zn`/`zN` to filter into a new list, `zf` for fzf filtering, `<C-t>`/`T` open in a new tab
 
-`gdefault` is set, so `:s` performs global substitution (all matches per line) by default. `jumpoptions+=stack` makes the jumplist behave like the tagstack.
+`gdefault` is set, so `:s` performs global substitution (all matches per line) by default. `jumpoptions+=stack` makes the jumplist behave like the tagstack. `diffopt` uses `algorithm:histogram`; gitsigns derives its hunk algorithm from `diffopt` too, so this covers both the sign column and the `:Gitsigns diffthis` side-by-side view.
 
 Viminfo equivalent (shada) is per-project: command/search history, registers and file marks are stored in `~/.local/state/nvim/shada/<project-root-flattened>.shada` (project root detected by walking up from the startup directory for `.git`/`.root`/`.hg`/... markers, falling back to `~`), so histories do not leak between projects. Unlike Vim's viminfo, Neovim's shada does not persist the jumplist.
 
